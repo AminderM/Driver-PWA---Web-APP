@@ -1,0 +1,113 @@
+name: Deploy to Driver PWA Production (EC2)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18.x'
+
+jobs:
+  deploy:
+    name: Driver App Production Deployment
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Display Git Information
+        run: |
+          CURRENT_BRANCH=$(git branch --show-current)
+          echo "📋 Git Information:"
+          echo "   Branch: $CURRENT_BRANCH"
+          echo "   Expected Branch: main"
+          echo "   Commit: $(git rev-parse HEAD)"
+          echo "   Commit Short: $(git rev-parse --short HEAD)"
+          echo "   Commit Message: $(git log -1 --pretty=%B)"
+          echo "   Author: $(git log -1 --pretty=%an)"
+          echo "   Date: $(git log -1 --pretty=%ai)"
+          echo ""
+          echo "🔍 Latest commits on current branch:"
+          git log --oneline -5
+          echo ""
+          if [ "$CURRENT_BRANCH" != "main" ]; then
+            echo "⚠️  WARNING: Not on main branch! Current branch is: $CURRENT_BRANCH"
+          else
+            echo "✅ Verified: Building from main branch"
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Build application
+        run: npm run build
+        env:
+          CI: false
+
+      - name: Create deployment info file
+        run: |
+          echo "Deployment Information" > deployment-info.txt
+          echo "=====================" >> deployment-info.txt
+          echo "Environment: PRODUCTION" >> deployment-info.txt
+          echo "Branch: $(git branch --show-current)" >> deployment-info.txt
+          echo "Commit Hash: $(git rev-parse HEAD)" >> deployment-info.txt
+          echo "Commit Short: $(git rev-parse --short HEAD)" >> deployment-info.txt
+          echo "Commit Message: $(git log -1 --pretty=%B | head -1)" >> deployment-info.txt
+          echo "Author: $(git log -1 --pretty=%an)" >> deployment-info.txt
+          echo "Date: $(git log -1 --pretty=%ai)" >> deployment-info.txt
+          echo "Build Date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> deployment-info.txt
+          echo "Workflow Run: ${{ github.run_number }}" >> deployment-info.txt
+          echo "Workflow Run ID: ${{ github.run_id }}" >> deployment-info.txt
+          cat deployment-info.txt
+
+      - name: Create deployment archive
+        run: |
+          tar -czf build.tar.gz build/
+          tar -czf deploy.tar.gz build.tar.gz ecosystem.config.prod.js deploy-prod.sh deployment-info.txt
+
+      - name: Deploy to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_PORT }}
+          source: "deploy.tar.gz"
+          target: "/tmp/"
+
+      - name: Extract and deploy on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_PORT }}
+          script: |
+            cd /tmp
+            tar -xzf deploy.tar.gz
+            mv ecosystem.config.prod.js ecosystem.config.js
+            mv deploy-prod.sh deploy.sh
+            chmod +x deploy.sh
+            ./deploy.sh
+
+      - name: Cleanup
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_PORT }}
+          script: |
+            rm -f /tmp/deploy.tar.gz /tmp/build.tar.gz /tmp/ecosystem.config.js /tmp/deploy.sh /tmp/deployment-info.txt
