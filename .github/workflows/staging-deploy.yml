@@ -8,6 +8,7 @@ on:
 
 env:
   NODE_VERSION: '18.x'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   deploy:
@@ -54,8 +55,10 @@ jobs:
 
       - name: Build application
         run: npm run build
+        timeout-minutes: 15
         env:
           CI: false
+          NODE_OPTIONS: --max_old_space_size=4096
 
       - name: Create deployment info file
         run: |
