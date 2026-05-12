@@ -56,6 +56,8 @@ jobs:
         env:
           CI: false
           REACT_APP_BACKEND_URL: https://api.integratedtech.ca
+          NODE_OPTIONS: --max_old_space_size=4096
+        timeout-minutes: 15
 
       - name: Create deployment info file
         run: |
