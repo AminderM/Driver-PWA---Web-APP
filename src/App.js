@@ -76,24 +76,29 @@ function App() {
         <AuthProvider>
           <FeaturesProvider>
             <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/auth" element={<AuthPage />} />
+              {/* Driver PWA — / and /auth redirect to the driver app login */}
+              <Route path="/" element={<Navigate to="/driver-app" replace />} />
+              <Route path="/auth" element={<Navigate to="/driver-app" replace />} />
+
+              {/* TMS platform routes (fleet owners, admins) */}
+              <Route path="/tms" element={<LandingPage />} />
+              <Route path="/tms/auth" element={<AuthPage />} />
               <Route path="/dashboard" element={<ProtectedRoute><FeatureLoader><Dashboard /></FeatureLoader></ProtectedRoute>} />
               <Route path="/apps" element={<ProtectedRoute><FeatureLoader><AppsPage /></FeatureLoader></ProtectedRoute>} />
               <Route path="/admin" element={<AdminRoute><FeatureLoader><AdminConsole /></FeatureLoader></AdminRoute>} />
-              
+
               {/* Driver Portal Routes */}
               <Route path="/driver-portal" element={<DriverPortalAuth />} />
               <Route path="/driver-portal/dashboard" element={<DriverPortalDashboard />} />
               <Route path="/driver-portal/loads/:loadId" element={<DriverLoadDetails />} />
               <Route path="/driver-portal/navigation/:loadId" element={<DriverNavigation />} />
               <Route path="/driver-portal/profile" element={<DriverProfile />} />
-              
-              {/* Mobile Driver App - Self-contained for future extraction */}
+
+              {/* Mobile Driver App */}
               <Route path="/driver-app" element={<DriverMobileApp />} />
               <Route path="/driver-app/*" element={<DriverMobileApp />} />
-              
-              <Route path="*" element={<Navigate to="/" replace />} />
+
+              <Route path="*" element={<Navigate to="/driver-app" replace />} />
             </Routes>
           </FeaturesProvider>
         </AuthProvider>
