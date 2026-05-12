@@ -20,7 +20,6 @@ const DriverAppContent = () => {
   const [selectedLoad, setSelectedLoad] = useState(null);
   const [showMenu, setShowMenu] = useState(false);
   const [showSignup, setShowSignup] = useState(!!inviteToken);
-  const [requiredDocs, setRequiredDocs] = useState([]);
 
   // Not logged in
   if (!user) {
@@ -35,9 +34,14 @@ const DriverAppContent = () => {
     return <DriverLogin onSignUp={() => setShowSignup(true)} />;
   }
 
-  // First login — show document scan flow (passes required docs from invite)
+  // First login — show document scan flow with dispatcher-required docs from user record
   if (!profileComplete) {
-    return <DocumentScanScreen onComplete={completeProfile} requiredDocs={requiredDocs} />;
+    return (
+      <DocumentScanScreen
+        onComplete={completeProfile}
+        requiredDocs={user.required_documents || []}
+      />
+    );
   }
 
   // Menu overlay

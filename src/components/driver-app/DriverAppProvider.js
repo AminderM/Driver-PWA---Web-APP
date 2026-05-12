@@ -260,9 +260,12 @@ export const DriverAppProvider = ({ children }) => {
     const response = await fetch(
       `${process.env.REACT_APP_BACKEND_URL || ''}/api/driver-mobile/invite/${encodeURIComponent(token)}`
     );
+    if (response.status === 404) {
+      throw new Error('Invite code not found, already used, or expired.');
+    }
     if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.detail || 'Invalid or expired invite code.');
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || 'Could not validate invite code.');
     }
     return response.json();
   };

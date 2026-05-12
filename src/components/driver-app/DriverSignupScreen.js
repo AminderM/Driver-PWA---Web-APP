@@ -37,6 +37,8 @@ const DriverSignupScreen = ({ onBack, initialInviteToken }) => {
     try {
       const data = await validateInvite(code);
       setInviteData(data);
+      // Pre-fill name if dispatcher already set it
+      if (data.full_name) setForm(f => ({ ...f, full_name: data.full_name }));
       setStep('details');
     } catch (err) {
       setInviteError(err.message || 'Invalid or expired invite code.');
@@ -47,7 +49,8 @@ const DriverSignupScreen = ({ onBack, initialInviteToken }) => {
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    if (!form.full_name.trim()) { setFormError('Full name is required.'); return; }
+    const resolvedName = inviteData?.full_name || form.full_name.trim();
+    if (!resolvedName) { setFormError('Full name is required.'); return; }
     if (!form.phone.trim())     { setFormError('Phone number is required.'); return; }
     if (form.password.length < 8) { setFormError('Password must be at least 8 characters.'); return; }
     if (form.password !== form.confirm) { setFormError('Passwords do not match.'); return; }
@@ -56,7 +59,7 @@ const DriverSignupScreen = ({ onBack, initialInviteToken }) => {
     try {
       await signup({
         invite_token: inviteCode.trim() || initialInviteToken,
-        full_name: form.full_name.trim(),
+        full_name: inviteData?.full_name || form.full_name.trim(),
         phone: form.phone.trim(),
         password: form.password,
       });
@@ -159,14 +162,20 @@ const DriverSignupScreen = ({ onBack, initialInviteToken }) => {
 
           <div>
             <label className={`block text-sm font-medium mb-2 tracking-wider ${isDark ? 'text-white/80' : 'text-black/80'}`}>FULL NAME</label>
-            <input
-              type="text"
-              value={form.full_name}
-              onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
-              placeholder="John Smith"
-              className={`w-full border py-4 px-4 focus:outline-none focus:ring-2 ${input}`}
-              required
-            />
+            {inviteData?.full_name ? (
+              <div className={`w-full border py-4 px-4 ${isDark ? 'bg-[#0a0a0a] border-[#262626] text-white/50' : 'bg-gray-50 border-[#e5e5e5] text-black/50'}`}>
+                {inviteData.full_name}
+              </div>
+            ) : (
+              <input
+                type="text"
+                value={form.full_name}
+                onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
+                placeholder="John Smith"
+                className={`w-full border py-4 px-4 focus:outline-none focus:ring-2 ${input}`}
+                required
+              />
+            )}
           </div>
 
           <div>
