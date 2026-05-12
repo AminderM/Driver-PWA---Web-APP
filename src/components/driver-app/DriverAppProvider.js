@@ -82,6 +82,7 @@ export const DriverAppProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [activeLoadId, setActiveLoadId] = useState(null);
+  const [profileComplete, setProfileComplete] = useState(false);
   
   // Theme state - synced with TMS
   const [theme, setTheme] = useState(() => {
@@ -119,10 +120,26 @@ export const DriverAppProvider = ({ children }) => {
     const savedToken = localStorage.getItem('driver_app_token');
     const savedUser = localStorage.getItem('driver_app_user');
     if (savedToken && savedUser) {
+      const u = JSON.parse(savedUser);
       setToken(savedToken);
-      setUser(JSON.parse(savedUser));
+      setUser(u);
+      const localComplete = localStorage.getItem(`driver_profile_complete_${u.id}`) === 'true';
+      setProfileComplete(localComplete || u.first_login === false);
     }
   }, []);
+
+  const completeProfile = () => {
+    if (user) localStorage.setItem(`driver_profile_complete_${user.id}`, 'true');
+    setProfileComplete(true);
+  };
+
+  const mergeUserData = (newData) => {
+    setUser(prev => {
+      const updated = { ...prev, ...newData };
+      localStorage.setItem('driver_app_user', JSON.stringify(updated));
+      return updated;
+    });
+  };
 
   // Request location permission
   const requestLocation = async () => {
@@ -202,6 +219,8 @@ export const DriverAppProvider = ({ children }) => {
     setUser(data.user);
     localStorage.setItem('driver_app_token', data.access_token);
     localStorage.setItem('driver_app_user', JSON.stringify(data.user));
+    const localComplete = localStorage.getItem(`driver_profile_complete_${data.user.id}`) === 'true';
+    setProfileComplete(localComplete || data.user.first_login === false);
     return data;
   };
 
@@ -233,10 +252,20 @@ export const DriverAppProvider = ({ children }) => {
     return response.json();
   };
 
+  const devLogin = () => {
+    const mockUser = { id: 'dev-user', full_name: 'Aminder (Dev)', email: 'aminderpro@gmail.com', role: 'driver', first_login: false };
+    setUser(mockUser);
+    setToken('dev-token');
+    setLocationGranted(true);
+    localStorage.setItem('driver_profile_complete_dev-user', 'true');
+    setProfileComplete(true);
+  };
+
   const value = {
-    user, token, login, logout, api,
+    user, token, login, logout, api, devLogin,
     currentLocation, activeLoadId, setActiveLoadId,
     locationGranted, requestLocation,
+    profileComplete, completeProfile, mergeUserData,
     theme, toggleTheme, setTheme
   };
 

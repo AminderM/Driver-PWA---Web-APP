@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useDriverApp } from './DriverAppProvider';
 
+const DEV_MODE = process.env.NODE_ENV === 'development';
+
 const DriverLogin = () => {
-  const { login, theme } = useDriverApp();
+  const { login, theme, devLogin } = useDriverApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -114,6 +116,19 @@ const DriverLogin = () => {
         <p className={`text-center text-sm mt-8 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
           Contact your dispatcher for account access
         </p>
+
+        {DEV_MODE && (
+          <div className={`mt-6 pt-6 border-t ${isDark ? 'border-[#262626]' : 'border-[#e5e5e5]'}`}>
+            <p className="text-center text-xs text-amber-500 mb-3 tracking-wider">DEV MODE</p>
+            <button
+              type="button"
+              onClick={devLogin}
+              className="w-full border border-amber-500/50 text-amber-500 hover:bg-amber-500/10 font-semibold py-3 transition-colors tracking-wider text-sm"
+            >
+              BYPASS LOGIN (PREVIEW)
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
