@@ -83,6 +83,10 @@ export const DriverAppProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [activeLoadId, setActiveLoadId] = useState(null);
   const [profileComplete, setProfileComplete] = useState(false);
+  const [inviteToken, setInviteToken] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('invite') || null;
+  });
   
   // Theme state - synced with TMS
   const [theme, setTheme] = useState(() => {
@@ -252,6 +256,41 @@ export const DriverAppProvider = ({ children }) => {
     return response.json();
   };
 
+  const validateInvite = async (token) => {
+    const response = await fetch(
+      `${process.env.REACT_APP_BACKEND_URL || ''}/api/driver-mobile/invite/${encodeURIComponent(token)}`
+    );
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.detail || 'Invalid or expired invite code.');
+    }
+    return response.json();
+  };
+
+  const signup = async ({ invite_token, full_name, phone, password }) => {
+    const response = await fetch(
+      `${process.env.REACT_APP_BACKEND_URL || ''}/api/driver-mobile/signup`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invite_token, full_name, phone, password }),
+      }
+    );
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.detail || 'Signup failed.');
+    }
+    const data = await response.json();
+    setToken(data.access_token);
+    setUser(data.user);
+    localStorage.setItem('driver_app_token', data.access_token);
+    localStorage.setItem('driver_app_user', JSON.stringify(data.user));
+    // first_login: true → DocumentScanScreen will show after this
+    setProfileComplete(false);
+    setInviteToken(null);
+    return data;
+  };
+
   const devLogin = () => {
     const mockUser = { id: 'dev-user', full_name: 'Aminder (Dev)', email: 'aminderpro@gmail.com', role: 'driver', first_login: false };
     setUser(mockUser);
@@ -266,6 +305,7 @@ export const DriverAppProvider = ({ children }) => {
     currentLocation, activeLoadId, setActiveLoadId,
     locationGranted, requestLocation,
     profileComplete, completeProfile, mergeUserData,
+    inviteToken, setInviteToken, validateInvite, signup,
     theme, toggleTheme, setTheme
   };
 

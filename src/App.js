@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import LandingPage from './components/LandingPage';
 import AuthPage from './components/AuthPage';
 import Dashboard from './components/Dashboard';
@@ -69,6 +69,11 @@ const AdminRoute = ({ children }) => {
   return children;
 };
 
+const InviteRedirect = () => {
+  const { inviteToken } = useParams();
+  return <Navigate to={`/driver-app?invite=${encodeURIComponent(inviteToken)}`} replace />;
+};
+
 function App() {
   return (
     <ThemeProvider>
@@ -93,6 +98,9 @@ function App() {
               <Route path="/driver-portal/loads/:loadId" element={<DriverLoadDetails />} />
               <Route path="/driver-portal/navigation/:loadId" element={<DriverNavigation />} />
               <Route path="/driver-portal/profile" element={<DriverProfile />} />
+
+              {/* Invite links — redirect to driver app with token in query string */}
+              <Route path="/invite/:inviteToken" element={<InviteRedirect />} />
 
               {/* Mobile Driver App */}
               <Route path="/driver-app" element={<DriverMobileApp />} />

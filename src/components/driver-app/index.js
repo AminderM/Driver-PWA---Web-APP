@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { DriverAppProvider, useDriverApp } from './DriverAppProvider';
 import DriverLogin from './DriverLogin';
+import DriverSignupScreen from './DriverSignupScreen';
 import DocumentScanScreen from './DocumentScanScreen';
 import MyLoadsScreen from './MyLoadsScreen';
 import MenuScreen from './MenuScreen';
@@ -14,19 +15,29 @@ import AnalyticsScreen from './AnalyticsScreen';
 
 // Screen management
 const DriverAppContent = () => {
-  const { user, profileComplete, completeProfile } = useDriverApp();
+  const { user, profileComplete, completeProfile, inviteToken } = useDriverApp();
   const [currentScreen, setCurrentScreen] = useState('loads');
   const [selectedLoad, setSelectedLoad] = useState(null);
   const [showMenu, setShowMenu] = useState(false);
+  const [showSignup, setShowSignup] = useState(!!inviteToken);
+  const [requiredDocs, setRequiredDocs] = useState([]);
 
   // Not logged in
   if (!user) {
-    return <DriverLogin />;
+    if (showSignup) {
+      return (
+        <DriverSignupScreen
+          initialInviteToken={inviteToken || undefined}
+          onBack={() => setShowSignup(false)}
+        />
+      );
+    }
+    return <DriverLogin onSignUp={() => setShowSignup(true)} />;
   }
 
-  // First login — show document scan flow
+  // First login — show document scan flow (passes required docs from invite)
   if (!profileComplete) {
-    return <DocumentScanScreen onComplete={completeProfile} />;
+    return <DocumentScanScreen onComplete={completeProfile} requiredDocs={requiredDocs} />;
   }
 
   // Menu overlay
