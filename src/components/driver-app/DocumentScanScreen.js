@@ -9,7 +9,7 @@ const DOCUMENT_TYPES = [
   { value: 'other',           label: 'Other Document',   emoji: '📄' },
 ];
 
-const DocumentScanScreen = ({ onComplete }) => {
+const DocumentScanScreen = ({ onComplete, requiredDocs = [] }) => {
   const { api, mergeUserData, theme } = useDriverApp();
   const [step, setStep] = useState('welcome');
   const [docType, setDocType] = useState(null);
@@ -102,16 +102,26 @@ const DocumentScanScreen = ({ onComplete }) => {
         <h1 className={`text-xl font-bold tracking-wider ${text}`}>SELECT DOCUMENT TYPE</h1>
       </div>
       <div className="flex-1 px-6 py-6 space-y-3">
-        {DOCUMENT_TYPES.map((dt) => (
-          <button
-            key={dt.value}
-            onClick={() => { setDocType(dt.value); handleCapture(); }}
-            className={`w-full flex items-center gap-4 p-4 border text-left transition-colors ${isDark ? 'border-[#262626] hover:bg-white/5' : 'border-[#e5e5e5] hover:bg-black/5'}`}
-          >
-            <span className="text-2xl">{dt.emoji}</span>
-            <span className={`font-semibold tracking-wider ${text}`}>{dt.label}</span>
-          </button>
-        ))}
+        {DOCUMENT_TYPES.map((dt) => {
+          const isRequired = requiredDocs.includes(dt.value);
+          return (
+            <button
+              key={dt.value}
+              onClick={() => { setDocType(dt.value); handleCapture(); }}
+              className={`w-full flex items-center gap-4 p-4 border text-left transition-colors ${
+                isRequired
+                  ? 'border-red-600/50 bg-red-600/5'
+                  : isDark ? 'border-[#262626] hover:bg-white/5' : 'border-[#e5e5e5] hover:bg-black/5'
+              }`}
+            >
+              <span className="text-2xl">{dt.emoji}</span>
+              <span className={`flex-1 font-semibold tracking-wider ${text}`}>{dt.label}</span>
+              {isRequired && (
+                <span className="text-xs bg-red-600 text-white px-2 py-0.5 tracking-wider">REQUIRED</span>
+              )}
+            </button>
+          );
+        })}
       </div>
       <div className="px-6 pb-8">
         <button
