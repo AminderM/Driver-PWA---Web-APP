@@ -3,7 +3,7 @@ import { useDriverApp } from './DriverAppProvider';
 
 const DEV_MODE = process.env.NODE_ENV === 'development';
 
-const DriverLogin = () => {
+const DriverLogin = ({ onSignUp }) => {
   const { login, theme, devLogin } = useDriverApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -113,9 +113,22 @@ const DriverLogin = () => {
           </button>
         </form>
 
-        <p className={`text-center text-sm mt-8 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
-          Contact your dispatcher for account access
-        </p>
+        <div className={`mt-8 pt-6 border-t ${isDark ? 'border-[#262626]' : 'border-[#e5e5e5]'}`}>
+          <p className={`text-center text-sm mb-4 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
+            New driver? Use your invite code.
+          </p>
+          <button
+            type="button"
+            onClick={onSignUp}
+            className={`w-full border font-semibold py-4 tracking-wider transition-colors ${
+              isDark
+                ? 'border-[#262626] text-white/70 hover:bg-white/5'
+                : 'border-[#e5e5e5] text-black/70 hover:bg-black/5'
+            }`}
+          >
+            CREATE ACCOUNT
+          </button>
+        </div>
 
         {DEV_MODE && (
           <div className={`mt-6 pt-6 border-t ${isDark ? 'border-[#262626]' : 'border-[#e5e5e5]'}`}>
