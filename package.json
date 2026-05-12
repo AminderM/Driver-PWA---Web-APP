@@ -51,6 +51,7 @@
     "react-dom": "^19.0.0",
     "react-grid-layout": "^1.5.3",
     "react-hook-form": "^7.56.2",
+    "react-is": "^19.2.5",
     "react-leaflet": "^5.0.0",
     "react-leaflet-markercluster": "^5.0.0-rc.0",
     "react-resizable-panels": "^3.0.1",

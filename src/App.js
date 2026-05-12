@@ -90,6 +90,7 @@ function App() {
               <Route path="/driver-portal/profile" element={<DriverProfile />} />
               
               {/* Mobile Driver App - Self-contained for future extraction */}
+              <Route path="/driver-app" element={<DriverMobileApp />} />
               <Route path="/driver-app/*" element={<DriverMobileApp />} />
               
               <Route path="*" element={<Navigate to="/" replace />} />

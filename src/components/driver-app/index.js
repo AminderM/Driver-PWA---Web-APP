@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { DriverAppProvider, useDriverApp } from './DriverAppProvider';
 import DriverLogin from './DriverLogin';
+import DocumentScanScreen from './DocumentScanScreen';
 import MyLoadsScreen from './MyLoadsScreen';
 import MenuScreen from './MenuScreen';
 import AIAssistantScreen from './AIAssistantScreen';
@@ -13,7 +14,7 @@ import AnalyticsScreen from './AnalyticsScreen';
 
 // Screen management
 const DriverAppContent = () => {
-  const { user } = useDriverApp();
+  const { user, profileComplete, completeProfile } = useDriverApp();
   const [currentScreen, setCurrentScreen] = useState('loads');
   const [selectedLoad, setSelectedLoad] = useState(null);
   const [showMenu, setShowMenu] = useState(false);
@@ -21,6 +22,11 @@ const DriverAppContent = () => {
   // Not logged in
   if (!user) {
     return <DriverLogin />;
+  }
+
+  // First login — show document scan flow
+  if (!profileComplete) {
+    return <DocumentScanScreen onComplete={completeProfile} />;
   }
 
   // Menu overlay
@@ -54,8 +60,11 @@ const DriverAppContent = () => {
     case 'analytics':
       return <AnalyticsScreen onBack={goBack} />;
     
+    case 'scan':
+      return <DocumentScanScreen onComplete={() => setCurrentScreen('profile')} />;
+
     case 'profile':
-      return <ProfileScreen onBack={goBack} />;
+      return <ProfileScreen onBack={goBack} onOpenScanner={() => setCurrentScreen('scan')} />;
     
     case 'settings':
       return <SettingsScreen onBack={goBack} />;
