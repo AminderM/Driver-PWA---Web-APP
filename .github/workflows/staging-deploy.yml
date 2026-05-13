@@ -55,7 +55,7 @@ jobs:
 
       - name: Build application
         run: npm run build
-        timeout-minutes: 15
+        timeout-minutes: 25
         env:
           CI: false
           NODE_OPTIONS: --max_old_space_size=4096
