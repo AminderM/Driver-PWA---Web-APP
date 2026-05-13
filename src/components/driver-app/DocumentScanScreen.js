@@ -2,11 +2,14 @@ import React, { useState, useRef } from 'react';
 import { useDriverApp } from './DriverAppProvider';
 
 const DOCUMENT_TYPES = [
-  { value: 'drivers_license', label: "Driver's License", emoji: '🪪' },
-  { value: 'medical_card',    label: 'Medical Card',     emoji: '🏥' },
-  { value: 'hazmat_cert',     label: 'Hazmat Certification', emoji: '☢️' },
-  { value: 'twic_card',       label: 'TWIC Card',        emoji: '🔒' },
-  { value: 'other',           label: 'Other Document',   emoji: '📄' },
+  { value: 'drivers_license', label: "Driver's License",    emoji: '🪪' },
+  { value: 'abstract',        label: 'Driver Abstract',     emoji: '📋' },
+  { value: 'sin_card',        label: 'SIN Card',            emoji: '🔒' },
+  { value: 'void_cheque',     label: 'Void Cheque',         emoji: '🏦' },
+  { value: 'medical_card',    label: 'Medical Card',        emoji: '🏥' },
+  { value: 'hazmat_cert',     label: 'Hazmat Certification',emoji: '☢️' },
+  { value: 'twic_card',       label: 'TWIC Card',           emoji: '🪪' },
+  { value: 'other',           label: 'Other Document',      emoji: '📄' },
 ];
 
 const DocumentScanScreen = ({ onComplete, requiredDocs = [] }) => {
