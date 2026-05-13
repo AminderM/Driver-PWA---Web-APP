@@ -5,7 +5,7 @@ const DEV_MODE = process.env.NODE_ENV === 'development';
 
 const DriverLogin = () => {
   const { login, theme, devLogin } = useDriverApp();
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -18,7 +18,7 @@ const DriverLogin = () => {
     setLoading(true);
     setError('');
     try {
-      await login(phone, password);
+      await login(email, password);
     } catch (err) {
       setError(err.message || 'Login failed');
     } finally {
@@ -50,12 +50,12 @@ const DriverLogin = () => {
           )}
 
           <div>
-            <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-white/80' : 'text-black/80'}`}>PHONE NUMBER</label>
+            <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-white/80' : 'text-black/80'}`}>EMAIL ADDRESS</label>
             <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="6471234567"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="driver@company.com"
               className={`w-full border py-4 px-4 focus:outline-none focus:ring-2 focus:ring-red-600 ${
                 isDark
                   ? 'bg-[#0a0a0a] border-[#262626] text-white placeholder-white/40'
