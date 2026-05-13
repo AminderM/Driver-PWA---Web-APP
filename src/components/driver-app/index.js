@@ -3,6 +3,7 @@ import { DriverAppProvider, useDriverApp } from './DriverAppProvider';
 import DriverLogin from './DriverLogin';
 import DriverSignupScreen from './DriverSignupScreen';
 import DocumentScanScreen from './DocumentScanScreen';
+import PhoneVerificationScreen from './PhoneVerificationScreen';
 import MyLoadsScreen from './MyLoadsScreen';
 import MenuScreen from './MenuScreen';
 import AIAssistantScreen from './AIAssistantScreen';
@@ -15,7 +16,7 @@ import AnalyticsScreen from './AnalyticsScreen';
 
 // Screen management
 const DriverAppContent = () => {
-  const { user, profileComplete, completeProfile, inviteToken } = useDriverApp();
+  const { user, profileComplete, completeProfile, inviteToken, phoneVerified } = useDriverApp();
   const [currentScreen, setCurrentScreen] = useState('loads');
   const [selectedLoad, setSelectedLoad] = useState(null);
   const [showMenu, setShowMenu] = useState(false);
@@ -26,6 +27,11 @@ const DriverAppContent = () => {
       return <DriverSignupScreen inviteToken={inviteToken} />;
     }
     return <DriverLogin />;
+  }
+
+  // Phone not yet verified — must verify before anything else
+  if (!phoneVerified) {
+    return <PhoneVerificationScreen />;
   }
 
   // First login — show document scan flow with dispatcher-required docs from user record
