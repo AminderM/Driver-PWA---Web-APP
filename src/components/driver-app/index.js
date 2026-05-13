@@ -19,19 +19,13 @@ const DriverAppContent = () => {
   const [currentScreen, setCurrentScreen] = useState('loads');
   const [selectedLoad, setSelectedLoad] = useState(null);
   const [showMenu, setShowMenu] = useState(false);
-  const [showSignup, setShowSignup] = useState(!!inviteToken);
 
   // Not logged in
   if (!user) {
-    if (showSignup) {
-      return (
-        <DriverSignupScreen
-          initialInviteToken={inviteToken || undefined}
-          onBack={() => setShowSignup(false)}
-        />
-      );
+    if (inviteToken) {
+      return <DriverSignupScreen inviteToken={inviteToken} />;
     }
-    return <DriverLogin onSignUp={() => setShowSignup(true)} />;
+    return <DriverLogin />;
   }
 
   // First login — show document scan flow with dispatcher-required docs from user record

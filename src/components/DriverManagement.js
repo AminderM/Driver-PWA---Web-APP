@@ -45,8 +45,12 @@ const DriverManagement = ({ onStatsUpdate }) => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteResult, setInviteResult] = useState(null);
   const [selectedDriver, setSelectedDriver] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
+
+  const DRIVER_PWA_URL = 'https://driver-pwa.integratedtech.ca';
 
   // Form state for new driver
   const [driverForm, setDriverForm] = useState({
@@ -64,8 +68,25 @@ const DriverManagement = ({ onStatsUpdate }) => {
     home_terminal: '',
     emergency_contact_name: '',
     emergency_contact_phone: '',
-    notes: ''
+    notes: '',
+    required_documents: []
   });
+
+  const REQUIRED_DOC_OPTIONS = [
+    { value: 'drivers_license', label: "Driver's License" },
+    { value: 'medical_card',    label: 'Medical Card' },
+    { value: 'hazmat_cert',     label: 'Hazmat Certification' },
+    { value: 'twic_card',       label: 'TWIC Card' },
+  ];
+
+  const toggleRequiredDoc = (value) => {
+    setDriverForm(prev => ({
+      ...prev,
+      required_documents: prev.required_documents.includes(value)
+        ? prev.required_documents.filter(d => d !== value)
+        : [...prev.required_documents, value]
+    }));
+  };
 
   // Load drivers
   useEffect(() => {
@@ -168,10 +189,21 @@ const DriverManagement = ({ onStatsUpdate }) => {
       });
 
       if (res.ok) {
-        toast.success('Driver added successfully');
+        const data = await res.json();
         setShowAddModal(false);
         resetForm();
         loadDrivers();
+        if (data.invite_token) {
+          setInviteResult({
+            full_name: driverForm.full_name,
+            email: driverForm.email,
+            invite_token: data.invite_token,
+            invite_url: `${DRIVER_PWA_URL}/invite/${data.invite_token}`,
+          });
+          setShowInviteModal(true);
+        } else {
+          toast.success('Driver added successfully');
+        }
       } else {
         const error = await res.json();
         toast.error(error.detail || 'Failed to add driver');
@@ -179,6 +211,33 @@ const DriverManagement = ({ onStatsUpdate }) => {
     } catch (error) {
       toast.error('Failed to add driver');
     }
+  };
+
+  const handleGetInviteLink = async (driver) => {
+    try {
+      const res = await fetchWithAuth(`${BACKEND_URL}/api/drivers/${driver.id}/invite-link`);
+      if (res.ok) {
+        const data = await res.json();
+        setInviteResult({
+          full_name: driver.full_name,
+          email: driver.email,
+          invite_token: data.invite_token,
+          invite_url: `${DRIVER_PWA_URL}/invite/${data.invite_token}`,
+        });
+        setShowInviteModal(true);
+      } else {
+        toast.error('Could not generate invite link');
+      }
+    } catch {
+      toast.error('Could not generate invite link');
+    }
+  };
+
+  const copyInviteLink = () => {
+    if (!inviteResult?.invite_url) return;
+    navigator.clipboard.writeText(inviteResult.invite_url)
+      .then(() => toast.success('Invite link copied to clipboard'))
+      .catch(() => toast.error('Copy failed — please copy manually'));
   };
 
   // Handle update driver status
@@ -236,7 +295,8 @@ const DriverManagement = ({ onStatsUpdate }) => {
       home_terminal: '',
       emergency_contact_name: '',
       emergency_contact_phone: '',
-      notes: ''
+      notes: '',
+      required_documents: []
     });
   };
 
@@ -523,8 +583,17 @@ const DriverManagement = ({ onStatsUpdate }) => {
                   >
                     <i className="fas fa-eye"></i>
                   </Button>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-blue-600 border-blue-200 hover:bg-blue-50"
+                    title="Get invite link"
+                    onClick={() => handleGetInviteLink(driver)}
+                  >
+                    <i className="fas fa-link"></i>
+                  </Button>
+                  <Button
+                    size="sm"
                     variant="outline"
                     className="h-8 text-foreground hover:text-foreground hover:bg-muted"
                     onClick={() => handleDeleteDriver(driver.id)}
@@ -730,6 +799,38 @@ const DriverManagement = ({ onStatsUpdate }) => {
               </div>
             </div>
 
+            {/* Required Documents */}
+            <div>
+              <h4 className="font-medium text-foreground mb-1 flex items-center gap-2">
+                <i className="fas fa-file-alt text-muted-foreground"></i>
+                Required Documents
+              </h4>
+              <p className="text-xs text-muted-foreground mb-3">
+                Select which documents the driver must scan when they complete account setup.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {REQUIRED_DOC_OPTIONS.map(opt => (
+                  <label
+                    key={opt.value}
+                    className={`flex items-center gap-2 p-3 border rounded-md cursor-pointer text-sm transition-colors ${
+                      driverForm.required_documents.includes(opt.value)
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-border text-foreground hover:bg-muted'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={driverForm.required_documents.includes(opt.value)}
+                      onChange={() => toggleRequiredDoc(opt.value)}
+                      className="hidden"
+                    />
+                    <i className={`fas fa-${driverForm.required_documents.includes(opt.value) ? 'check-square text-blue-500' : 'square text-muted-foreground'}`}></i>
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
             {/* Notes */}
             <div>
               <Label className="text-xs">Notes</Label>
@@ -750,6 +851,62 @@ const DriverManagement = ({ onStatsUpdate }) => {
             <Button onClick={handleAddDriver} className="bg-blue-600 hover:bg-blue-700">
               <i className="fas fa-plus mr-2"></i>
               Add Driver
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invite Link Modal */}
+      <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <i className="fas fa-paper-plane text-blue-600"></i>
+              Driver Invite Link
+            </DialogTitle>
+          </DialogHeader>
+
+          {inviteResult && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
+                  {inviteResult.full_name?.charAt(0) || 'D'}
+                </div>
+                <div>
+                  <p className="font-medium text-foreground text-sm">{inviteResult.full_name}</p>
+                  <p className="text-xs text-muted-foreground">{inviteResult.email}</p>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Share this link with the driver. They'll use it to set their password and scan the required documents.
+                </p>
+                <div className="flex items-center gap-2 p-3 bg-muted border rounded-md">
+                  <p className="text-xs font-mono text-foreground flex-1 break-all">{inviteResult.invite_url}</p>
+                  <Button size="sm" onClick={copyInviteLink} className="shrink-0 bg-blue-600 hover:bg-blue-700">
+                    <i className="fas fa-copy mr-1"></i>
+                    Copy
+                  </Button>
+                </div>
+              </div>
+
+              <div className="text-xs text-muted-foreground space-y-1 border-t pt-3">
+                <p className="font-medium text-foreground">How to share:</p>
+                <p><i className="fas fa-sms mr-2"></i>Text it to {inviteResult.full_name}</p>
+                <p><i className="fas fa-envelope mr-2"></i>Email it to {inviteResult.email}</p>
+                <p><i className="fab fa-whatsapp mr-2"></i>Send via WhatsApp or any messaging app</p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={copyInviteLink}>
+              <i className="fas fa-copy mr-2"></i>
+              Copy Link
+            </Button>
+            <Button onClick={() => setShowInviteModal(false)} className="bg-blue-600 hover:bg-blue-700">
+              Done
             </Button>
           </DialogFooter>
         </DialogContent>

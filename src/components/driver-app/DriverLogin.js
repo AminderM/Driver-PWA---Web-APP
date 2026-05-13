@@ -3,9 +3,9 @@ import { useDriverApp } from './DriverAppProvider';
 
 const DEV_MODE = process.env.NODE_ENV === 'development';
 
-const DriverLogin = ({ onSignUp }) => {
+const DriverLogin = () => {
   const { login, theme, devLogin } = useDriverApp();
-  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -18,7 +18,7 @@ const DriverLogin = ({ onSignUp }) => {
     setLoading(true);
     setError('');
     try {
-      await login(email, password);
+      await login(phone, password);
     } catch (err) {
       setError(err.message || 'Login failed');
     } finally {
@@ -50,15 +50,15 @@ const DriverLogin = ({ onSignUp }) => {
           )}
 
           <div>
-            <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-white/80' : 'text-black/80'}`}>EMAIL</label>
+            <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-white/80' : 'text-black/80'}`}>PHONE NUMBER</label>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="driver@company.com"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="6471234567"
               className={`w-full border py-4 px-4 focus:outline-none focus:ring-2 focus:ring-red-600 ${
-                isDark 
-                  ? 'bg-[#0a0a0a] border-[#262626] text-white placeholder-white/40' 
+                isDark
+                  ? 'bg-[#0a0a0a] border-[#262626] text-white placeholder-white/40'
                   : 'bg-white border-[#e5e5e5] text-black placeholder-black/40'
               }`}
               required
@@ -113,22 +113,9 @@ const DriverLogin = ({ onSignUp }) => {
           </button>
         </form>
 
-        <div className={`mt-8 pt-6 border-t ${isDark ? 'border-[#262626]' : 'border-[#e5e5e5]'}`}>
-          <p className={`text-center text-sm mb-4 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
-            New driver? Use your invite code.
-          </p>
-          <button
-            type="button"
-            onClick={onSignUp}
-            className={`w-full border font-semibold py-4 tracking-wider transition-colors ${
-              isDark
-                ? 'border-[#262626] text-white/70 hover:bg-white/5'
-                : 'border-[#e5e5e5] text-black/70 hover:bg-black/5'
-            }`}
-          >
-            CREATE ACCOUNT
-          </button>
-        </div>
+        <p className={`text-center text-sm mt-8 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
+          New driver? Check your email for an invite link from your company.
+        </p>
 
         {DEV_MODE && (
           <div className={`mt-6 pt-6 border-t ${isDark ? 'border-[#262626]' : 'border-[#e5e5e5]'}`}>
