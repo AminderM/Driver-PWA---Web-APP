@@ -206,11 +206,11 @@ export const DriverAppProvider = ({ children }) => {
   }, [locationGranted, user, token, activeLoadId]);
 
   // Login
-  const login = async (phone, password) => {
+  const login = async (email, password) => {
     const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || ''}/api/driver-mobile/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, password })
+      body: JSON.stringify({ email, password })
     });
     
     if (!response.ok) {
@@ -295,7 +295,7 @@ export const DriverAppProvider = ({ children }) => {
   };
 
   const devLogin = () => {
-    const mockUser = { id: 'dev-user', full_name: 'Aminder (Dev)', email: 'aminderpro@gmail.com', role: 'driver', first_login: false };
+    const mockUser = { id: 'dev-user', full_name: 'Aminder (Dev)', email: 'aminderpro@gmail.com', role: 'driver', first_login: false, phone_verified: true };
     setUser(mockUser);
     setToken('dev-token');
     setLocationGranted(true);
@@ -303,12 +303,30 @@ export const DriverAppProvider = ({ children }) => {
     setProfileComplete(true);
   };
 
+  // Phone OTP — send to the driver's registered phone
+  const sendPhoneOTP = async () => {
+    await api('/phone/send-otp', { method: 'POST' });
+  };
+
+  // Phone OTP — verify the code, merges phone_verified: true into user
+  const verifyPhoneOTP = async (otp) => {
+    const result = await api('/phone/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ otp })
+    });
+    mergeUserData(result?.user || { phone_verified: true });
+  };
+
+  // phone_verified: treat undefined (old users / backend not yet returning field) as verified
+  const phoneVerified = user ? user.phone_verified !== false : false;
+
   const value = {
     user, token, login, logout, api, devLogin,
     currentLocation, activeLoadId, setActiveLoadId,
     locationGranted, requestLocation,
     profileComplete, completeProfile, mergeUserData,
     inviteToken, setInviteToken, validateInvite, signup,
+    phoneVerified, sendPhoneOTP, verifyPhoneOTP,
     theme, toggleTheme, setTheme
   };
 
