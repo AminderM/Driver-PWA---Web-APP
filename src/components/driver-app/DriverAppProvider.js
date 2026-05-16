@@ -215,7 +215,11 @@ export const DriverAppProvider = ({ children }) => {
     
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.detail || 'Login failed');
+      const detail = error.detail;
+      const message = Array.isArray(detail)
+        ? detail.map(e => e.msg || JSON.stringify(e)).join('. ')
+        : (typeof detail === 'string' ? detail : 'Login failed');
+      throw new Error(message);
     }
     
     const data = await response.json();
@@ -281,7 +285,11 @@ export const DriverAppProvider = ({ children }) => {
     );
     if (!response.ok) {
       const err = await response.json();
-      throw new Error(err.detail || 'Signup failed.');
+      const detail = err.detail;
+      const message = Array.isArray(detail)
+        ? detail.map(e => e.msg || JSON.stringify(e)).join('. ')
+        : (typeof detail === 'string' ? detail : 'Signup failed. Please try again.');
+      throw new Error(message);
     }
     const data = await response.json();
     setToken(data.access_token);
