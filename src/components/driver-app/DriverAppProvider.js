@@ -274,13 +274,13 @@ export const DriverAppProvider = ({ children }) => {
     return response.json();
   };
 
-  const signup = async ({ token, full_name, phone, password }) => {
+  const signup = async ({ token, phone, password }) => {
     const response = await fetch(
       `${process.env.REACT_APP_BACKEND_URL || ''}/api/driver-mobile/signup`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, full_name, phone, password }),
+        body: JSON.stringify({ token, phone, password }),
       }
     );
     if (!response.ok) {
