@@ -15,6 +15,7 @@ import DriverLoadDetails from './components/driver/DriverLoadDetails';
 import DriverNavigation from './components/driver/DriverNavigation';
 import DriverProfile from './components/driver/DriverProfile';
 import DriverMobileApp from './components/driver-app';
+import ResetPasswordScreen from './components/driver-app/ResetPasswordScreen';
 
 // Protected route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -102,6 +103,9 @@ function App() {
               {/* Invite links — redirect to driver app with token in query string */}
               <Route path="/invite/:inviteToken" element={<InviteRedirect />} />
               <Route path="/driver-setup/:inviteToken" element={<InviteRedirect />} />
+
+              {/* Password reset — driver arrives here from email link */}
+              <Route path="/reset-password/:resetToken" element={<ResetPasswordScreen />} />
 
               {/* Mobile Driver App */}
               <Route path="/driver-app" element={<DriverMobileApp />} />
