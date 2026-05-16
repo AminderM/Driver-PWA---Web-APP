@@ -101,6 +101,7 @@ function App() {
 
               {/* Invite links — redirect to driver app with token in query string */}
               <Route path="/invite/:inviteToken" element={<InviteRedirect />} />
+              <Route path="/driver-setup/:inviteToken" element={<InviteRedirect />} />
 
               {/* Mobile Driver App */}
               <Route path="/driver-app" element={<DriverMobileApp />} />
