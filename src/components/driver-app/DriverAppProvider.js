@@ -280,7 +280,7 @@ export const DriverAppProvider = ({ children }) => {
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ invite_token: token, full_name, phone, password }),
+        body: JSON.stringify({ token, full_name, phone, password }),
       }
     );
     if (!response.ok) {
