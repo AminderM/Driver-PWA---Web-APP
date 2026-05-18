@@ -1,67 +1,69 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useDriverApp } from './DriverAppProvider';
 
 const STATUS_CONFIG = {
-  available: { label: 'AVAILABLE', color: 'bg-green-600' },
-  assigned: { label: 'PENDING', color: 'bg-amber-600' },
-  pending: { label: 'PENDING', color: 'bg-amber-600' },
-  en_route_pickup: { label: 'EN ROUTE', color: 'bg-blue-600' },
-  arrived_pickup: { label: 'AT PICKUP', color: 'bg-amber-600' },
-  loaded: { label: 'LOADED', color: 'bg-indigo-600' },
-  en_route_delivery: { label: 'EN ROUTE', color: 'bg-blue-600' },
-  arrived_delivery: { label: 'AT DELIVERY', color: 'bg-amber-600' },
-  delivered: { label: 'DELIVERED', color: 'bg-green-600' },
-  rejected: { label: 'REJECTED', color: 'bg-red-600' },
+  available:         { label: 'NEW LOAD',    color: 'bg-red-600'    },
+  assigned:          { label: 'PENDING',     color: 'bg-amber-600'  },
+  pending:           { label: 'PENDING',     color: 'bg-amber-600'  },
+  en_route_pickup:   { label: 'EN ROUTE',    color: 'bg-blue-600'   },
+  arrived_pickup:    { label: 'AT PICKUP',   color: 'bg-amber-600'  },
+  loaded:            { label: 'LOADED',      color: 'bg-indigo-600' },
+  en_route_delivery: { label: 'EN ROUTE',    color: 'bg-blue-600'   },
+  arrived_delivery:  { label: 'AT DELIVERY', color: 'bg-amber-600'  },
+  delivered:         { label: 'DELIVERED',   color: 'bg-green-600'  },
+  rejected:          { label: 'REJECTED',    color: 'bg-red-600'    },
 };
 
-// Load Offer Card - Uber style with TMS theme
-const LoadOfferCard = ({ load, onAccept, onReject, onViewRoute, accepting, theme }) => {
+// Load Offer Card
+const LoadOfferCard = ({ load, onAccept, onReject, onViewRoute, accepting, acceptError, theme }) => {
   const isDark = theme === 'dark';
-  const estimatedMiles = load.estimated_miles || Math.floor(Math.random() * 300 + 100);
-  const estimatedPay = load.rate || (estimatedMiles * 2.5).toFixed(0);
-  const estimatedTime = load.estimated_hours || Math.ceil(estimatedMiles / 50);
+
+  // Stable values — no Math.random()
+  const miles   = load.estimated_miles  || load.distance_miles  || null;
+  const pay     = load.rate             || load.total_rate       || null;
+  const hours   = load.estimated_hours  || (miles ? Math.ceil(miles / 55) : null);
 
   return (
-    <div className={`border mb-4 animate-slideUp ${isDark ? 'bg-[#0a0a0a] border-[#262626]' : 'bg-white border-[#e5e5e5]'}`}>
+    <div className={`border mb-4 ${isDark ? 'bg-[#0a0a0a] border-[#262626]' : 'bg-white border-[#e5e5e5]'}`}>
       {/* Header */}
       <div className="bg-red-600 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-white" />
           </span>
           <span className="text-white font-semibold text-sm tracking-wider">NEW LOAD</span>
         </div>
-        <span className="text-white font-bold">{load.order_number || `#${load.id?.slice(0, 6)}`}</span>
+        <span className="text-white font-bold tracking-wider">
+          {load.order_number || `LD-${load.id?.slice(0, 8).toUpperCase()}`}
+        </span>
       </div>
 
       {/* Route */}
       <div className="px-4 py-4">
         <div className="flex items-start gap-3">
-          <div className="flex flex-col items-center">
-            <div className="w-4 h-4 bg-green-600"></div>
-            <div className="w-0.5 h-16 bg-gradient-to-b from-green-600 to-red-600"></div>
-            <div className="w-4 h-4 bg-red-600"></div>
+          <div className="flex flex-col items-center pt-1">
+            <div className="w-4 h-4 bg-green-600" />
+            <div className="w-0.5 h-14 bg-gradient-to-b from-green-600 to-red-600" />
+            <div className="w-4 h-4 bg-red-600" />
           </div>
-          
           <div className="flex-1">
             <div className="mb-4">
               <p className={`text-xs font-medium tracking-wider ${isDark ? 'text-white/50' : 'text-black/50'}`}>PICKUP</p>
               <p className={`font-semibold ${isDark ? 'text-white' : 'text-black'}`}>
-                {load.pickup_city || load.origin_city}, {load.pickup_state || load.origin_state}
+                {load.pickup_city || load.origin_city}{load.pickup_state || load.origin_state ? `, ${load.pickup_state || load.origin_state}` : ''}
               </p>
               <p className={`text-sm truncate ${isDark ? 'text-white/60' : 'text-black/60'}`}>
-                {load.pickup_location || 'Address TBD'}
+                {load.pickup_location || load.origin_address || 'Address TBD'}
               </p>
             </div>
-            
             <div>
               <p className={`text-xs font-medium tracking-wider ${isDark ? 'text-white/50' : 'text-black/50'}`}>DELIVERY</p>
               <p className={`font-semibold ${isDark ? 'text-white' : 'text-black'}`}>
-                {load.delivery_city || load.destination_city}, {load.delivery_state || load.destination_state}
+                {load.delivery_city || load.destination_city}{load.delivery_state || load.destination_state ? `, ${load.delivery_state || load.destination_state}` : ''}
               </p>
               <p className={`text-sm truncate ${isDark ? 'text-white/60' : 'text-black/60'}`}>
-                {load.delivery_location || 'Address TBD'}
+                {load.delivery_location || load.destination_address || 'Address TBD'}
               </p>
             </div>
           </div>
@@ -72,19 +74,25 @@ const LoadOfferCard = ({ load, onAccept, onReject, onViewRoute, accepting, theme
       <div className="px-4 pb-4 grid grid-cols-3 gap-3">
         <div className={`p-3 text-center ${isDark ? 'bg-[#171717]' : 'bg-[#f5f5f5]'}`}>
           <p className={`text-xs ${isDark ? 'text-white/50' : 'text-black/50'}`}>DISTANCE</p>
-          <p className={`font-bold text-lg ${isDark ? 'text-white' : 'text-black'}`}>{estimatedMiles} mi</p>
+          <p className={`font-bold text-lg ${isDark ? 'text-white' : 'text-black'}`}>
+            {miles != null ? `${miles} mi` : '—'}
+          </p>
         </div>
         <div className={`p-3 text-center ${isDark ? 'bg-[#171717]' : 'bg-[#f5f5f5]'}`}>
           <p className={`text-xs ${isDark ? 'text-white/50' : 'text-black/50'}`}>EST. TIME</p>
-          <p className={`font-bold text-lg ${isDark ? 'text-white' : 'text-black'}`}>{estimatedTime}h</p>
+          <p className={`font-bold text-lg ${isDark ? 'text-white' : 'text-black'}`}>
+            {hours != null ? `${hours}h` : '—'}
+          </p>
         </div>
         <div className="bg-green-600/20 border border-green-600/50 p-3 text-center">
           <p className="text-xs text-green-500">PAY</p>
-          <p className="text-green-500 font-bold text-lg">${estimatedPay}</p>
+          <p className="text-green-500 font-bold text-lg">
+            {pay != null ? `$${Number(pay).toLocaleString()}` : '—'}
+          </p>
         </div>
       </div>
 
-      {/* Tags */}
+      {/* Equipment tags */}
       {(load.equipment_type || load.commodity) && (
         <div className="px-4 pb-4 flex gap-2 flex-wrap">
           {load.equipment_type && (
@@ -100,13 +108,13 @@ const LoadOfferCard = ({ load, onAccept, onReject, onViewRoute, accepting, theme
         </div>
       )}
 
-      {/* View Route */}
+      {/* View Route button */}
       <div className="px-4 pb-3">
         <button
           onClick={() => onViewRoute(load)}
-          className={`w-full py-3 flex items-center justify-center gap-2 transition-colors border ${
-            isDark 
-              ? 'bg-[#171717] hover:bg-[#262626] text-white border-[#262626]' 
+          className={`w-full py-3 flex items-center justify-center gap-2 border transition-colors ${
+            isDark
+              ? 'bg-[#171717] hover:bg-[#262626] text-white border-[#262626]'
               : 'bg-[#f5f5f5] hover:bg-[#e5e5e5] text-black border-[#e5e5e5]'
           }`}
         >
@@ -117,26 +125,34 @@ const LoadOfferCard = ({ load, onAccept, onReject, onViewRoute, accepting, theme
         </button>
       </div>
 
-      {/* Actions */}
+      {/* Accept error */}
+      {acceptError && (
+        <div className="mx-4 mb-3 bg-red-600/20 border border-red-600/50 px-4 py-3">
+          <p className="text-red-500 text-sm">{acceptError}</p>
+        </div>
+      )}
+
+      {/* Accept / Reject */}
       <div className={`flex border-t ${isDark ? 'border-[#262626]' : 'border-[#e5e5e5]'}`}>
         <button
           onClick={() => onReject(load)}
-          className={`flex-1 py-4 font-semibold transition-colors flex items-center justify-center gap-2 ${
+          disabled={accepting}
+          className={`flex-1 py-4 font-semibold tracking-wider transition-colors flex items-center justify-center gap-2 disabled:opacity-40 text-red-600 ${
             isDark ? 'hover:bg-red-600/10' : 'hover:bg-red-50'
-          } text-red-600`}
+          }`}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
           REJECT
         </button>
-        <div className={`w-px ${isDark ? 'bg-[#262626]' : 'bg-[#e5e5e5]'}`}></div>
+        <div className={`w-px ${isDark ? 'bg-[#262626]' : 'bg-[#e5e5e5]'}`} />
         <button
           onClick={() => onAccept(load)}
           disabled={accepting}
-          className={`flex-1 py-4 font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50 ${
+          className={`flex-1 py-4 font-semibold tracking-wider transition-colors flex items-center justify-center gap-2 disabled:opacity-40 text-green-600 ${
             isDark ? 'hover:bg-green-600/10' : 'hover:bg-green-50'
-          } text-green-600`}
+          }`}
         >
           {accepting ? (
             <div className="w-5 h-5 border-2 border-green-600/30 border-t-green-600 rounded-full animate-spin" />
@@ -156,32 +172,35 @@ const LoadOfferCard = ({ load, onAccept, onReject, onViewRoute, accepting, theme
 const ActiveLoadCard = ({ load, onViewRoute, onViewDetails, theme }) => {
   const isDark = theme === 'dark';
   const status = STATUS_CONFIG[load.status] || STATUS_CONFIG.assigned;
-  
+
   return (
     <div className={`border mb-3 ${isDark ? 'bg-[#0a0a0a] border-[#262626]' : 'bg-white border-[#e5e5e5]'}`}>
-      <div className="px-4 py-3 flex items-center justify-between">
+      <div
+        className="px-4 py-3 flex items-center justify-between cursor-pointer"
+        onClick={() => onViewDetails(load)}
+      >
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className={`font-bold ${isDark ? 'text-white' : 'text-black'}`}>
-              {load.order_number || `#${load.id?.slice(0, 6)}`}
+            <span className={`font-bold tracking-wider ${isDark ? 'text-white' : 'text-black'}`}>
+              {load.order_number || `LD-${load.id?.slice(0, 8).toUpperCase()}`}
             </span>
-            <span className={`${status.color} text-white text-xs px-2 py-0.5`}>
+            <span className={`${status.color} text-white text-xs px-2 py-0.5 tracking-wider`}>
               {status.label}
             </span>
           </div>
           <p className={`text-sm ${isDark ? 'text-white/60' : 'text-black/60'}`}>
-            {load.pickup_city}, {load.pickup_state} → {load.delivery_city}, {load.delivery_state}
+            {load.pickup_city || load.origin_city} → {load.delivery_city || load.destination_city}
           </p>
         </div>
         <svg className={`w-5 h-5 ${isDark ? 'text-white/40' : 'text-black/40'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
       </div>
-      
+
       <div className={`flex border-t ${isDark ? 'border-[#262626]' : 'border-[#e5e5e5]'}`}>
         <button
           onClick={() => onViewRoute(load)}
-          className={`flex-1 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-1 text-red-600 ${
+          className={`flex-1 py-3 text-sm font-medium tracking-wider transition-colors flex items-center justify-center gap-1 text-red-600 ${
             isDark ? 'hover:bg-red-600/10' : 'hover:bg-red-50'
           }`}
         >
@@ -190,10 +209,10 @@ const ActiveLoadCard = ({ load, onViewRoute, onViewDetails, theme }) => {
           </svg>
           NAVIGATE
         </button>
-        <div className={`w-px ${isDark ? 'bg-[#262626]' : 'bg-[#e5e5e5]'}`}></div>
+        <div className={`w-px ${isDark ? 'bg-[#262626]' : 'bg-[#e5e5e5]'}`} />
         <button
           onClick={() => onViewDetails(load)}
-          className={`flex-1 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-1 ${
+          className={`flex-1 py-3 text-sm font-medium tracking-wider transition-colors flex items-center justify-center gap-1 ${
             isDark ? 'text-white/60 hover:bg-[#171717]' : 'text-black/60 hover:bg-[#f5f5f5]'
           }`}
         >
@@ -212,18 +231,18 @@ const MyLoadsScreen = ({ onNavigate, onSelectLoad, onViewMap }) => {
   const [availableLoads, setAvailableLoads] = useState([]);
   const [activeLoads, setActiveLoads] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [accepting, setAccepting] = useState(null);
+  const [accepting, setAccepting] = useState(null); // load id being accepted
+  const [acceptError, setAcceptError] = useState(null); // { loadId, message }
   const [tab, setTab] = useState('available');
-
   const isDark = theme === 'dark';
 
   const fetchLoads = async () => {
     try {
       const data = await api('/loads');
-      const available = data.filter(l => 
-        l.status === 'available' || l.status === 'assigned' || l.status === 'pending'
+      const available = data.filter(l =>
+        ['available', 'assigned', 'pending'].includes(l.status)
       );
-      const active = data.filter(l => 
+      const active = data.filter(l =>
         !['available', 'assigned', 'pending', 'delivered', 'rejected'].includes(l.status)
       );
       setAvailableLoads(available);
@@ -243,23 +262,29 @@ const MyLoadsScreen = ({ onNavigate, onSelectLoad, onViewMap }) => {
 
   const handleAccept = async (load) => {
     setAccepting(load.id);
+    setAcceptError(null);
     try {
+      // Try the dedicated accept endpoint first
       await api(`/loads/${load.id}/accept`, {
         method: 'POST',
-        body: JSON.stringify({ accepted: true })
+        body: JSON.stringify({ accepted: true }),
       });
       await fetchLoads();
       setTab('active');
-    } catch (err) {
+      // Navigate to route screen
+      onSelectLoad(load, 'route');
+    } catch {
+      // Fall back to status update
       try {
         await api(`/loads/${load.id}/status`, {
           method: 'POST',
-          body: JSON.stringify({ status: 'en_route_pickup', note: 'Load accepted' })
+          body: JSON.stringify({ status: 'en_route_pickup', note: 'Load accepted by driver' }),
         });
         await fetchLoads();
         setTab('active');
-      } catch (e) {
-        console.error('Failed to accept:', e);
+        onSelectLoad(load, 'route');
+      } catch (err2) {
+        setAcceptError({ loadId: load.id, message: err2.message || 'Failed to accept load. Please try again.' });
       }
     } finally {
       setAccepting(null);
@@ -270,32 +295,34 @@ const MyLoadsScreen = ({ onNavigate, onSelectLoad, onViewMap }) => {
     try {
       await api(`/loads/${load.id}/reject`, {
         method: 'POST',
-        body: JSON.stringify({ rejected: true, reason: 'Driver rejected' })
+        body: JSON.stringify({ rejected: true, reason: 'Driver rejected' }),
       });
       await fetchLoads();
-    } catch (err) {
+    } catch {
+      // Optimistically remove from list if endpoint isn't available
       setAvailableLoads(prev => prev.filter(l => l.id !== load.id));
     }
   };
 
   if (loading) {
     return (
-      <div className={`flex-1 flex items-center justify-center ${isDark ? 'bg-black' : 'bg-white'}`}>
-        <div className="animate-spin w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full" />
+      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-black' : 'bg-white'}`}>
+        <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className={`flex-1 flex flex-col font-['Oxanium'] ${isDark ? 'bg-black' : 'bg-white'}`}>
+    <div className={`min-h-screen flex flex-col font-['Oxanium'] ${isDark ? 'bg-black' : 'bg-white'}`}>
       {/* Header */}
       <div className={`px-4 py-4 flex items-center justify-between border-b ${isDark ? 'border-[#262626]' : 'border-[#e5e5e5]'}`}>
         <div>
           <h1 className={`text-xl font-bold tracking-wider ${isDark ? 'text-white' : 'text-black'}`}>MY LOADS</h1>
-          <p className={`text-sm ${isDark ? 'text-white/60' : 'text-black/60'}`}>Welcome, {user?.full_name?.split(' ')[0]}</p>
+          <p className={`text-sm ${isDark ? 'text-white/60' : 'text-black/60'}`}>
+            Welcome, {user?.full_name?.split(' ')[0]}
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Theme Toggle */}
           <button
             onClick={toggleTheme}
             className={`w-10 h-10 flex items-center justify-center border ${
@@ -312,7 +339,6 @@ const MyLoadsScreen = ({ onNavigate, onSelectLoad, onViewMap }) => {
               </svg>
             )}
           </button>
-          {/* Menu */}
           <button
             onClick={() => onNavigate('menu')}
             className={`w-10 h-10 flex items-center justify-center ${isDark ? 'text-white' : 'text-black'}`}
@@ -326,38 +352,24 @@ const MyLoadsScreen = ({ onNavigate, onSelectLoad, onViewMap }) => {
 
       {/* Tabs */}
       <div className={`flex border-b ${isDark ? 'border-[#262626]' : 'border-[#e5e5e5]'}`}>
-        <button
-          onClick={() => setTab('available')}
-          className={`flex-1 py-3 text-sm font-medium tracking-wider transition-colors relative ${
-            tab === 'available' 
-              ? 'text-red-600' 
-              : isDark ? 'text-white/50' : 'text-black/50'
-          }`}
-        >
-          AVAILABLE
-          {availableLoads.length > 0 && (
-            <span className="ml-1 bg-red-600 text-white text-xs px-1.5 py-0.5">
-              {availableLoads.length}
-            </span>
-          )}
-          {tab === 'available' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600" />}
-        </button>
-        <button
-          onClick={() => setTab('active')}
-          className={`flex-1 py-3 text-sm font-medium tracking-wider transition-colors relative ${
-            tab === 'active' 
-              ? 'text-red-600' 
-              : isDark ? 'text-white/50' : 'text-black/50'
-          }`}
-        >
-          ACTIVE
-          {activeLoads.length > 0 && (
-            <span className="ml-1 bg-red-600 text-white text-xs px-1.5 py-0.5">
-              {activeLoads.length}
-            </span>
-          )}
-          {tab === 'active' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600" />}
-        </button>
+        {[
+          { id: 'available', label: 'AVAILABLE', count: availableLoads.length },
+          { id: 'active',    label: 'ACTIVE',    count: activeLoads.length    },
+        ].map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`flex-1 py-3 text-sm font-medium tracking-wider transition-colors relative ${
+              tab === t.id ? 'text-red-600' : isDark ? 'text-white/50' : 'text-black/50'
+            }`}
+          >
+            {t.label}
+            {t.count > 0 && (
+              <span className="ml-1 bg-red-600 text-white text-xs px-1.5 py-0.5">{t.count}</span>
+            )}
+            {tab === t.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600" />}
+          </button>
+        ))}
       </div>
 
       {/* Content */}
@@ -370,7 +382,7 @@ const MyLoadsScreen = ({ onNavigate, onSelectLoad, onViewMap }) => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
               </div>
-              <h3 className={`font-medium mb-1 ${isDark ? 'text-white' : 'text-black'}`}>NO LOADS AVAILABLE</h3>
+              <h3 className={`font-medium mb-1 tracking-wider ${isDark ? 'text-white' : 'text-black'}`}>NO LOADS AVAILABLE</h3>
               <p className={`text-sm ${isDark ? 'text-white/50' : 'text-black/50'}`}>New loads will appear here</p>
             </div>
           ) : (
@@ -382,6 +394,7 @@ const MyLoadsScreen = ({ onNavigate, onSelectLoad, onViewMap }) => {
                 onReject={handleReject}
                 onViewRoute={(l) => onViewMap(l)}
                 accepting={accepting === load.id}
+                acceptError={acceptError?.loadId === load.id ? acceptError.message : null}
                 theme={theme}
               />
             ))
@@ -394,7 +407,7 @@ const MyLoadsScreen = ({ onNavigate, onSelectLoad, onViewMap }) => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
               </div>
-              <h3 className={`font-medium mb-1 ${isDark ? 'text-white' : 'text-black'}`}>NO ACTIVE LOADS</h3>
+              <h3 className={`font-medium mb-1 tracking-wider ${isDark ? 'text-white' : 'text-black'}`}>NO ACTIVE LOADS</h3>
               <p className={`text-sm ${isDark ? 'text-white/50' : 'text-black/50'}`}>Accept a load to get started</p>
             </div>
           ) : (
