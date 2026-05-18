@@ -2,14 +2,27 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useDriverApp } from './DriverAppProvider';
 
 const STATUS_CONFIG = {
-  assigned:          { label: 'ASSIGNED',            color: 'bg-amber-600',  next: 'en_route_pickup',   nextLabel: 'START ROUTE TO PICKUP'   },
-  en_route_pickup:   { label: 'EN ROUTE TO PICKUP',  color: 'bg-blue-600',   next: 'arrived_pickup',    nextLabel: 'ARRIVED AT PICKUP'        },
-  arrived_pickup:    { label: 'AT PICKUP',           color: 'bg-amber-600',  next: 'loaded',            nextLabel: 'LOADED & DEPARTING'       },
-  loaded:            { label: 'LOADED',              color: 'bg-indigo-600', next: 'en_route_delivery', nextLabel: 'START ROUTE TO DELIVERY'  },
-  en_route_delivery: { label: 'EN ROUTE TO DELIVERY',color: 'bg-blue-600',   next: 'arrived_delivery',  nextLabel: 'ARRIVED AT DELIVERY'      },
-  arrived_delivery:  { label: 'AT DELIVERY',         color: 'bg-amber-600',  next: 'delivered',         nextLabel: 'MARK AS DELIVERED'        },
-  delivered:         { label: 'DELIVERED',           color: 'bg-green-600',  next: null                                                        },
-  problem:           { label: 'PROBLEM REPORTED',    color: 'bg-red-600',    next: null                                                        },
+  assigned:          { label: 'ASSIGNED',             color: 'bg-amber-600',  next: 'en_route_pickup',   nextLabel: 'START ROUTE TO PICKUP'   },
+  en_route_pickup:   { label: 'EN ROUTE TO PICKUP',   color: 'bg-blue-600',   next: 'arrived_pickup',    nextLabel: 'ARRIVED AT PICKUP'        },
+  arrived_pickup:    { label: 'AT PICKUP',            color: 'bg-amber-600',  next: 'loaded',            nextLabel: 'LOADED & DEPARTING'       },
+  loaded:            { label: 'LOADED',               color: 'bg-indigo-600', next: 'en_route_delivery', nextLabel: 'START ROUTE TO DELIVERY'  },
+  en_route_delivery: { label: 'EN ROUTE TO DELIVERY', color: 'bg-blue-600',   next: 'arrived_delivery',  nextLabel: 'ARRIVED AT DELIVERY'      },
+  arrived_delivery:  { label: 'AT DELIVERY',          color: 'bg-amber-600',  next: 'delivered',         nextLabel: 'MARK AS DELIVERED'        },
+  delivered:         { label: 'DELIVERED',            color: 'bg-green-600',  next: null                                                        },
+  problem:           { label: 'PROBLEM REPORTED',     color: 'bg-red-600',    next: null                                                        },
+};
+
+// Which status transitions require capturing an actual time
+const TIME_CAPTURES = {
+  arrived_pickup:   { field: 'actual_pickup_in',   label: 'PICKUP IN TIME'    },
+  loaded:           { field: 'actual_pickup_out',  label: 'PICKUP OUT TIME'   },
+  arrived_delivery: { field: 'actual_delivery_in', label: 'DELIVERY IN TIME'  },
+};
+
+const toDatetimeLocal = (date = new Date()) => {
+  const d = new Date(date);
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
 };
 
 const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
@@ -19,6 +32,9 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
   const [updateError, setUpdateError] = useState('');
   const [showProblem, setShowProblem] = useState(false);
   const [problemNote, setProblemNote] = useState('');
+
+  // Time capture modal state
+  const [pendingStatus, setPendingStatus] = useState(null); // { nextStatus, field, label, timeValue }
 
   // POD (Proof of Delivery) state
   const [podStep, setPodStep] = useState(null); // null | 'preview'
@@ -47,7 +63,7 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
     }
   };
 
-  const updateStatus = async (newStatus, note = '') => {
+  const updateStatus = async (newStatus, note = '', extraFields = {}) => {
     setUpdating(true);
     setUpdateError('');
     try {
@@ -58,6 +74,7 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
           note,
           latitude: currentLocation?.lat,
           longitude: currentLocation?.lng,
+          ...extraFields,
         }),
       });
       await refreshLoad();
@@ -68,6 +85,30 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
     } finally {
       setUpdating(false);
     }
+  };
+
+  // Called when driver taps a status button
+  const handleStatusButton = (nextStatus) => {
+    const capture = TIME_CAPTURES[nextStatus];
+    if (capture) {
+      setPendingStatus({
+        nextStatus,
+        field: capture.field,
+        label: capture.label,
+        timeValue: toDatetimeLocal(),
+      });
+    } else {
+      updateStatus(nextStatus);
+    }
+  };
+
+  // Confirm time capture modal
+  const handleTimeConfirm = async () => {
+    if (!pendingStatus) return;
+    const { nextStatus, field, timeValue } = pendingStatus;
+    const isoTime = new Date(timeValue).toISOString();
+    setPendingStatus(null);
+    await updateStatus(nextStatus, '', { [field]: isoTime });
   };
 
   // POD handlers
@@ -83,17 +124,14 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
     setUpdating(true);
     setUpdateError('');
     try {
-      // Upload the POD photo
       const formData = new FormData();
       formData.append('document', podFile);
       formData.append('document_type', 'proof_of_delivery');
       try {
         await api(`/loads/${load.id}/pod`, { method: 'POST', headers: {}, body: formData });
       } catch {
-        // Fallback: upload via general documents endpoint
         await api('/documents/scan', { method: 'POST', headers: {}, body: formData });
       }
-      // Mark as delivered
       await api(`/loads/${load.id}/status`, {
         method: 'POST',
         body: JSON.stringify({
@@ -101,6 +139,7 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
           note: 'Delivery confirmed with proof of delivery photo',
           latitude: currentLocation?.lat,
           longitude: currentLocation?.lng,
+          actual_delivery_out: new Date().toISOString(),
         }),
       });
       await refreshLoad();
@@ -123,6 +162,15 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
     });
   };
 
+  const formatActualTime = (dateStr) => {
+    if (!dateStr) return null;
+    return new Date(dateStr).toLocaleString('en-US', {
+      month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+    });
+  };
+
+  const hasAnyActualTime = load.actual_pickup_in || load.actual_pickup_out || load.actual_delivery_in || load.actual_delivery_out;
+
   return (
     <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
       {/* Header */}
@@ -140,7 +188,6 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
             {status.label}
           </span>
         </div>
-        {/* Chat button */}
         <button
           onClick={() => onOpenChat?.(load)}
           className="w-10 h-10 flex items-center justify-center border border-red-600/50 text-red-500 hover:bg-red-600/10 transition-colors"
@@ -215,6 +262,39 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
           </div>
         </div>
 
+        {/* Actual Times */}
+        {hasAnyActualTime && (
+          <div className={`border p-4 ${card}`}>
+            <p className={`text-xs tracking-wider mb-3 ${sub}`}>ACTUAL TIMES</p>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <p className={`text-xs ${sub}`}>Pickup In</p>
+                <p className={`font-medium text-sm ${formatActualTime(load.actual_pickup_in) ? text : sub}`}>
+                  {formatActualTime(load.actual_pickup_in) || '—'}
+                </p>
+              </div>
+              <div>
+                <p className={`text-xs ${sub}`}>Pickup Out</p>
+                <p className={`font-medium text-sm ${formatActualTime(load.actual_pickup_out) ? text : sub}`}>
+                  {formatActualTime(load.actual_pickup_out) || '—'}
+                </p>
+              </div>
+              <div>
+                <p className={`text-xs ${sub}`}>Delivery In</p>
+                <p className={`font-medium text-sm ${formatActualTime(load.actual_delivery_in) ? text : sub}`}>
+                  {formatActualTime(load.actual_delivery_in) || '—'}
+                </p>
+              </div>
+              <div>
+                <p className={`text-xs ${sub}`}>Delivery Out</p>
+                <p className={`font-medium text-sm ${formatActualTime(load.actual_delivery_out) ? text : sub}`}>
+                  {formatActualTime(load.actual_delivery_out) || '—'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Map button */}
         {onViewMap && (
           <button
@@ -239,10 +319,52 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
           </div>
         )}
 
+        {/* ── Time Capture Modal ─────────────────────────────────── */}
+        {pendingStatus && (
+          <div className={`border p-4 space-y-4 ${card}`}>
+            <div>
+              <p className={`text-sm font-bold tracking-wider ${text}`}>{pendingStatus.label}</p>
+              <p className={`text-xs mt-1 ${sub}`}>Confirm the actual time. Adjust if needed before recording.</p>
+            </div>
+            <input
+              type="datetime-local"
+              value={pendingStatus.timeValue}
+              onChange={e => setPendingStatus(prev => ({ ...prev, timeValue: e.target.value }))}
+              className={`w-full border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 ${
+                isDark
+                  ? 'bg-[#171717] border-[#262626] text-white'
+                  : 'bg-[#f5f5f5] border-[#e5e5e5] text-black'
+              }`}
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => setPendingStatus(null)}
+                disabled={updating}
+                className={`flex-1 border py-3 text-sm tracking-wider disabled:opacity-40 ${
+                  isDark ? 'border-[#262626] text-white/60' : 'border-[#e5e5e5] text-black/60'
+                }`}
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={handleTimeConfirm}
+                disabled={updating || !pendingStatus.timeValue}
+                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-600/40 text-white py-3 text-sm tracking-wider flex items-center justify-center gap-2"
+              >
+                {updating ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    RECORDING...
+                  </>
+                ) : 'RECORD & CONTINUE'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* ── Status CTA ─────────────────────────────────────────── */}
-        {status.next && load.status !== 'delivered' && load.status !== 'problem' && (
+        {!pendingStatus && status.next && load.status !== 'delivered' && load.status !== 'problem' && (
           status.next === 'delivered' ? (
-            // POD capture required before marking delivered
             podStep === null ? (
               <div>
                 <div className="bg-amber-600/20 border border-amber-600/50 px-4 py-3 mb-3">
@@ -261,7 +383,6 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
                 </button>
               </div>
             ) : (
-              // POD preview + confirm
               <div className={`border p-4 space-y-3 ${card}`}>
                 <p className={`text-sm font-semibold tracking-wider ${text}`}>PROOF OF DELIVERY</p>
                 <img
@@ -297,9 +418,8 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
               </div>
             )
           ) : (
-            // Regular status update
             <button
-              onClick={() => updateStatus(status.next)}
+              onClick={() => handleStatusButton(status.next)}
               disabled={updating}
               className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white font-semibold py-4 tracking-wider transition-colors flex items-center justify-center gap-2"
             >
@@ -329,7 +449,7 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
         )}
 
         {/* Problem Report */}
-        {load.status !== 'delivered' && load.status !== 'problem' && (
+        {!pendingStatus && load.status !== 'delivered' && load.status !== 'problem' && (
           !showProblem ? (
             <button
               onClick={() => setShowProblem(true)}
