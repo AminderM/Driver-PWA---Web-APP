@@ -97,7 +97,7 @@ const DriverSignupScreen = ({ inviteToken }) => {
               d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10l2 2h8l2-2zM13 8h4l2 4v4h-6V8z" />
           </svg>
         </div>
-        <h1 className={`text-2xl font-bold tracking-wider ${text}`}>DRIVER TMS</h1>
+        <h1 className={`text-2xl font-bold tracking-wider ${text}`}>INTEGRA TMS</h1>
         <p className={`mt-1 text-sm ${subtext}`}>Complete your account setup</p>
       </div>
 
@@ -106,7 +106,15 @@ const DriverSignupScreen = ({ inviteToken }) => {
         {inviteData && (
           <div className={`border p-4 mb-6 ${card}`}>
             <p className={`text-xs tracking-wider mb-1 ${subtext}`}>INVITED BY</p>
-            <p className={`font-bold tracking-wider ${text}`}>{inviteData.company_name}</p>
+            <p className={`font-bold tracking-wider mb-3 ${text}`}>{inviteData.company_name}</p>
+            {inviteData.user_type && (
+              <>
+                <p className={`text-xs tracking-wider mb-1 ${subtext}`}>ACCOUNT TYPE</p>
+                <span className="text-xs bg-red-600 text-white px-2 py-0.5 tracking-wider">
+                  {({ driver: 'DRIVER', owner_operator: 'OWNER OPERATOR', carrier: 'CARRIER' })[inviteData.user_type] || inviteData.user_type.toUpperCase()}
+                </span>
+              </>
+            )}
           </div>
         )}
 

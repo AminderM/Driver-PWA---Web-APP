@@ -12,13 +12,18 @@ import SettingsScreen from './SettingsScreen';
 import RouteScreen from './RouteScreen';
 import MapScreen from './MapScreen';
 import AnalyticsScreen from './AnalyticsScreen';
+import TruckScreen from './TruckScreen';
+import FleetScreen from './FleetScreen';
+import LoadsBoardScreen from './LoadsBoardScreen';
 
 // Screen management
 const DriverAppContent = () => {
-  const { user, profileComplete, completeProfile, inviteToken } = useDriverApp();
+  const { user, profileComplete, completeProfile, inviteToken, userType } = useDriverApp();
   const [currentScreen, setCurrentScreen] = useState('loads');
   const [selectedLoad, setSelectedLoad] = useState(null);
   const [showMenu, setShowMenu] = useState(false);
+
+  const homeScreen = userType === 'carrier' ? 'fleet' : 'loads';
 
   // Not logged in
   if (!user) {
@@ -28,7 +33,7 @@ const DriverAppContent = () => {
     return <DriverLogin />;
   }
 
-  // First login — show document scan flow with dispatcher-required docs from user record
+  // First login — show document scan flow
   if (!profileComplete) {
     return (
       <DocumentScanScreen
@@ -41,7 +46,7 @@ const DriverAppContent = () => {
   // Menu overlay
   if (showMenu) {
     return (
-      <MenuScreen 
+      <MenuScreen
         onNavigate={(screen) => {
           setCurrentScreen(screen);
           setShowMenu(false);
@@ -51,102 +56,99 @@ const DriverAppContent = () => {
     );
   }
 
-  // Screen router
   const goBack = () => {
-    setCurrentScreen('loads');
+    setCurrentScreen(homeScreen);
     setSelectedLoad(null);
   };
 
   const goToLoads = () => {
-    setCurrentScreen('loads');
+    setCurrentScreen(homeScreen);
     setSelectedLoad(null);
   };
 
   switch (currentScreen) {
     case 'ai':
       return <AIAssistantScreen onBack={goBack} />;
-    
+
     case 'analytics':
       return <AnalyticsScreen onBack={goBack} />;
-    
+
     case 'scan':
       return <DocumentScanScreen onComplete={() => setCurrentScreen('profile')} />;
 
     case 'profile':
       return <ProfileScreen onBack={goBack} onOpenScanner={() => setCurrentScreen('scan')} />;
-    
+
     case 'settings':
       return <SettingsScreen onBack={goBack} />;
-    
+
+    case 'truck':
+      return <TruckScreen onBack={goBack} />;
+
+    case 'fleet':
+      return (
+        <FleetScreen
+          onBack={goBack}
+          onNavigate={(screen) => setCurrentScreen(screen)}
+        />
+      );
+
+    case 'loads-board':
+      return <LoadsBoardScreen onBack={goBack} />;
+
     case 'map':
       return selectedLoad ? (
         <MapScreen load={selectedLoad} onBack={goBack} />
       ) : (
-        <MyLoadsScreen 
+        <MyLoadsScreen
           onNavigate={(screen) => screen === 'menu' ? setShowMenu(true) : setCurrentScreen(screen)}
-          onSelectLoad={(load, type) => {
-            setSelectedLoad(load);
-            setCurrentScreen(type);
-          }}
-          onViewMap={(load) => {
-            setSelectedLoad(load);
-            setCurrentScreen('map');
-          }}
+          onSelectLoad={(load, type) => { setSelectedLoad(load); setCurrentScreen(type); }}
+          onViewMap={(load) => { setSelectedLoad(load); setCurrentScreen('map'); }}
         />
       );
-    
+
     case 'route':
       return selectedLoad ? (
-        <RouteScreen 
-          load={selectedLoad} 
+        <RouteScreen
+          load={selectedLoad}
           onBack={goToLoads}
           onViewMap={() => setCurrentScreen('map')}
         />
       ) : (
-        <MyLoadsScreen 
+        <MyLoadsScreen
           onNavigate={(screen) => screen === 'menu' ? setShowMenu(true) : setCurrentScreen(screen)}
-          onSelectLoad={(load, type) => {
-            setSelectedLoad(load);
-            setCurrentScreen(type);
-          }}
-          onViewMap={(load) => {
-            setSelectedLoad(load);
-            setCurrentScreen('map');
-          }}
+          onSelectLoad={(load, type) => { setSelectedLoad(load); setCurrentScreen(type); }}
+          onViewMap={(load) => { setSelectedLoad(load); setCurrentScreen('map'); }}
         />
       );
-    
+
     case 'docs':
       return selectedLoad ? (
         <DocumentsScreen load={selectedLoad} onBack={goToLoads} />
       ) : (
-        <MyLoadsScreen 
+        <MyLoadsScreen
           onNavigate={(screen) => screen === 'menu' ? setShowMenu(true) : setCurrentScreen(screen)}
-          onSelectLoad={(load, type) => {
-            setSelectedLoad(load);
-            setCurrentScreen(type);
-          }}
-          onViewMap={(load) => {
-            setSelectedLoad(load);
-            setCurrentScreen('map');
-          }}
+          onSelectLoad={(load, type) => { setSelectedLoad(load); setCurrentScreen(type); }}
+          onViewMap={(load) => { setSelectedLoad(load); setCurrentScreen('map'); }}
         />
       );
-    
+
     case 'loads':
     case 'dashboard':
     default:
+      if (userType === 'carrier') {
+        return (
+          <FleetScreen
+            onBack={() => {}}
+            onNavigate={(screen) => setCurrentScreen(screen)}
+          />
+        );
+      }
       return (
-        <MyLoadsScreen 
+        <MyLoadsScreen
           onNavigate={(screen) => screen === 'menu' ? setShowMenu(true) : setCurrentScreen(screen)}
-          onSelectLoad={(load, type) => {
-            setSelectedLoad(load);
-            setCurrentScreen(type);
-          }}
-          onViewMap={(load) => {
-            setSelectedLoad(load);
-            setCurrentScreen('map');
-          }}
+          onSelectLoad={(load, type) => { setSelectedLoad(load); setCurrentScreen(type); }}
+          onViewMap={(load) => { setSelectedLoad(load); setCurrentScreen('map'); }}
         />
       );
   }
