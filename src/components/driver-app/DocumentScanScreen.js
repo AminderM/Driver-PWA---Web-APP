@@ -1,19 +1,50 @@
 import React, { useState, useRef } from 'react';
 import { useDriverApp } from './DriverAppProvider';
 
-const DOCUMENT_TYPES = [
-  { value: 'drivers_license', label: "Driver's License",    emoji: '🪪' },
-  { value: 'abstract',        label: 'Driver Abstract',     emoji: '📋' },
-  { value: 'sin_card',        label: 'SIN Card',            emoji: '🔒' },
-  { value: 'void_cheque',     label: 'Void Cheque',         emoji: '🏦' },
-  { value: 'medical_card',    label: 'Medical Card',        emoji: '🏥' },
-  { value: 'hazmat_cert',     label: 'Hazmat Certification',emoji: '☢️' },
-  { value: 'twic_card',       label: 'TWIC Card',           emoji: '🪪' },
-  { value: 'other',           label: 'Other Document',      emoji: '📄' },
-];
+const ALL_DOC_TYPES = {
+  drivers_license:      { value: 'drivers_license',      label: "Driver's License",       emoji: '🪪' },
+  abstract:             { value: 'abstract',              label: 'Driver Abstract',         emoji: '📋' },
+  sin_card:             { value: 'sin_card',              label: 'SIN Card',                emoji: '🔒' },
+  void_cheque:          { value: 'void_cheque',           label: 'Void Cheque',             emoji: '🏦' },
+  medical_card:         { value: 'medical_card',          label: 'Medical Card',            emoji: '🏥' },
+  hazmat_cert:          { value: 'hazmat_cert',           label: 'Hazmat Certification',    emoji: '☢️' },
+  twic_card:            { value: 'twic_card',             label: 'TWIC Card',               emoji: '🪪' },
+  vehicle_registration: { value: 'vehicle_registration',  label: 'Vehicle Registration',    emoji: '🚗' },
+  cvor_certificate:     { value: 'cvor_certificate',      label: 'CVOR / NSC Certificate',  emoji: '📜' },
+  cargo_insurance:      { value: 'cargo_insurance',       label: 'Cargo Insurance',         emoji: '🛡️' },
+  liability_insurance:  { value: 'liability_insurance',   label: 'Liability Insurance',     emoji: '🛡️' },
+  lease_agreement:      { value: 'lease_agreement',       label: 'Lease Agreement',         emoji: '📝' },
+  ifta_license:         { value: 'ifta_license',          label: 'IFTA License',            emoji: '⛽' },
+  business_registration:{ value: 'business_registration', label: 'Business Registration',   emoji: '🏢' },
+  gst_hst_registration: { value: 'gst_hst_registration',  label: 'GST/HST Registration',   emoji: '📑' },
+  operating_authority:  { value: 'operating_authority',   label: 'Operating Authority',     emoji: '⚖️' },
+  other:                { value: 'other',                  label: 'Other Document',          emoji: '📄' },
+};
+
+const DOC_KEYS_BY_TYPE = {
+  driver: [
+    'drivers_license', 'abstract', 'sin_card', 'void_cheque',
+    'medical_card', 'hazmat_cert', 'twic_card', 'other',
+  ],
+  owner_operator: [
+    'drivers_license', 'abstract', 'sin_card', 'void_cheque',
+    'medical_card', 'hazmat_cert', 'twic_card',
+    'vehicle_registration', 'cvor_certificate', 'cargo_insurance',
+    'liability_insurance', 'lease_agreement', 'ifta_license', 'other',
+  ],
+  carrier: [
+    'cvor_certificate', 'cargo_insurance', 'liability_insurance',
+    'business_registration', 'gst_hst_registration', 'operating_authority', 'other',
+  ],
+};
+
+const getDocumentTypes = (userType) => {
+  const keys = DOC_KEYS_BY_TYPE[userType] || DOC_KEYS_BY_TYPE.driver;
+  return keys.map(k => ALL_DOC_TYPES[k]);
+};
 
 const DocumentScanScreen = ({ onComplete, requiredDocs = [] }) => {
-  const { api, mergeUserData, theme } = useDriverApp();
+  const { api, mergeUserData, theme, userType } = useDriverApp();
   const [step, setStep] = useState('welcome');
   const [docType, setDocType] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -26,6 +57,8 @@ const DocumentScanScreen = ({ onComplete, requiredDocs = [] }) => {
   const card    = isDark ? 'bg-[#0a0a0a] border-[#262626]' : 'bg-white border-[#e5e5e5]';
   const text    = isDark ? 'text-white'     : 'text-black';
   const subtext = isDark ? 'text-white/60'  : 'text-black/60';
+
+  const documentTypes = getDocumentTypes(userType);
 
   const handleFileChange = (e) => {
     const f = e.target.files?.[0];
@@ -67,6 +100,8 @@ const DocumentScanScreen = ({ onComplete, requiredDocs = [] }) => {
     setStep('select-type');
   };
 
+  const completeLabel = userType === 'carrier' ? 'GO TO MY FLEET' : 'GO TO MY LOADS';
+
   if (step === 'welcome') return (
     <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
       <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
@@ -78,7 +113,9 @@ const DocumentScanScreen = ({ onComplete, requiredDocs = [] }) => {
         </div>
         <h1 className={`text-2xl font-bold tracking-wider mb-3 ${text}`}>COMPLETE YOUR PROFILE</h1>
         <p className={`text-sm mb-10 max-w-xs leading-relaxed ${subtext}`}>
-          Scan your driver's license or other documents to get started. Your dispatcher may have already added your details.
+          {userType === 'carrier'
+            ? 'Upload your business documents to complete your carrier profile.'
+            : "Scan your driver's license or other documents to get started."}
         </p>
         <div className="w-full space-y-3">
           <button
@@ -105,7 +142,7 @@ const DocumentScanScreen = ({ onComplete, requiredDocs = [] }) => {
         <h1 className={`text-xl font-bold tracking-wider ${text}`}>SELECT DOCUMENT TYPE</h1>
       </div>
       <div className="flex-1 px-6 py-6 space-y-3">
-        {DOCUMENT_TYPES.map((dt) => {
+        {documentTypes.map((dt) => {
           const isRequired = requiredDocs.includes(dt.value);
           return (
             <button
@@ -146,7 +183,7 @@ const DocumentScanScreen = ({ onComplete, requiredDocs = [] }) => {
   );
 
   if (step === 'preview') {
-    const label = DOCUMENT_TYPES.find(d => d.value === docType)?.label || 'Document';
+    const label = ALL_DOC_TYPES[docType]?.label || 'Document';
     return (
       <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
         <div className={`pt-14 pb-6 px-6 border-b ${isDark ? 'border-[#262626]' : 'border-[#e5e5e5]'}`}>
@@ -194,7 +231,7 @@ const DocumentScanScreen = ({ onComplete, requiredDocs = [] }) => {
   );
 
   if (step === 'success') {
-    const label = DOCUMENT_TYPES.find(d => d.value === docType)?.label || 'Document';
+    const label = ALL_DOC_TYPES[docType]?.label || 'Document';
     return (
       <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
         <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
@@ -221,7 +258,7 @@ const DocumentScanScreen = ({ onComplete, requiredDocs = [] }) => {
               onClick={onComplete}
               className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-4 tracking-wider transition-colors"
             >
-              GO TO MY LOADS
+              {completeLabel}
             </button>
           </div>
         </div>

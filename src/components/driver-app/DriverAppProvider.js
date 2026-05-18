@@ -83,6 +83,7 @@ export const DriverAppProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [activeLoadId, setActiveLoadId] = useState(null);
   const [profileComplete, setProfileComplete] = useState(false);
+  const userType = user?.user_type || 'driver';
   const [inviteToken, setInviteToken] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('invite') || null;
@@ -171,7 +172,8 @@ export const DriverAppProvider = ({ children }) => {
   // Location tracking
   useEffect(() => {
     if (!locationGranted || !user) return;
-    
+    if (user?.user_type === 'carrier') return;
+
     const interval = activeLoadId ? 30000 : 180000;
     
     const updateLocation = async (position) => {
@@ -330,6 +332,7 @@ export const DriverAppProvider = ({ children }) => {
 
   const value = {
     user, token, login, logout, api, devLogin,
+    userType,
     currentLocation, activeLoadId, setActiveLoadId,
     locationGranted, requestLocation,
     profileComplete, completeProfile, mergeUserData,
@@ -348,7 +351,7 @@ export const DriverAppProvider = ({ children }) => {
 
   if (!isMobile) return <MobileBlockScreen theme={theme} />;
   
-  if (user && !locationGranted) {
+  if (user && !locationGranted && user?.user_type !== 'carrier') {
     return <LocationPermissionScreen onRetry={requestLocation} error={locationError} theme={theme} />;
   }
 

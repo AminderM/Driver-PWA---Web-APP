@@ -1,17 +1,36 @@
 import React from 'react';
 import { useDriverApp } from './DriverAppProvider';
 
+const MENU_ITEMS_BY_TYPE = {
+  driver: [
+    { id: 'ai',        label: 'AI ASSISTANT', sublabel: 'Ask me anything',           icon: '🤖' },
+    { id: 'loads',     label: 'MY LOADS',     sublabel: 'View assigned loads',        icon: '📦' },
+    { id: 'analytics', label: 'MY ANALYTICS', sublabel: 'Earnings & performance',     icon: '📊' },
+    { id: 'profile',   label: 'PROFILE',      sublabel: 'Account details',            icon: '👤' },
+    { id: 'settings',  label: 'SETTINGS',     sublabel: 'App preferences',            icon: '⚙️' },
+  ],
+  owner_operator: [
+    { id: 'ai',        label: 'AI ASSISTANT', sublabel: 'Ask me anything',           icon: '🤖' },
+    { id: 'loads',     label: 'MY LOADS',     sublabel: 'View assigned loads',        icon: '📦' },
+    { id: 'analytics', label: 'MY ANALYTICS', sublabel: 'Earnings & performance',     icon: '📊' },
+    { id: 'truck',     label: 'MY TRUCK',     sublabel: 'Vehicle & insurance info',   icon: '🚛' },
+    { id: 'profile',   label: 'PROFILE',      sublabel: 'Account details',            icon: '👤' },
+    { id: 'settings',  label: 'SETTINGS',     sublabel: 'App preferences',            icon: '⚙️' },
+  ],
+  carrier: [
+    { id: 'fleet',       label: 'MY FLEET',    sublabel: 'Drivers & owner operators', icon: '👥' },
+    { id: 'loads-board', label: 'LOADS BOARD', sublabel: 'Fleet load assignments',    icon: '📋' },
+    { id: 'analytics',   label: 'ANALYTICS',   sublabel: 'Fleet performance',         icon: '📊' },
+    { id: 'profile',     label: 'PROFILE',     sublabel: 'Account details',           icon: '👤' },
+    { id: 'settings',    label: 'SETTINGS',    sublabel: 'App preferences',           icon: '⚙️' },
+  ],
+};
+
 const MenuScreen = ({ onNavigate, onClose }) => {
-  const { user, logout, theme, toggleTheme } = useDriverApp();
+  const { user, logout, theme, toggleTheme, userType } = useDriverApp();
   const isDark = theme === 'dark';
 
-  const menuItems = [
-    { id: 'ai', label: 'AI ASSISTANT', sublabel: 'Ask me anything', icon: '🤖' },
-    { id: 'loads', label: 'MY LOADS', sublabel: 'View assigned loads', icon: '📦' },
-    { id: 'analytics', label: 'MY ANALYTICS', sublabel: 'Earnings & performance', icon: '📊' },
-    { id: 'profile', label: 'PROFILE', sublabel: 'Account details', icon: '👤' },
-    { id: 'settings', label: 'SETTINGS', sublabel: 'App preferences', icon: '⚙️' },
-  ];
+  const menuItems = MENU_ITEMS_BY_TYPE[userType] || MENU_ITEMS_BY_TYPE.driver;
 
   const handleLogout = () => {
     logout();

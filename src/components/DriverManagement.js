@@ -49,6 +49,8 @@ const DriverManagement = ({ onStatsUpdate }) => {
   const [inviteResult, setInviteResult] = useState(null);
   const [selectedDriver, setSelectedDriver] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
+  const [driverDocuments, setDriverDocuments] = useState([]);
+  const [docsLoading, setDocsLoading] = useState(false);
 
   const DRIVER_PWA_URL = 'https://driver-pwa.integratedtech.ca';
 
@@ -92,6 +94,18 @@ const DriverManagement = ({ onStatsUpdate }) => {
   useEffect(() => {
     loadDrivers();
   }, []);
+
+  // Fetch documents when a driver profile is opened
+  useEffect(() => {
+    if (!selectedDriver || !showDetailModal) return;
+    setDriverDocuments([]);
+    setDocsLoading(true);
+    fetchWithAuth(`${BACKEND_URL}/api/drivers/${selectedDriver.id}/documents`)
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setDriverDocuments(Array.isArray(data) ? data : []))
+      .catch(() => setDriverDocuments([]))
+      .finally(() => setDocsLoading(false));
+  }, [selectedDriver, showDetailModal]);
 
   const loadDrivers = async () => {
     setLoading(true);
@@ -1022,6 +1036,62 @@ const DriverManagement = ({ onStatsUpdate }) => {
                   </div>
                 </div>
               )}
+
+              {/* Scanned Documents */}
+              <div>
+                <h4 className="font-medium text-foreground mb-3">Scanned Documents</h4>
+                {docsLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="w-4 h-4 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin" />
+                    Loading documents...
+                  </div>
+                ) : driverDocuments.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No documents uploaded yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {driverDocuments.map((doc) => {
+                      const typeLabels = {
+                        drivers_license: "Driver's License",
+                        abstract: 'Driver Abstract',
+                        sin_card: 'SIN Card',
+                        void_cheque: 'Void Cheque',
+                        medical_card: 'Medical Card',
+                        hazmat_cert: 'Hazmat Certification',
+                        twic_card: 'TWIC Card',
+                        other: 'Other Document',
+                      };
+                      const label = typeLabels[doc.document_type] || doc.document_type || 'Document';
+                      const uploadedAt = doc.uploaded_at || doc.created_at;
+                      return (
+                        <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
+                          <div className="flex items-center gap-3">
+                            <i className="fas fa-file-alt text-muted-foreground"></i>
+                            <div>
+                              <p className="text-sm font-medium text-foreground">{label}</p>
+                              {uploadedAt && (
+                                <p className="text-xs text-muted-foreground">
+                                  {new Date(uploadedAt).toLocaleDateString()}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          {doc.file_url && (
+                            <a
+                              href={doc.file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                            >
+                              <i className="fas fa-external-link-alt text-xs"></i>
+                              View
+                            </a>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
