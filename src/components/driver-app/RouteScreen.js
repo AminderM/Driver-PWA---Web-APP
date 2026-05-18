@@ -128,9 +128,9 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
       formData.append('document', podFile);
       formData.append('document_type', 'proof_of_delivery');
       try {
-        await api(`/loads/${load.id}/pod`, { method: 'POST', headers: {}, body: formData });
+        await api(`/loads/${load.id}/pod`, { method: 'POST', body: formData });
       } catch {
-        await api('/documents/scan', { method: 'POST', headers: {}, body: formData });
+        await api('/documents/scan', { method: 'POST', body: formData });
       }
       await api(`/loads/${load.id}/status`, {
         method: 'POST',
