@@ -7,6 +7,8 @@ const ChatScreen = ({ load, onBack }) => {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState('');
+  const [sendError, setSendError] = useState('');
   const bottomRef = useRef(null);
   const isDark = theme === 'dark';
 
@@ -20,20 +22,21 @@ const ChatScreen = ({ load, onBack }) => {
       : 'bg-white border-[#e5e5e5] text-black placeholder-black/30'
   }`;
 
-  const fetchMessages = async () => {
+  const fetchMessages = async (isInitial = false) => {
     try {
       const data = await api(`/loads/${load.id}/messages`);
       setMessages(Array.isArray(data) ? data : data?.messages || []);
-    } catch {
-      // silently fail on polling refresh
+      if (isInitial) setFetchError('');
+    } catch (err) {
+      if (isInitial) setFetchError(err.message || 'Could not load messages.');
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchMessages();
-    const interval = setInterval(fetchMessages, 5000);
+    fetchMessages(true);
+    const interval = setInterval(() => fetchMessages(false), 5000);
     return () => clearInterval(interval);
   }, [load.id]);
 
@@ -45,15 +48,17 @@ const ChatScreen = ({ load, onBack }) => {
     const content = text.trim();
     if (!content || sending) return;
     setSending(true);
+    setSendError('');
     setText('');
     try {
       await api(`/loads/${load.id}/messages`, {
         method: 'POST',
         body: JSON.stringify({ content }),
       });
-      await fetchMessages();
-    } catch {
+      await fetchMessages(false);
+    } catch (err) {
       setText(content); // restore on failure
+      setSendError(err.message || 'Failed to send message.');
     } finally {
       setSending(false);
     }
@@ -99,6 +104,16 @@ const ChatScreen = ({ load, onBack }) => {
           <div className="flex items-center justify-center py-12">
             <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin" />
           </div>
+        ) : fetchError ? (
+          <div className="flex flex-col items-center justify-center py-12 px-4">
+            <div className={`w-16 h-16 flex items-center justify-center mx-auto mb-4 ${isDark ? 'bg-[#171717]' : 'bg-[#f5f5f5]'}`}>
+              <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <p className={`text-sm text-center ${sub}`}>{fetchError}</p>
+            <p className={`text-xs mt-1 text-center ${sub}`}>Chat endpoint may not be available yet. Contact your dispatcher by phone.</p>
+          </div>
         ) : messages.length === 0 ? (
           <div className="text-center py-12">
             <div className={`w-16 h-16 flex items-center justify-center mx-auto mb-4 ${isDark ? 'bg-[#171717]' : 'bg-[#f5f5f5]'}`}>
@@ -136,6 +151,9 @@ const ChatScreen = ({ load, onBack }) => {
 
       {/* Input */}
       <div className={`px-4 py-4 border-t ${border}`}>
+        {sendError && (
+          <p className="text-red-500 text-xs mb-2">{sendError}</p>
+        )}
         <div className="flex gap-3 items-center">
           <input
             type="text"

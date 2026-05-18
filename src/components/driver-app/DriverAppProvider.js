@@ -245,21 +245,28 @@ export const DriverAppProvider = ({ children }) => {
 
   // API helper
   const api = async (endpoint, options = {}) => {
+    const isFormData = options.body instanceof FormData;
     const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || ''}/api/driver-mobile${endpoint}`, {
       ...options,
       headers: {
-        'Content-Type': 'application/json',
+        // Don't set Content-Type for FormData — browser must set it with the multipart boundary
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         'Authorization': `Bearer ${token}`,
-        ...options.headers
+        ...options.headers,
       }
     });
-    
+
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Request failed');
+      let message = 'Request failed';
+      try {
+        const error = await response.json();
+        message = error.detail || error.message || error.error || message;
+      } catch { /* response body not JSON */ }
+      throw new Error(message);
     }
-    
-    return response.json();
+
+    const text = await response.text();
+    return text ? JSON.parse(text) : null;
   };
 
   const validateInvite = async (token) => {
