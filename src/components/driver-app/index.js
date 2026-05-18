@@ -15,6 +15,7 @@ import AnalyticsScreen from './AnalyticsScreen';
 import TruckScreen from './TruckScreen';
 import FleetScreen from './FleetScreen';
 import LoadsBoardScreen from './LoadsBoardScreen';
+import ChatScreen from './ChatScreen';
 
 // Screen management
 const DriverAppContent = () => {
@@ -107,12 +108,18 @@ const DriverAppContent = () => {
         />
       );
 
+    case 'chat':
+      return selectedLoad ? (
+        <ChatScreen load={selectedLoad} onBack={() => setCurrentScreen('route')} />
+      ) : null;
+
     case 'route':
       return selectedLoad ? (
         <RouteScreen
           load={selectedLoad}
           onBack={goToLoads}
           onViewMap={() => setCurrentScreen('map')}
+          onOpenChat={(load) => { setSelectedLoad(load); setCurrentScreen('chat'); }}
         />
       ) : (
         <MyLoadsScreen
