@@ -2,21 +2,33 @@ import React, { useState, useEffect } from 'react';
 import { useDriverApp } from './DriverAppProvider';
 
 const ENDORSEMENT_LABELS = { H: 'Hazmat', N: 'Tank', X: 'Hazmat+Tank', T: 'Doubles/Triples', P: 'Passenger', S: 'School Bus' };
-
 const LICENSE_TYPE_LABELS = { CDL_A: 'CDL Class A', CDL_B: 'CDL Class B', CDL_C: 'CDL Class C', NON_CDL: 'Non-CDL' };
+const ROLE_LABELS = { driver: 'Driver', owner_operator: 'Owner Operator', carrier: 'Carrier' };
 
 const DOC_TYPE_LABELS = {
-  drivers_license: "Driver's License",
-  medical_card: 'Medical Card',
-  hazmat_cert: 'Hazmat Certification',
-  twic_card: 'TWIC Card',
-  other: 'Other Document',
+  drivers_license:      "Driver's License",
+  medical_card:         'Medical Card',
+  hazmat_cert:          'Hazmat Certification',
+  twic_card:            'TWIC Card',
+  abstract:             'Driver Abstract',
+  sin_card:             'SIN Card',
+  void_cheque:          'Void Cheque',
+  vehicle_registration: 'Vehicle Registration',
+  cvor_certificate:     'CVOR / NSC Certificate',
+  cargo_insurance:      'Cargo Insurance',
+  liability_insurance:  'Liability Insurance',
+  lease_agreement:      'Lease Agreement',
+  ifta_license:         'IFTA License',
+  business_registration:'Business Registration',
+  gst_hst_registration: 'GST/HST Registration',
+  operating_authority:  'Operating Authority',
+  other:                'Other Document',
 };
 
 const isExpiringSoon = (dateStr) => {
   if (!dateStr) return false;
   const diff = new Date(dateStr) - new Date();
-  return diff > 0 && diff < 60 * 24 * 60 * 60 * 1000; // within 60 days
+  return diff > 0 && diff < 60 * 24 * 60 * 60 * 1000;
 };
 
 const isExpired = (dateStr) => {
@@ -32,7 +44,7 @@ const ExpiryBadge = ({ date }) => {
 };
 
 const ProfileScreen = ({ onBack, onOpenScanner }) => {
-  const { user, currentLocation, api } = useDriverApp();
+  const { user, currentLocation, api, userType } = useDriverApp();
   const [documents, setDocuments] = useState([]);
   const [docsLoading, setDocsLoading] = useState(true);
 
@@ -73,9 +85,12 @@ const ProfileScreen = ({ onBack, onOpenScanner }) => {
             </span>
           </div>
           <h2 className="text-xl font-bold text-white">{user?.full_name}</h2>
-          <p className="text-white/50 text-sm">Driver</p>
+          <p className="text-white/50 text-sm">{ROLE_LABELS[userType] || 'Driver'}</p>
           {user?.home_terminal && (
             <p className="text-white/40 text-xs mt-1">{user.home_terminal}</p>
+          )}
+          {user?.carrier_name && userType !== 'carrier' && (
+            <p className="text-white/40 text-xs mt-1">{user.carrier_name}</p>
           )}
         </div>
 
@@ -98,65 +113,118 @@ const ProfileScreen = ({ onBack, onOpenScanner }) => {
           )}
         </div>
 
-        {/* License & Certifications */}
-        <div className="bg-[#0a0a0a] border border-[#262626] p-4 space-y-3">
-          <p className="text-white/40 text-xs tracking-wider">LICENSE & CERTIFICATIONS</p>
+        {/* Carrier Company Info */}
+        {userType === 'carrier' && (
+          <div className="bg-[#0a0a0a] border border-[#262626] p-4 space-y-3">
+            <p className="text-white/40 text-xs tracking-wider">COMPANY INFO</p>
+            {user?.company_name && (
+              <div>
+                <p className="text-white/50 text-xs mb-0.5">Company Name</p>
+                <p className="text-white text-sm">{user.company_name}</p>
+              </div>
+            )}
+            {user?.company_address && (
+              <div>
+                <p className="text-white/50 text-xs mb-0.5">Address</p>
+                <p className="text-white text-sm">{user.company_address}</p>
+              </div>
+            )}
+            {user?.mc_number && (
+              <div>
+                <p className="text-white/50 text-xs mb-0.5">MC Number</p>
+                <p className="text-white text-sm font-mono">{user.mc_number}</p>
+              </div>
+            )}
+            {user?.dot_number && (
+              <div>
+                <p className="text-white/50 text-xs mb-0.5">DOT Number</p>
+                <p className="text-white text-sm font-mono">{user.dot_number}</p>
+              </div>
+            )}
+            {user?.cvor_number && (
+              <div>
+                <p className="text-white/50 text-xs mb-0.5">CVOR Number</p>
+                <p className="text-white text-sm font-mono">{user.cvor_number}</p>
+              </div>
+            )}
+            {user?.nsc_number && (
+              <div>
+                <p className="text-white/50 text-xs mb-0.5">NSC Number</p>
+                <p className="text-white text-sm font-mono">{user.nsc_number}</p>
+              </div>
+            )}
+            {user?.gst_hst_number && (
+              <div>
+                <p className="text-white/50 text-xs mb-0.5">GST/HST Number</p>
+                <p className="text-white text-sm font-mono">{user.gst_hst_number}</p>
+              </div>
+            )}
+            {!user?.company_name && !user?.mc_number && (
+              <p className="text-white/30 text-sm">No company details on file.</p>
+            )}
+          </div>
+        )}
 
-          {hasLicenseData ? (
-            <>
-              {user.license_number && (
-                <div>
-                  <p className="text-white/50 text-xs mb-0.5">License Number</p>
-                  <p className="text-white text-sm font-mono">{user.license_number}</p>
-                </div>
-              )}
-              {user.license_type && (
-                <div>
-                  <p className="text-white/50 text-xs mb-0.5">License Type</p>
-                  <p className="text-white text-sm">{LICENSE_TYPE_LABELS[user.license_type] || user.license_type}</p>
-                </div>
-              )}
-              {user.license_state && (
-                <div>
-                  <p className="text-white/50 text-xs mb-0.5">License State</p>
-                  <p className="text-white text-sm">{user.license_state}</p>
-                </div>
-              )}
-              {user.license_expiry && (
-                <div>
-                  <p className="text-white/50 text-xs mb-0.5">License Expiry</p>
-                  <div className="flex items-center">
-                    <p className="text-white text-sm">{new Date(user.license_expiry).toLocaleDateString()}</p>
-                    <ExpiryBadge date={user.license_expiry} />
+        {/* License & Certifications — driver and owner_operator only */}
+        {userType !== 'carrier' && (
+          <div className="bg-[#0a0a0a] border border-[#262626] p-4 space-y-3">
+            <p className="text-white/40 text-xs tracking-wider">LICENSE & CERTIFICATIONS</p>
+            {hasLicenseData ? (
+              <>
+                {user.license_number && (
+                  <div>
+                    <p className="text-white/50 text-xs mb-0.5">License Number</p>
+                    <p className="text-white text-sm font-mono">{user.license_number}</p>
                   </div>
-                </div>
-              )}
-              {user.medical_card_expiry && (
-                <div>
-                  <p className="text-white/50 text-xs mb-0.5">Medical Card Expiry</p>
-                  <div className="flex items-center">
-                    <p className="text-white text-sm">{new Date(user.medical_card_expiry).toLocaleDateString()}</p>
-                    <ExpiryBadge date={user.medical_card_expiry} />
+                )}
+                {user.license_type && (
+                  <div>
+                    <p className="text-white/50 text-xs mb-0.5">License Type</p>
+                    <p className="text-white text-sm">{LICENSE_TYPE_LABELS[user.license_type] || user.license_type}</p>
                   </div>
-                </div>
-              )}
-              {user.endorsements?.length > 0 && (
-                <div>
-                  <p className="text-white/50 text-xs mb-1">Endorsements</p>
-                  <div className="flex flex-wrap gap-2">
-                    {user.endorsements.map(e => (
-                      <span key={e} className="bg-red-600/20 border border-red-600/40 text-red-400 text-xs px-2 py-1 tracking-wider">
-                        {e} — {ENDORSEMENT_LABELS[e] || e}
-                      </span>
-                    ))}
+                )}
+                {user.license_state && (
+                  <div>
+                    <p className="text-white/50 text-xs mb-0.5">License State</p>
+                    <p className="text-white text-sm">{user.license_state}</p>
                   </div>
-                </div>
-              )}
-            </>
-          ) : (
-            <p className="text-white/30 text-sm">No license details on file.</p>
-          )}
-        </div>
+                )}
+                {user.license_expiry && (
+                  <div>
+                    <p className="text-white/50 text-xs mb-0.5">License Expiry</p>
+                    <div className="flex items-center">
+                      <p className="text-white text-sm">{new Date(user.license_expiry).toLocaleDateString()}</p>
+                      <ExpiryBadge date={user.license_expiry} />
+                    </div>
+                  </div>
+                )}
+                {user.medical_card_expiry && (
+                  <div>
+                    <p className="text-white/50 text-xs mb-0.5">Medical Card Expiry</p>
+                    <div className="flex items-center">
+                      <p className="text-white text-sm">{new Date(user.medical_card_expiry).toLocaleDateString()}</p>
+                      <ExpiryBadge date={user.medical_card_expiry} />
+                    </div>
+                  </div>
+                )}
+                {user.endorsements?.length > 0 && (
+                  <div>
+                    <p className="text-white/50 text-xs mb-1">Endorsements</p>
+                    <div className="flex flex-wrap gap-2">
+                      {user.endorsements.map(e => (
+                        <span key={e} className="bg-red-600/20 border border-red-600/40 text-red-400 text-xs px-2 py-1 tracking-wider">
+                          {e} — {ENDORSEMENT_LABELS[e] || e}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-white/30 text-sm">No license details on file.</p>
+            )}
+          </div>
+        )}
 
         {/* Scanned Documents */}
         <div className="bg-[#0a0a0a] border border-[#262626] p-4 space-y-3">
@@ -208,24 +276,37 @@ const ProfileScreen = ({ onBack, onOpenScanner }) => {
           )}
         </div>
 
-        {/* Location & Status */}
-        <div className="bg-[#0a0a0a] border border-[#262626] p-4 space-y-3">
-          <p className="text-white/40 text-xs tracking-wider">STATUS</p>
-          <div>
-            <p className="text-white/50 text-xs mb-0.5">Location Tracking</p>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-green-400 text-sm">Active</span>
+        {/* Location & Status — driver and owner_operator only */}
+        {userType !== 'carrier' && (
+          <div className="bg-[#0a0a0a] border border-[#262626] p-4 space-y-3">
+            <p className="text-white/40 text-xs tracking-wider">STATUS</p>
+            <div>
+              <p className="text-white/50 text-xs mb-0.5">Location Tracking</p>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                <span className="text-green-400 text-sm">Active</span>
+              </div>
+              {currentLocation && (
+                <p className="text-white/30 text-xs mt-1">Accuracy: ±{Math.round(currentLocation.accuracy_m || 0)}m</p>
+              )}
             </div>
-            {currentLocation && (
-              <p className="text-white/30 text-xs mt-1">Accuracy: ±{Math.round(currentLocation.accuracy_m || 0)}m</p>
-            )}
+            <div>
+              <p className="text-white/50 text-xs mb-0.5">Driver ID</p>
+              <p className="text-white font-mono text-xs">{user?.id}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-white/50 text-xs mb-0.5">Driver ID</p>
-            <p className="text-white font-mono text-xs">{user?.id}</p>
+        )}
+
+        {/* Account ID — carrier only */}
+        {userType === 'carrier' && (
+          <div className="bg-[#0a0a0a] border border-[#262626] p-4 space-y-3">
+            <p className="text-white/40 text-xs tracking-wider">ACCOUNT</p>
+            <div>
+              <p className="text-white/50 text-xs mb-0.5">Account ID</p>
+              <p className="text-white font-mono text-xs">{user?.id}</p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
