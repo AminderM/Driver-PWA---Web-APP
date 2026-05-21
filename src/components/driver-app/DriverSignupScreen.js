@@ -47,7 +47,7 @@ const DriverSignupScreen = ({ inviteToken }) => {
     setFormError('');
     setStep('submitting');
     try {
-      await signup({ token: inviteToken, phone: phone.trim(), password });
+      await signup({ inviteCode: inviteToken, phone: phone.trim(), password });
     } catch (err) {
       setFormError(err.message || 'Account creation failed. Please try again.');
       setStep('form');

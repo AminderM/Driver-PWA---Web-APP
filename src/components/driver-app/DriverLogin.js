@@ -4,6 +4,21 @@ import { useDriverApp } from './DriverAppProvider';
 const DEV_MODE = process.env.NODE_ENV === 'development';
 const BACKEND = process.env.REACT_APP_BACKEND_URL || '';
 
+const LoginHeader = ({ step, isDark, border, text, subtext }) => (
+  <div className={`pt-16 pb-12 px-6 text-center border-b ${border}`}>
+    <div className="w-20 h-20 bg-red-600 flex items-center justify-center mx-auto mb-4">
+      <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+      </svg>
+    </div>
+    <h1 className={`text-2xl font-bold tracking-wider ${text}`}>INTEGRA TMS</h1>
+    <p className={`mt-2 ${subtext}`}>
+      {step === 'login' ? 'Sign in to view your loads' : 'Reset your password'}
+    </p>
+  </div>
+);
+
 const DriverLogin = () => {
   const { login, theme, devLogin } = useDriverApp();
   const isDark = theme === 'dark';
@@ -50,38 +65,27 @@ const DriverLogin = () => {
     setForgotLoading(true);
     setForgotError('');
     try {
-      await fetch(`${BACKEND}/api/driver-mobile/forgot-password`, {
+      const res = await fetch(`${BACKEND}/api/driver-mobile/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: forgotEmail }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'Something went wrong. Please try again.');
+      }
       setStep('sent');
-    } catch {
-      setForgotError('Something went wrong. Please try again.');
+    } catch (err) {
+      setForgotError(err.message || 'Something went wrong. Please try again.');
     } finally {
       setForgotLoading(false);
     }
   };
 
-  const Header = () => (
-    <div className={`pt-16 pb-12 px-6 text-center border-b ${border}`}>
-      <div className="w-20 h-20 bg-red-600 flex items-center justify-center mx-auto mb-4">
-        <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
-        </svg>
-      </div>
-      <h1 className={`text-2xl font-bold tracking-wider ${text}`}>INTEGRA TMS</h1>
-      <p className={`mt-2 ${subtext}`}>
-        {step === 'login' ? 'Sign in to view your loads' : 'Reset your password'}
-      </p>
-    </div>
-  );
-
   // ── Login ────────────────────────────────────────────────────────────────
   if (step === 'login') return (
     <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
-      <Header />
+      <LoginHeader step={step} isDark={isDark} border={border} text={text} subtext={subtext} />
       <div className="flex-1 px-6 py-8">
         <form onSubmit={handleLogin} className="space-y-4">
           {error && (
@@ -169,7 +173,7 @@ const DriverLogin = () => {
   // ── Forgot Password ──────────────────────────────────────────────────────
   if (step === 'forgot') return (
     <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
-      <Header />
+      <LoginHeader step={step} isDark={isDark} border={border} text={text} subtext={subtext} />
       <div className="flex-1 px-6 py-8">
         <button onClick={() => setStep('login')} className={`text-sm tracking-wider mb-6 ${subtext}`}>← BACK TO LOGIN</button>
 
@@ -216,7 +220,7 @@ const DriverLogin = () => {
   // ── Sent ─────────────────────────────────────────────────────────────────
   return (
     <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
-      <Header />
+      <LoginHeader step={step} isDark={isDark} border={border} text={text} subtext={subtext} />
       <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
         <div className="w-20 h-20 bg-green-600/20 flex items-center justify-center mb-6">
           <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
