@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useDriverApp } from './DriverAppProvider';
+import { takePhoto, isNative, hapticSuccess } from '../../lib/native';
 
 const ALL_DOC_TYPES = {
   drivers_license:      { value: 'drivers_license',      label: "Driver's License",       emoji: '🪪' },
@@ -53,13 +54,13 @@ const DocumentScanScreen = ({ onComplete, requiredDocs = [] }) => {
   const fileInputRef = useRef(null);
   const isDark = theme !== 'light';
 
-  const bg      = isDark ? 'bg-black'       : 'bg-white';
-  const card    = isDark ? 'bg-[#0a0a0a] border-[#262626]' : 'bg-white border-[#e5e5e5]';
-  const text    = isDark ? 'text-white'     : 'text-black';
-  const subtext = isDark ? 'text-white/60'  : 'text-black/60';
+  const bg      = isDark ? 'bg-black'      : 'bg-white';
+  const text    = isDark ? 'text-white'    : 'text-black';
+  const subtext = isDark ? 'text-white/60' : 'text-black/60';
 
   const documentTypes = getDocumentTypes(userType);
 
+  // Web-only fallback handler (native path goes through handleCapture → takePhoto)
   const handleFileChange = (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
@@ -68,8 +69,19 @@ const DocumentScanScreen = ({ onComplete, requiredDocs = [] }) => {
     setStep('preview');
   };
 
-  const handleCapture = () => {
-    fileInputRef.current?.click();
+  const handleCapture = async () => {
+    if (isNative()) {
+      try {
+        const { dataUrl, file: photo } = await takePhoto({ source: 'camera' });
+        setFile(photo);
+        setPreviewUrl(dataUrl);
+        setStep('preview');
+      } catch {
+        // user cancelled — do nothing
+      }
+    } else {
+      fileInputRef.current?.click();
+    }
   };
 
   const handleUpload = async () => {
@@ -85,6 +97,7 @@ const DocumentScanScreen = ({ onComplete, requiredDocs = [] }) => {
         body: formData,
       });
       if (result?.user) mergeUserData(result.user);
+      hapticSuccess();
       setStep('success');
     } catch {
       setUploadError('Upload failed — your document will be synced later.');
