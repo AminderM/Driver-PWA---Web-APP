@@ -55,9 +55,10 @@ jobs:
 
       - name: Build application
         run: npm run build
-        timeout-minutes: 25
+        timeout-minutes: 35
         env:
           CI: false
+          GENERATE_SOURCEMAP: false
           NODE_OPTIONS: --max_old_space_size=4096
 
       - name: Create deployment info file
