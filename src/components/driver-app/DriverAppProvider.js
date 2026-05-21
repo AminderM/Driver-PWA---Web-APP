@@ -1,4 +1,5 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
+import { getCurrentPosition, watchPosition as nativeWatchPosition } from '../../lib/native';
 
 // Driver App Context
 const DriverAppContext = createContext(null);
@@ -150,18 +151,8 @@ export const DriverAppProvider = ({ children }) => {
   const requestLocation = async () => {
     setLocationError(null);
     try {
-      const position = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
-        });
-      });
-      setCurrentLocation({
-        lat: position.coords.latitude,
-        lng: position.coords.longitude,
-        accuracy_m: position.coords.accuracy
-      });
+      const loc = await getCurrentPosition();
+      setCurrentLocation(loc);
       setLocationGranted(true);
     } catch (error) {
       setLocationError(error.message);
@@ -174,17 +165,8 @@ export const DriverAppProvider = ({ children }) => {
     if (!locationGranted || !user) return;
     if (user?.user_type === 'carrier') return;
 
-    const interval = activeLoadId ? 30000 : 180000;
-    
-    const updateLocation = async (position) => {
-      const loc = {
-        lat: position.coords.latitude,
-        lng: position.coords.longitude,
-        accuracy_m: position.coords.accuracy,
-        load_id: activeLoadId
-      };
+    const pingLocation = async (loc) => {
       setCurrentLocation(loc);
-      
       try {
         await fetch(`${process.env.REACT_APP_BACKEND_URL || ''}/api/driver-mobile/location/ping`, {
           method: 'POST',
@@ -192,19 +174,18 @@ export const DriverAppProvider = ({ children }) => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify(loc)
+          body: JSON.stringify({ ...loc, load_id: activeLoadId })
         });
       } catch (err) {
         console.error('Location ping failed:', err);
       }
     };
-    
-    const watchId = navigator.geolocation.watchPosition(updateLocation, () => {}, {
-      enableHighAccuracy: true,
-      maximumAge: interval
-    });
-    
-    return () => navigator.geolocation.clearWatch(watchId);
+
+    let unsubscribe;
+    nativeWatchPosition(pingLocation, () => setLocationGranted(false))
+      .then(fn => { unsubscribe = fn; });
+
+    return () => { unsubscribe?.(); };
   }, [locationGranted, user, token, activeLoadId]);
 
   // Login
@@ -269,9 +250,9 @@ export const DriverAppProvider = ({ children }) => {
     return text ? JSON.parse(text) : null;
   };
 
-  const validateInvite = async (token) => {
+  const validateInvite = async (inviteCode) => {
     const response = await fetch(
-      `${process.env.REACT_APP_BACKEND_URL || ''}/api/driver-mobile/invite/${encodeURIComponent(token)}`
+      `${process.env.REACT_APP_BACKEND_URL || ''}/api/driver-mobile/invite/${encodeURIComponent(inviteCode)}`
     );
     if (response.status === 404) {
       throw new Error('Invite code not found, already used, or expired.');
@@ -283,13 +264,13 @@ export const DriverAppProvider = ({ children }) => {
     return response.json();
   };
 
-  const signup = async ({ token, phone, password }) => {
+  const signup = async ({ inviteCode, phone, password }) => {
     const response = await fetch(
       `${process.env.REACT_APP_BACKEND_URL || ''}/api/driver-mobile/signup`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, phone, password }),
+        body: JSON.stringify({ token: inviteCode, phone, password }),
       }
     );
     if (!response.ok) {
@@ -312,7 +293,7 @@ export const DriverAppProvider = ({ children }) => {
   };
 
   const devLogin = () => {
-    const mockUser = { id: 'dev-user', full_name: 'Aminder (Dev)', email: 'aminderpro@gmail.com', role: 'driver', first_login: false, phone_verified: true };
+    const mockUser = { id: 'dev-user', full_name: 'Dev Driver', email: 'dev@example.com', role: 'driver', first_login: false, phone_verified: true };
     setUser(mockUser);
     setToken('dev-token');
     setLocationGranted(true);

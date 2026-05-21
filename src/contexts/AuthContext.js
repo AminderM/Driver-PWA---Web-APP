@@ -87,11 +87,7 @@ export const AuthProvider = ({ children }) => {
   }, [token, user]);
 
   const fetchWithAuth = async (url, options = {}) => {
-    console.log('fetchWithAuth: token exists?', !!token, 'token length:', token?.length);
-    if (!token) {
-      console.error('fetchWithAuth: No authentication token!');
-      throw new Error('No authentication token');
-    }
+    if (!token) throw new Error('No authentication token');
 
     const headers = {
       'Content-Type': 'application/json',
@@ -99,10 +95,7 @@ export const AuthProvider = ({ children }) => {
       ...options.headers,
     };
 
-    console.log('fetchWithAuth: Making request to', url, 'with token:', token.substring(0, 20) + '...');
-    const response = await fetch(url, { ...options, headers });
-    console.log('fetchWithAuth: Response status:', response.status, response.ok);
-    return response;
+    return fetch(url, { ...options, headers });
   };
 
   const login = async (email, password) => {

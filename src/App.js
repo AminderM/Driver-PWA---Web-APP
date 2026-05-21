@@ -32,16 +32,15 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
+  if (!user) return <Navigate to="/tms/auth" replace />;
+
   return children;
 };
 
 const AdminRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
-  console.log('AdminRoute: loading=', loading, 'user=', user?.email, 'role=', user?.role);
-
   if (loading) {
-    console.log('AdminRoute: Still loading auth...');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -52,21 +51,10 @@ const AdminRoute = ({ children }) => {
     );
   }
 
-  // Check if user exists and is platform admin
-  if (!user) {
-    console.log('AdminRoute: No user, redirecting to /auth');
-    return <Navigate to="/auth" replace />;
-  }
+  if (!user) return <Navigate to="/tms/auth" replace />;
 
-  const isAdmin = user.role === 'platform_admin';
-  console.log('AdminRoute: isAdmin=', isAdmin);
+  if (user.role !== 'platform_admin') return <Navigate to="/dashboard" replace />;
 
-  if (!isAdmin) {
-    console.log('AdminRoute: Not admin, redirecting to /dashboard');
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  console.log('AdminRoute: Access granted, rendering Admin Console');
   return children;
 };
 

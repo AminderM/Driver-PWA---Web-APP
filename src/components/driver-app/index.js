@@ -62,10 +62,15 @@ const DriverAppContent = () => {
     setSelectedLoad(null);
   };
 
-  const goToLoads = () => {
-    setCurrentScreen(homeScreen);
-    setSelectedLoad(null);
-  };
+  const goToLoads = goBack;
+
+  const loadsScreen = (
+    <MyLoadsScreen
+      onNavigate={(screen) => screen === 'menu' ? setShowMenu(true) : setCurrentScreen(screen)}
+      onSelectLoad={(load, type) => { setSelectedLoad(load); setCurrentScreen(type); }}
+      onViewMap={(load) => { setSelectedLoad(load); setCurrentScreen('map'); }}
+    />
+  );
 
   switch (currentScreen) {
     case 'ai':
@@ -98,15 +103,7 @@ const DriverAppContent = () => {
       return <LoadsBoardScreen onBack={goBack} />;
 
     case 'map':
-      return selectedLoad ? (
-        <MapScreen load={selectedLoad} onBack={goBack} />
-      ) : (
-        <MyLoadsScreen
-          onNavigate={(screen) => screen === 'menu' ? setShowMenu(true) : setCurrentScreen(screen)}
-          onSelectLoad={(load, type) => { setSelectedLoad(load); setCurrentScreen(type); }}
-          onViewMap={(load) => { setSelectedLoad(load); setCurrentScreen('map'); }}
-        />
-      );
+      return selectedLoad ? <MapScreen load={selectedLoad} onBack={goBack} /> : loadsScreen;
 
     case 'chat':
       return selectedLoad ? (
@@ -121,24 +118,10 @@ const DriverAppContent = () => {
           onViewMap={() => setCurrentScreen('map')}
           onOpenChat={(load) => { setSelectedLoad(load); setCurrentScreen('chat'); }}
         />
-      ) : (
-        <MyLoadsScreen
-          onNavigate={(screen) => screen === 'menu' ? setShowMenu(true) : setCurrentScreen(screen)}
-          onSelectLoad={(load, type) => { setSelectedLoad(load); setCurrentScreen(type); }}
-          onViewMap={(load) => { setSelectedLoad(load); setCurrentScreen('map'); }}
-        />
-      );
+      ) : loadsScreen;
 
     case 'docs':
-      return selectedLoad ? (
-        <DocumentsScreen load={selectedLoad} onBack={goToLoads} />
-      ) : (
-        <MyLoadsScreen
-          onNavigate={(screen) => screen === 'menu' ? setShowMenu(true) : setCurrentScreen(screen)}
-          onSelectLoad={(load, type) => { setSelectedLoad(load); setCurrentScreen(type); }}
-          onViewMap={(load) => { setSelectedLoad(load); setCurrentScreen('map'); }}
-        />
-      );
+      return selectedLoad ? <DocumentsScreen load={selectedLoad} onBack={goToLoads} /> : loadsScreen;
 
     case 'loads':
     case 'dashboard':

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -50,7 +50,7 @@ const Dashboard = () => {
     if (user && showAdminTabs && activeTab === 'equipment') {
       setActiveTab('fleet');
     }
-  }, [user, showAdminTabs]);
+  }, [user, showAdminTabs, activeTab]);
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -139,7 +139,7 @@ const Dashboard = () => {
                     className="block w-full text-left px-4 py-2 text-sm hover:bg-muted bg-primary/10 text-primary font-medium"
                   >
                     <i className="fas fa-mobile-alt mr-2"></i>
-                    🚀 Driver Portal Demo
+                    ðŸš€ Driver Portal Demo
                   </button>
                   <div className="border-t border-border"></div>
                   <button
