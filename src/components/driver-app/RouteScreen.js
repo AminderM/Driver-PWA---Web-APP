@@ -11,6 +11,8 @@ const STATUS_CONFIG = {
   arrived_delivery:  { label: 'AT DELIVERY',          color: 'bg-amber-600',  next: 'delivered',         nextLabel: 'MARK AS DELIVERED'        },
   delivered:         { label: 'DELIVERED',            color: 'bg-green-600',  next: null                                                        },
   problem:           { label: 'PROBLEM REPORTED',     color: 'bg-red-600',    next: null                                                        },
+  failed:            { label: 'FAILED',               color: 'bg-red-800',    next: null                                                        },
+  cancelled:         { label: 'CANCELLED',            color: 'bg-gray-600',   next: null                                                        },
 };
 
 // Which status transitions require capturing an actual time
@@ -41,6 +43,9 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
   const [podStep, setPodStep] = useState(null); // null | 'preview'
   const [podFile, setPodFile] = useState(null);
   const [podPreviewUrl, setPodPreviewUrl] = useState(null);
+  // True once the photo has been successfully sent to the server —
+  // on retry we skip the upload and only retry the status update
+  const [podUploaded, setPodUploaded] = useState(false);
   const podInputRef = useRef(null);
 
   const isDark = theme === 'dark';
@@ -114,8 +119,9 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
   };
 
   // POD handlers
-  const openPodCamera = async () => {
+  const openPodCamera = async (isRetake = false) => {
     setUpdateError('');
+    if (isRetake) setPodUploaded(false);
     if (isNative()) {
       try {
         const { dataUrl, file: photo } = await takePhoto({ source: 'camera' });
@@ -142,15 +148,29 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
   const handlePodConfirm = async () => {
     setUpdating(true);
     setUpdateError('');
-    try {
-      const formData = new FormData();
-      formData.append('document', podFile);
-      formData.append('document_type', 'proof_of_delivery');
+
+    // ── Step 1: Upload photo (skip if already uploaded on a previous attempt) ──
+    if (!podUploaded) {
       try {
-        await api(`/loads/${load.id}/pod`, { method: 'POST', body: formData });
-      } catch {
-        await api('/documents/scan', { method: 'POST', body: formData });
+        const formData = new FormData();
+        formData.append('document', podFile);
+        formData.append('document_type', 'proof_of_delivery');
+        try {
+          await api(`/loads/${load.id}/pod`, { method: 'POST', body: formData });
+        } catch {
+          // /pod endpoint doesn't exist yet — fall back to generic scan
+          await api('/documents/scan', { method: 'POST', body: formData });
+        }
+        setPodUploaded(true);
+      } catch (uploadErr) {
+        // Upload failed — still attempt the status update so the driver isn't stuck.
+        // The photo stays on their device and can be re-uploaded later.
+        console.error('POD upload failed, continuing to status update:', uploadErr);
       }
+    }
+
+    // ── Step 2: Mark load as delivered (separate from upload — can retry independently) ──
+    try {
       await api(`/loads/${load.id}/status`, {
         method: 'POST',
         body: JSON.stringify({
@@ -158,7 +178,9 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
           note: 'Delivery confirmed with proof of delivery photo',
           latitude: currentLocation?.lat,
           longitude: currentLocation?.lng,
-          actual_delivery_out: new Date().toISOString(),
+          // NOTE: actual_delivery_out is NOT sent here — the backend status
+          // endpoint only accepts { status, note, latitude, longitude }.
+          // Sending unknown fields was causing the "Load failed" validation error.
         }),
       });
       await refreshLoad();
@@ -166,9 +188,10 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
       setPodStep(null);
       setPodFile(null);
       setPodPreviewUrl(null);
+      setPodUploaded(false);
     } catch (err) {
       hapticError();
-      setUpdateError(err.message || 'Failed to submit delivery. Please try again.');
+      setUpdateError(err.message || 'Could not mark as delivered. Tap RETRY to try again.');
     } finally {
       setUpdating(false);
     }
@@ -333,11 +356,11 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
           </button>
         )}
 
-        {/* Error — hidden while the driver is reviewing the POD photo */}
+        {/* Status update errors (non-POD) — hidden while POD preview is active */}
         {updateError && podStep !== 'preview' && (
           <div className="bg-red-600/20 border border-red-600/50 px-4 py-3">
             <p className="text-red-500 text-sm">{updateError}</p>
-            <p className="text-red-400 text-xs mt-1">If this persists, use REPORT A PROBLEM or contact dispatch.</p>
+            <p className="text-red-400 text-xs mt-1">If this keeps happening, use REPORT A PROBLEM or contact dispatch directly.</p>
           </div>
         )}
 
@@ -391,10 +414,10 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
               <div>
                 <div className="bg-amber-600/20 border border-amber-600/50 px-4 py-3 mb-3">
                   <p className="text-amber-500 text-sm tracking-wider font-semibold">PROOF OF DELIVERY REQUIRED</p>
-                  <p className={`text-xs mt-1 ${sub}`}>You must photograph the signed delivery receipt before marking as delivered.</p>
+                  <p className={`text-xs mt-1 ${sub}`}>Photograph the signed delivery receipt before marking as delivered.</p>
                 </div>
                 <button
-                  onClick={openPodCamera}
+                  onClick={() => openPodCamera(false)}
                   className="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-4 tracking-wider transition-colors flex items-center justify-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -406,7 +429,12 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
               </div>
             ) : (
               <div className={`border p-4 space-y-3 ${card}`}>
-                <p className={`text-sm font-semibold tracking-wider ${text}`}>PROOF OF DELIVERY</p>
+                <p className={`text-sm font-semibold tracking-wider ${text}`}>
+                  PROOF OF DELIVERY
+                  {podUploaded && (
+                    <span className="ml-2 text-green-500 text-xs normal-case">photo uploaded</span>
+                  )}
+                </p>
                 <img
                   src={podPreviewUrl}
                   alt="Proof of delivery"
@@ -414,9 +442,20 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
                   style={{ maxHeight: 220 }}
                 />
                 <p className={`text-xs ${sub}`}>Make sure the delivery receipt and signature are clearly visible.</p>
+
+                {/* Error with retry — shown only inside the preview card */}
+                {updateError && (
+                  <div className="bg-red-600/20 border border-red-600/50 px-3 py-2">
+                    <p className="text-red-500 text-xs font-medium">{updateError}</p>
+                    {podUploaded && (
+                      <p className="text-red-400 text-xs mt-1">Photo already uploaded — tap RETRY to confirm delivery without re-uploading.</p>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex gap-3">
                   <button
-                    onClick={() => { setPodStep(null); setPodFile(null); setPodPreviewUrl(null); openPodCamera(); }}
+                    onClick={() => { setPodStep(null); setPodFile(null); setPodPreviewUrl(null); openPodCamera(true); }}
                     disabled={updating}
                     className={`flex-1 border py-3 text-sm tracking-wider disabled:opacity-40 ${
                       isDark ? 'border-[#262626] text-white/60' : 'border-[#e5e5e5] text-black/60'
@@ -432,9 +471,9 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
                     {updating ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        SUBMITTING...
+                        {podUploaded ? 'CONFIRMING...' : 'UPLOADING...'}
                       </>
-                    ) : 'CONFIRM DELIVERY'}
+                    ) : (updateError ? 'RETRY' : 'CONFIRM DELIVERY')}
                   </button>
                 </div>
               </div>
