@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useDriverApp } from './DriverAppProvider';
+import { takePhoto, isNative, hapticSuccess, hapticError } from '../../lib/native';
 
 const STATUS_CONFIG = {
   assigned:          { label: 'ASSIGNED',             color: 'bg-amber-600',  next: 'en_route_pickup',   nextLabel: 'START ROUTE TO PICKUP'   },
@@ -81,6 +82,7 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
       setShowProblem(false);
       setProblemNote('');
     } catch (err) {
+      hapticError();
       setUpdateError(err.message || 'Status update failed. Please try again.');
     } finally {
       setUpdating(false);
@@ -112,9 +114,26 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
   };
 
   // POD handlers
+  const openPodCamera = async () => {
+    setUpdateError('');
+    if (isNative()) {
+      try {
+        const { dataUrl, file: photo } = await takePhoto({ source: 'camera' });
+        setPodFile(photo);
+        setPodPreviewUrl(dataUrl);
+        setPodStep('preview');
+      } catch {
+        // user cancelled
+      }
+    } else {
+      podInputRef.current?.click();
+    }
+  };
+
   const handlePodFileChange = (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
+    setUpdateError('');
     setPodFile(f);
     setPodPreviewUrl(URL.createObjectURL(f));
     setPodStep('preview');
@@ -143,10 +162,12 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
         }),
       });
       await refreshLoad();
+      hapticSuccess();
       setPodStep(null);
       setPodFile(null);
       setPodPreviewUrl(null);
     } catch (err) {
+      hapticError();
       setUpdateError(err.message || 'Failed to submit delivery. Please try again.');
     } finally {
       setUpdating(false);
@@ -312,10 +333,11 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
           </button>
         )}
 
-        {/* Error */}
-        {updateError && (
+        {/* Error — hidden while the driver is reviewing the POD photo */}
+        {updateError && podStep !== 'preview' && (
           <div className="bg-red-600/20 border border-red-600/50 px-4 py-3">
             <p className="text-red-500 text-sm">{updateError}</p>
+            <p className="text-red-400 text-xs mt-1">If this persists, use REPORT A PROBLEM or contact dispatch.</p>
           </div>
         )}
 
@@ -372,7 +394,7 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
                   <p className={`text-xs mt-1 ${sub}`}>You must photograph the signed delivery receipt before marking as delivered.</p>
                 </div>
                 <button
-                  onClick={() => podInputRef.current?.click()}
+                  onClick={openPodCamera}
                   className="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-4 tracking-wider transition-colors flex items-center justify-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -394,7 +416,7 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
                 <p className={`text-xs ${sub}`}>Make sure the delivery receipt and signature are clearly visible.</p>
                 <div className="flex gap-3">
                   <button
-                    onClick={() => { setPodStep(null); setPodFile(null); setPodPreviewUrl(null); podInputRef.current?.click(); }}
+                    onClick={() => { setPodStep(null); setPodFile(null); setPodPreviewUrl(null); openPodCamera(); }}
                     disabled={updating}
                     className={`flex-1 border py-3 text-sm tracking-wider disabled:opacity-40 ${
                       isDark ? 'border-[#262626] text-white/60' : 'border-[#e5e5e5] text-black/60'
