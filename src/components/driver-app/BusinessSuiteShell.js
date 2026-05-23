@@ -11,14 +11,15 @@ import SettingsScreen from './SettingsScreen';
 import LoadCalculatorScreen from './LoadCalculatorScreen';
 import InvoiceGeneratorScreen from './InvoiceGeneratorScreen';
 import ExpenseRecorderScreen from './ExpenseRecorderScreen';
+import PLScreen from './PLScreen';
 
-// Tool cards — Phases 2-5 live; 6-7 still upcoming
+// Tool cards — Phases 2-6 live; 7 still upcoming
 const TOOLS = [
   { id: 'loads',      label: 'Load Management',    icon: '📦', desc: 'Manage loads + scan rate confirmations with AI', phase: 2, live: true  },
   { id: 'calculator', label: 'Load Calculator',    icon: '🧮', desc: 'RPM, fuel cost, net profit per load',            phase: 3, live: true  },
   { id: 'invoices',   label: 'Invoice Generator',  icon: '📄', desc: 'PDF invoices from your load + letterhead',       phase: 4, live: true  },
   { id: 'expenses',   label: 'Expense Recorder',   icon: '🧾', desc: 'Scan receipts, auto-categorize costs',           phase: 5, live: true  },
-  { id: 'pl',         label: 'P&L View',           icon: '📊', desc: 'Weekly / monthly / annual profit & loss',        phase: 6, live: false },
+  { id: 'pl',         label: 'P&L View',           icon: '📊', desc: 'Weekly / monthly / annual profit & loss',        phase: 6, live: true  },
   { id: 'vault',      label: 'Document Vault',      icon: '🗂️', desc: 'CDL, insurance, IFTA — expiry alerts',          phase: 7, live: false },
 ];
 
@@ -105,6 +106,7 @@ const BusinessSuiteShell = () => {
     else if (toolId === 'calculator') { setActiveTool('calculator'); }
     else if (toolId === 'invoices')   { setActiveTool('invoices'); }
     else if (toolId === 'expenses')   { setActiveTool('expenses'); }
+    else if (toolId === 'pl')         { setActiveTool('pl'); }
   };
 
   if (activeTab === 'loads') {
@@ -235,6 +237,16 @@ const BusinessSuiteShell = () => {
     return (
       <div className={`font-['Oxanium'] ${bg} min-h-screen pb-16`}>
         <ExpenseRecorderScreen onBack={() => setActiveTool(null)} />
+        <BottomNav activeTab={activeTab} onTabChange={t => { setActiveTool(null); setActiveTab(t); }}
+          isDark={isDark} navBg={navBg} border={border} />
+      </div>
+    );
+  }
+
+  if (activeTool === 'pl') {
+    return (
+      <div className={`font-['Oxanium'] ${bg} min-h-screen pb-16`}>
+        <PLScreen onBack={() => setActiveTool(null)} />
         <BottomNav activeTab={activeTab} onTabChange={t => { setActiveTool(null); setActiveTab(t); }}
           isDark={isDark} navBg={navBg} border={border} />
       </div>
