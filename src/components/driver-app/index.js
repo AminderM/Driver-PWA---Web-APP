@@ -16,6 +16,7 @@ import TruckScreen from './TruckScreen';
 import FleetScreen from './FleetScreen';
 import LoadsBoardScreen from './LoadsBoardScreen';
 import ChatScreen from './ChatScreen';
+import BusinessSuiteShell from './BusinessSuiteShell';
 
 // Screen management
 const DriverAppContent = () => {
@@ -24,7 +25,13 @@ const DriverAppContent = () => {
   const [selectedLoad, setSelectedLoad] = useState(null);
   const [showMenu, setShowMenu] = useState(false);
 
-  const homeScreen = userType === 'carrier' ? 'fleet' : 'loads';
+  // Owner Operators and Carriers get the Business Suite shell
+  // (includes TMS loads + business tools nav)
+  if (user && profileComplete && (userType === 'owner_operator' || userType === 'carrier')) {
+    return <BusinessSuiteShell />;
+  }
+
+  const homeScreen = 'loads';
 
   // Not logged in
   if (!user) {
@@ -126,14 +133,6 @@ const DriverAppContent = () => {
     case 'loads':
     case 'dashboard':
     default:
-      if (userType === 'carrier') {
-        return (
-          <FleetScreen
-            onBack={() => {}}
-            onNavigate={(screen) => setCurrentScreen(screen)}
-          />
-        );
-      }
       return (
         <MyLoadsScreen
           onNavigate={(screen) => screen === 'menu' ? setShowMenu(true) : setCurrentScreen(screen)}
