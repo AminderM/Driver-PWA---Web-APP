@@ -8,11 +8,12 @@ import ChatScreen from './ChatScreen';
 import DocumentsScreen from './DocumentsScreen';
 import ProfileScreen from './ProfileScreen';
 import SettingsScreen from './SettingsScreen';
+import LoadCalculatorScreen from './LoadCalculatorScreen';
 
-// Tool cards — Phase 2 (Load Management) is now live; 3-7 still upcoming
+// Tool cards — Phase 2 (Load Management) + Phase 3 (Calculator) are live; 4-7 still upcoming
 const TOOLS = [
   { id: 'loads',      label: 'Load Management',    icon: '📦', desc: 'Manage loads + scan rate confirmations with AI', phase: 2, live: true  },
-  { id: 'calculator', label: 'Load Calculator',    icon: '🧮', desc: 'RPM, fuel cost, net profit per load',            phase: 3, live: false },
+  { id: 'calculator', label: 'Load Calculator',    icon: '🧮', desc: 'RPM, fuel cost, net profit per load',            phase: 3, live: true  },
   { id: 'invoices',   label: 'Invoice Generator',  icon: '📄', desc: 'PDF invoices from your load + letterhead',       phase: 4, live: false },
   { id: 'expenses',   label: 'Expense Recorder',   icon: '🧾', desc: 'Scan receipts, auto-categorize costs',           phase: 5, live: false },
   { id: 'pl',         label: 'P&L View',           icon: '📊', desc: 'Weekly / monthly / annual profit & loss',        phase: 6, live: false },
@@ -85,6 +86,7 @@ const BusinessSuiteShell = () => {
   const [loadsSubTab, setLoadsSubTab]   = useState('dispatched'); // 'dispatched' | 'my-loads'
   const [loadScreen, setLoadScreen]     = useState('list'); // 'list' | 'route' | 'map' | 'chat' | 'docs'
   const [selectedLoad, setSelectedLoad] = useState(null);
+  const [activeTool, setActiveTool]     = useState(null); // 'calculator' | null
 
   const userTypeLabel = userType === 'owner_operator' ? 'Owner Operator' : 'Carrier';
 
@@ -95,6 +97,11 @@ const BusinessSuiteShell = () => {
   const goToLoadList      = ()                  => { setLoadScreen('list'); setSelectedLoad(null); };
 
   const resetLoadsTab = () => { goToLoadList(); };
+
+  const handleToolOpen = (toolId) => {
+    if (toolId === 'loads') { setActiveTab('loads'); setLoadsSubTab('my-loads'); }
+    else if (toolId === 'calculator') { setActiveTool('calculator'); }
+  };
 
   if (activeTab === 'loads') {
     // TMS detail screens (route, map, chat, docs) take over full screen
@@ -200,6 +207,16 @@ const BusinessSuiteShell = () => {
     );
   }
 
+  if (activeTool === 'calculator') {
+    return (
+      <div className={`font-['Oxanium'] ${bg} min-h-screen pb-16`}>
+        <LoadCalculatorScreen onBack={() => setActiveTool(null)} />
+        <BottomNav activeTab={activeTab} onTabChange={t => { setActiveTool(null); setActiveTab(t); }}
+          isDark={isDark} navBg={navBg} border={border} />
+      </div>
+    );
+  }
+
   // ── Home / Tools tabs ─────────────────────────────────────────────────────
   return (
     <div className={`font-['Oxanium'] ${bg} min-h-screen pb-16`}>
@@ -282,7 +299,7 @@ const BusinessSuiteShell = () => {
           <div className="space-y-3">
             {TOOLS.map(tool => (
               tool.live ? (
-                <button key={tool.id} onClick={() => { setActiveTab('loads'); setLoadsSubTab('my-loads'); }}
+                <button key={tool.id} onClick={() => handleToolOpen(tool.id)}
                   className={`w-full text-left ${surface} border ${border} p-4 flex items-center gap-4 hover:border-red-600/50 transition-colors`}>
                   <span className="text-2xl">{tool.icon}</span>
                   <div className="flex-1 min-w-0">
@@ -315,7 +332,7 @@ const BusinessSuiteShell = () => {
           <div className="space-y-3">
             {TOOLS.map(tool => (
               tool.live ? (
-                <button key={tool.id} onClick={() => { setActiveTab('loads'); setLoadsSubTab('my-loads'); }}
+                <button key={tool.id} onClick={() => handleToolOpen(tool.id)}
                   className={`w-full text-left ${surface} border ${border} p-5 hover:border-red-600/50 transition-colors`}>
                   <div className="flex items-center gap-3 mb-2">
                     <span className="text-2xl">{tool.icon}</span>
