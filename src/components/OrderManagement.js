@@ -32,6 +32,14 @@ const OrderManagement = () => {
   // Dispatch edit modal state
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [dispatchingLoad, setDispatchingLoad] = useState(null);
+
+  // Documents viewer modal state
+  const [showDocsModal, setShowDocsModal]           = useState(false);
+  const [docsLoad, setDocsLoad]                     = useState(null);
+  const [loadDocuments, setLoadDocuments]           = useState([]);
+  const [loadingDocs, setLoadingDocs]               = useState(false);
+  const [viewingDoc, setViewingDoc]                 = useState(null);
+  const [loadingDocPreview, setLoadingDocPreview]   = useState(false);
   const [dispatchData, setDispatchData] = useState({
     assigned_carrier: '',
     assigned_driver: '',
@@ -354,7 +362,45 @@ const OrderManagement = () => {
     }
   };
 
-  // Open dispatch edit modal
+  // ── Documents viewer ────────────────────────────────────────────────────────
+
+  const DOC_TYPE_LABELS = {
+    pod: 'Proof of Delivery', bol: 'Bill of Lading',
+    lumper: 'Lumper Receipt', scale_ticket: 'Scale Ticket', other: 'Other',
+  };
+
+  const formatFileSize = (bytes) => {
+    if (!bytes) return '';
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  };
+
+  const openDocsModal = async (load) => {
+    setDocsLoad(load);
+    setLoadDocuments([]);
+    setViewingDoc(null);
+    setShowDocsModal(true);
+    setLoadingDocs(true);
+    try {
+      const res = await fetchWithAuth(`${BACKEND_URL}/api/bookings/${load.id}/documents`);
+      if (res.ok) setLoadDocuments(await res.json());
+      else toast.error('Could not load documents');
+    } catch { toast.error('Could not load documents'); }
+    finally { setLoadingDocs(false); }
+  };
+
+  const handleViewDocument = async (doc) => {
+    setLoadingDocPreview(true);
+    setViewingDoc(null);
+    try {
+      const res = await fetchWithAuth(`${BACKEND_URL}/api/drivers/documents/${doc.id}`);
+      if (res.ok) setViewingDoc(await res.json());
+      else toast.error('Could not load document preview');
+    } catch { toast.error('Could not load document preview'); }
+    finally { setLoadingDocPreview(false); }
+  };
+
+  // ── Open dispatch edit modal ─────────────────────────────────────────────
   const openDispatchModal = (load) => {
     setDispatchingLoad(load);
     setDispatchData({
@@ -1680,13 +1726,28 @@ const OrderManagement = () => {
                             ) : '-'}
                           </td>
                           <td className="px-3 py-2 whitespace-nowrap">
-                            <div className="flex gap-1">
+                            <div className="flex items-center gap-1 flex-wrap">
                               <Button variant="outline" size="sm" className="h-7 px-2" onClick={() => openDispatchModal(load)} title="Edit Dispatch Info">
                                 <i className="fas fa-truck text-foreground"></i>
                               </Button>
                               <Button variant="outline" size="sm" className="h-7 px-2" onClick={() => handleEditOrder(load)} title="Edit Order">
                                 <i className="fas fa-edit text-foreground"></i>
                               </Button>
+                              <Button
+                                variant="outline" size="sm" className="h-7 px-2 relative"
+                                onClick={() => openDocsModal(load)}
+                                title={load.pod_document_url ? 'View documents (POD received)' : 'View documents'}
+                              >
+                                <i className="fas fa-file-alt text-foreground text-xs"></i>
+                                {load.pod_document_url && (
+                                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full" />
+                                )}
+                              </Button>
+                              {load.pod_document_url && (
+                                <Badge className="h-5 px-1.5 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-xs font-normal border-0">
+                                  📷 POD
+                                </Badge>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -2132,6 +2193,107 @@ const OrderManagement = () => {
                 </Button>
               </div>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Documents Modal */}
+      <Dialog open={showDocsModal} onOpenChange={(open) => {
+        setShowDocsModal(open);
+        if (!open) { setDocsLoad(null); setLoadDocuments([]); setViewingDoc(null); }
+      }}>
+        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <i className="fas fa-file-alt text-foreground"></i>
+              Documents — {docsLoad?.order_number || 'Load'}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto space-y-4 py-2">
+            {loadingDocs ? (
+              <div className="flex items-center justify-center py-8 text-muted-foreground">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mr-3" />
+                Loading documents...
+              </div>
+            ) : loadDocuments.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <i className="fas fa-folder-open text-3xl mb-3 block opacity-40"></i>
+                No documents uploaded yet
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                  {loadDocuments.length} {loadDocuments.length === 1 ? 'file' : 'files'}
+                </p>
+                {loadDocuments.map(doc => (
+                  <div key={doc.id}
+                    className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <i className={`fas ${doc.content_type?.startsWith('image/') ? 'fa-image' : 'fa-file-pdf'} text-muted-foreground text-lg flex-shrink-0`} />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">
+                          {DOC_TYPE_LABELS[doc.doc_type] || doc.document_type || 'Document'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {doc.uploader_name} · {formatFileSize(doc.file_size)} ·{' '}
+                          {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleString('en-US', {
+                            month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+                          }) : ''}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline" size="sm"
+                      onClick={() => handleViewDocument(doc)}
+                      disabled={loadingDocPreview}
+                    >
+                      {loadingDocPreview && viewingDoc === null ? (
+                        <span className="flex items-center gap-1">
+                          <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                          Loading
+                        </span>
+                      ) : 'View'}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {viewingDoc && (
+              <div className="border-t pt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Preview</p>
+                  <Button variant="ghost" size="sm" className="h-6 text-xs"
+                    onClick={() => setViewingDoc(null)}>
+                    Close preview
+                  </Button>
+                </div>
+                {viewingDoc.content_type?.startsWith('image/') ? (
+                  <img
+                    src={`data:${viewingDoc.content_type};base64,${viewingDoc.file_data}`}
+                    alt={viewingDoc.filename}
+                    className="w-full rounded-lg border object-contain max-h-96"
+                  />
+                ) : viewingDoc.content_type === 'application/pdf' ? (
+                  <Button
+                    className="w-full" variant="outline"
+                    onClick={() => {
+                      const bytes = atob(viewingDoc.file_data);
+                      const arr = new Uint8Array(bytes.length).map((_, i) => bytes.charCodeAt(i));
+                      const url = URL.createObjectURL(new Blob([arr], { type: 'application/pdf' }));
+                      window.open(url, '_blank');
+                    }}
+                  >
+                    <i className="fas fa-external-link-alt mr-2"></i>
+                    Open PDF in new tab
+                  </Button>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Preview not available for this file type.</p>
+                )}
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

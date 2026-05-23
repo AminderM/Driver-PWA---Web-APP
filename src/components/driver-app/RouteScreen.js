@@ -28,6 +28,20 @@ const toDatetimeLocal = (date = new Date()) => {
   return d.toISOString().slice(0, 16);
 };
 
+// Returns a human-readable error string that always includes the HTTP status
+// code so we can diagnose backend rejections without reading server logs.
+const formatApiError = (err, fallback) => {
+  const msg = err.message || fallback;
+  const code = err.status;
+  if (!code) return msg;
+  // Map common codes to actionable driver-facing messages
+  if (code === 401 || code === 403) return `${msg} (auth error ${code} — try logging out and back in)`;
+  if (code === 404) return `Load not found on server (404) — contact dispatch`;
+  if (code === 409) return `${msg} (conflict ${code} — load may already be updated)`;
+  if (code >= 500) return `${msg} (server error ${code} — contact dispatch)`;
+  return `${msg} [${code}]`;
+};
+
 const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
   const { api, theme, currentLocation, setActiveLoadId } = useDriverApp();
   const [load, setLoad] = useState(initialLoad);
@@ -88,7 +102,7 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
       setProblemNote('');
     } catch (err) {
       hapticError();
-      setUpdateError(err.message || 'Status update failed. Please try again.');
+      setUpdateError(formatApiError(err, 'Status update failed. Please try again.'));
     } finally {
       setUpdating(false);
     }
@@ -191,7 +205,7 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
       setPodUploaded(false);
     } catch (err) {
       hapticError();
-      setUpdateError(err.message || 'Could not mark as delivered. Tap RETRY to try again.');
+      setUpdateError(formatApiError(err, 'Could not mark as delivered. Tap RETRY to try again.'));
     } finally {
       setUpdating(false);
     }
@@ -358,9 +372,9 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
 
         {/* Status update errors (non-POD) — hidden while POD preview is active */}
         {updateError && podStep !== 'preview' && (
-          <div className="bg-red-600/20 border border-red-600/50 px-4 py-3">
-            <p className="text-red-500 text-sm">{updateError}</p>
-            <p className="text-red-400 text-xs mt-1">If this keeps happening, use REPORT A PROBLEM or contact dispatch directly.</p>
+          <div className="bg-red-600/20 border border-red-600/50 px-4 py-3 space-y-2">
+            <p className="text-red-500 text-sm font-medium">{updateError}</p>
+            <p className="text-red-400 text-xs">Screenshot this error and send it to dispatch, or use the chat button above.</p>
           </div>
         )}
 

@@ -239,11 +239,19 @@ export const DriverAppProvider = ({ children }) => {
 
     if (!response.ok) {
       let message = 'Request failed';
+      let rawDetail = null;
       try {
         const error = await response.json();
-        message = error.detail || error.message || error.error || message;
+        rawDetail = error.detail || error.message || error.error;
+        message = typeof rawDetail === 'string' ? rawDetail
+          : Array.isArray(rawDetail) ? rawDetail.map(e => e.msg || JSON.stringify(e)).join('. ')
+          : message;
       } catch { /* response body not JSON */ }
-      throw new Error(message);
+      // Attach HTTP status so callers can distinguish 401/403/404/409/500
+      const err = new Error(message);
+      err.status = response.status;
+      err.detail = rawDetail;
+      throw err;
     }
 
     const text = await response.text();
