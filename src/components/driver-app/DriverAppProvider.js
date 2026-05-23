@@ -309,6 +309,114 @@ export const DriverAppProvider = ({ children }) => {
     setProfileComplete(true);
   };
 
+  // Open registration — no invite required (Owner Operator + Carrier)
+  const openSignup = async ({ userType, fullName, email, phone, password, companyName, mcDotNumber, logoFile }) => {
+    const formData = new FormData();
+    formData.append('user_type', userType);
+    formData.append('full_name', fullName);
+    formData.append('email', email);
+    formData.append('phone', phone);
+    formData.append('password', password);
+    formData.append('company_name', companyName);
+    if (mcDotNumber) formData.append('mc_dot_number', mcDotNumber);
+    if (logoFile) formData.append('logo', logoFile);
+
+    const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || ''}/api/driver-mobile/signup/open`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      const detail = err.detail;
+      const message = Array.isArray(detail)
+        ? detail.map(e => e.msg || JSON.stringify(e)).join('. ')
+        : (typeof detail === 'string' ? detail : 'Registration failed. Please try again.');
+      throw new Error(message);
+    }
+    const data = await response.json();
+    setToken(data.access_token);
+    setUser(data.user);
+    localStorage.setItem('driver_app_token', data.access_token);
+    localStorage.setItem('driver_app_user', JSON.stringify(data.user));
+    setProfileComplete(true);
+    setInviteToken(null);
+    return data;
+  };
+
+  // Phone OTP login — send code (unauthenticated)
+  const loginWithPhoneRequest = async (phone) => {
+    const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || ''}/api/driver-mobile/auth/phone/request-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to send verification code.');
+    }
+  };
+
+  // Phone OTP login — verify code, returns JWT + user
+  const loginWithPhoneVerify = async (phone, otp) => {
+    const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || ''}/api/driver-mobile/auth/phone/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, otp }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || 'Invalid or expired code.');
+    }
+    const data = await response.json();
+    setToken(data.access_token);
+    setUser(data.user);
+    localStorage.setItem('driver_app_token', data.access_token);
+    localStorage.setItem('driver_app_user', JSON.stringify(data.user));
+    const localComplete = localStorage.getItem(`driver_profile_complete_${data.user.id}`) === 'true';
+    setProfileComplete(localComplete || data.user.first_login === false);
+    return data;
+  };
+
+  // Google OAuth — exchange Google ID token for app JWT
+  const loginWithGoogle = async (googleIdToken) => {
+    const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || ''}/api/driver-mobile/auth/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id_token: googleIdToken }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || 'Google sign-in failed.');
+    }
+    const data = await response.json();
+    setToken(data.access_token);
+    setUser(data.user);
+    localStorage.setItem('driver_app_token', data.access_token);
+    localStorage.setItem('driver_app_user', JSON.stringify(data.user));
+    const localComplete = localStorage.getItem(`driver_profile_complete_${data.user.id}`) === 'true';
+    setProfileComplete(localComplete || data.user.first_login === false);
+    return data;
+  };
+
+  // Update profile (company name, MC/DOT, logo)
+  const updateProfile = async (data) => {
+    const isLogoUpload = data.logo instanceof File;
+    let body, headers;
+    if (isLogoUpload) {
+      const formData = new FormData();
+      Object.entries(data).forEach(([k, v]) => { if (v != null) formData.append(k, v); });
+      body = formData;
+      headers = {};
+    } else {
+      body = JSON.stringify(data);
+      headers = { 'Content-Type': 'application/json' };
+    }
+    const result = await api('/profile', { method: 'PATCH', headers, body });
+    if (result?.user) mergeUserData(result.user);
+    else if (result) mergeUserData(result);
+    return result;
+  };
+
   // Phone OTP — send to the driver's registered phone
   const sendPhoneOTP = async () => {
     await api('/phone/send-otp', { method: 'POST' });
@@ -333,6 +441,7 @@ export const DriverAppProvider = ({ children }) => {
     locationGranted, requestLocation,
     profileComplete, completeProfile, mergeUserData,
     inviteToken, setInviteToken, validateInvite, signup,
+    openSignup, loginWithPhoneRequest, loginWithPhoneVerify, loginWithGoogle, updateProfile,
     phoneVerified, sendPhoneOTP, verifyPhoneOTP,
     theme, toggleTheme, setTheme
   };
