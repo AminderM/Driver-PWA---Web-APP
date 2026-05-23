@@ -310,7 +310,7 @@ export const DriverAppProvider = ({ children }) => {
   };
 
   // Open registration — no invite required (Owner Operator + Carrier)
-  const openSignup = async ({ userType, fullName, email, phone, password, companyName, mcDotNumber, logoFile }) => {
+  const openSignup = async ({ userType, fullName, email, phone, password, companyName, mcDotNumber, logoFile, otp }) => {
     const formData = new FormData();
     formData.append('user_type', userType);
     formData.append('full_name', fullName);
@@ -319,7 +319,8 @@ export const DriverAppProvider = ({ children }) => {
     formData.append('password', password);
     formData.append('company_name', companyName);
     if (mcDotNumber) formData.append('mc_dot_number', mcDotNumber);
-    if (logoFile) formData.append('logo', logoFile);
+    if (logoFile)    formData.append('logo', logoFile);
+    if (otp)         formData.append('otp', otp);
 
     const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || ''}/api/driver-mobile/signup/open`, {
       method: 'POST',
@@ -456,7 +457,7 @@ export const DriverAppProvider = ({ children }) => {
 
   if (!isMobile) return <MobileBlockScreen theme={theme} />;
   
-  if (user && !locationGranted && user?.user_type !== 'carrier') {
+  if (user && !locationGranted && user?.user_type === 'driver') {
     return <LocationPermissionScreen onRetry={requestLocation} error={locationError} theme={theme} />;
   }
 
