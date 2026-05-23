@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useDriverApp } from './DriverAppProvider';
 import MyLoadsScreen from './MyLoadsScreen';
+import ManualLoadsScreen from './ManualLoadsScreen';
 import RouteScreen from './RouteScreen';
 import MapScreen from './MapScreen';
 import ChatScreen from './ChatScreen';
@@ -8,13 +9,14 @@ import DocumentsScreen from './DocumentsScreen';
 import ProfileScreen from './ProfileScreen';
 import SettingsScreen from './SettingsScreen';
 
-// Tool cards shown on the Home tab until each phase ships
+// Tool cards — Phase 2 (Load Management) is now live; 3-7 still upcoming
 const TOOLS = [
-  { id: 'calculator', label: 'Load Calculator',    icon: '🧮', desc: 'RPM, fuel cost, net profit per load',        phase: 3 },
-  { id: 'invoices',   label: 'Invoice Generator',  icon: '📄', desc: 'PDF invoices from your load + letterhead',   phase: 4 },
-  { id: 'expenses',   label: 'Expense Recorder',   icon: '🧾', desc: 'Scan receipts, auto-categorize costs',       phase: 5 },
-  { id: 'pl',         label: 'P&L View',           icon: '📊', desc: 'Weekly / monthly / annual profit & loss',    phase: 6 },
-  { id: 'vault',      label: 'Document Vault',      icon: '🗂️', desc: 'CDL, insurance, IFTA — expiry alerts',      phase: 7 },
+  { id: 'loads',      label: 'Load Management',    icon: '📦', desc: 'Manage loads + scan rate confirmations with AI', phase: 2, live: true  },
+  { id: 'calculator', label: 'Load Calculator',    icon: '🧮', desc: 'RPM, fuel cost, net profit per load',            phase: 3, live: false },
+  { id: 'invoices',   label: 'Invoice Generator',  icon: '📄', desc: 'PDF invoices from your load + letterhead',       phase: 4, live: false },
+  { id: 'expenses',   label: 'Expense Recorder',   icon: '🧾', desc: 'Scan receipts, auto-categorize costs',           phase: 5, live: false },
+  { id: 'pl',         label: 'P&L View',           icon: '📊', desc: 'Weekly / monthly / annual profit & loss',        phase: 6, live: false },
+  { id: 'vault',      label: 'Document Vault',      icon: '🗂️', desc: 'CDL, insurance, IFTA — expiry alerts',          phase: 7, live: false },
 ];
 
 const NAV_TABS = [
@@ -79,69 +81,100 @@ const BusinessSuiteShell = () => {
   const border  = isDark ? 'border-[#262626]'  : 'border-[#e5e5e5]';
   const navBg   = isDark ? 'bg-[#0a0a0a]'     : 'bg-white';
 
-  const [activeTab, setActiveTab]     = useState('home');
-  const [loadScreen, setLoadScreen]   = useState('list'); // 'list' | 'route' | 'map' | 'chat' | 'docs'
+  const [activeTab, setActiveTab]       = useState('home');
+  const [loadsSubTab, setLoadsSubTab]   = useState('dispatched'); // 'dispatched' | 'my-loads'
+  const [loadScreen, setLoadScreen]     = useState('list'); // 'list' | 'route' | 'map' | 'chat' | 'docs'
   const [selectedLoad, setSelectedLoad] = useState(null);
 
   const userTypeLabel = userType === 'owner_operator' ? 'Owner Operator' : 'Carrier';
 
-  // ── Loads sub-navigation (reuse existing TMS screens unchanged) ───────────
+  // ── Loads sub-navigation (TMS screens reused unchanged) ──────────────────
 
   const handleLoadSelect  = (load, screenType) => { setSelectedLoad(load); setLoadScreen(screenType || 'route'); };
   const handleLoadViewMap = (load)              => { setSelectedLoad(load); setLoadScreen('map'); };
   const goToLoadList      = ()                  => { setLoadScreen('list'); setSelectedLoad(null); };
 
+  const resetLoadsTab = () => { goToLoadList(); };
+
   if (activeTab === 'loads') {
-    if (loadScreen === 'route' && selectedLoad) {
-      return (
-        <div className={`font-['Oxanium'] ${bg} min-h-screen`}>
-          <RouteScreen
-            load={selectedLoad}
-            onBack={goToLoadList}
-            onViewMap={() => setLoadScreen('map')}
-            onOpenChat={(load) => { setSelectedLoad(load); setLoadScreen('chat'); }}
-          />
-          <BottomNav activeTab={activeTab} onTabChange={t => { setActiveTab(t); goToLoadList(); }}
-            isDark={isDark} navBg={navBg} border={border} />
-        </div>
-      );
+    // TMS detail screens (route, map, chat, docs) take over full screen
+    if (loadsSubTab === 'dispatched') {
+      if (loadScreen === 'route' && selectedLoad) {
+        return (
+          <div className={`font-['Oxanium'] ${bg} min-h-screen`}>
+            <RouteScreen
+              load={selectedLoad}
+              onBack={goToLoadList}
+              onViewMap={() => setLoadScreen('map')}
+              onOpenChat={(load) => { setSelectedLoad(load); setLoadScreen('chat'); }}
+            />
+            <BottomNav activeTab={activeTab} onTabChange={t => { setActiveTab(t); resetLoadsTab(); }}
+              isDark={isDark} navBg={navBg} border={border} />
+          </div>
+        );
+      }
+      if (loadScreen === 'map' && selectedLoad) {
+        return (
+          <div className={`font-['Oxanium'] ${bg} min-h-screen`}>
+            <MapScreen load={selectedLoad} onBack={() => setLoadScreen('route')} />
+            <BottomNav activeTab={activeTab} onTabChange={t => { setActiveTab(t); resetLoadsTab(); }}
+              isDark={isDark} navBg={navBg} border={border} />
+          </div>
+        );
+      }
+      if (loadScreen === 'chat' && selectedLoad) {
+        return (
+          <div className={`font-['Oxanium'] ${bg} min-h-screen`}>
+            <ChatScreen load={selectedLoad} onBack={() => setLoadScreen('route')} />
+            <BottomNav activeTab={activeTab} onTabChange={t => { setActiveTab(t); resetLoadsTab(); }}
+              isDark={isDark} navBg={navBg} border={border} />
+          </div>
+        );
+      }
+      if (loadScreen === 'docs' && selectedLoad) {
+        return (
+          <div className={`font-['Oxanium'] ${bg} min-h-screen`}>
+            <DocumentsScreen load={selectedLoad} onBack={goToLoadList} />
+            <BottomNav activeTab={activeTab} onTabChange={t => { setActiveTab(t); resetLoadsTab(); }}
+              isDark={isDark} navBg={navBg} border={border} />
+          </div>
+        );
+      }
     }
-    if (loadScreen === 'map' && selectedLoad) {
-      return (
-        <div className={`font-['Oxanium'] ${bg} min-h-screen`}>
-          <MapScreen load={selectedLoad} onBack={() => setLoadScreen('route')} />
-          <BottomNav activeTab={activeTab} onTabChange={t => { setActiveTab(t); goToLoadList(); }}
-            isDark={isDark} navBg={navBg} border={border} />
-        </div>
-      );
-    }
-    if (loadScreen === 'chat' && selectedLoad) {
-      return (
-        <div className={`font-['Oxanium'] ${bg} min-h-screen`}>
-          <ChatScreen load={selectedLoad} onBack={() => setLoadScreen('route')} />
-          <BottomNav activeTab={activeTab} onTabChange={t => { setActiveTab(t); goToLoadList(); }}
-            isDark={isDark} navBg={navBg} border={border} />
-        </div>
-      );
-    }
-    if (loadScreen === 'docs' && selectedLoad) {
-      return (
-        <div className={`font-['Oxanium'] ${bg} min-h-screen`}>
-          <DocumentsScreen load={selectedLoad} onBack={goToLoadList} />
-          <BottomNav activeTab={activeTab} onTabChange={t => { setActiveTab(t); goToLoadList(); }}
-            isDark={isDark} navBg={navBg} border={border} />
-        </div>
-      );
-    }
-    // Default: load list
+
+    // Loads tab with sub-tab switcher at top
     return (
-      <div className={`font-['Oxanium'] ${bg} min-h-screen pb-16`}>
-        <MyLoadsScreen
-          onNavigate={() => {}}
-          onSelectLoad={handleLoadSelect}
-          onViewMap={handleLoadViewMap}
-        />
-        <BottomNav activeTab={activeTab} onTabChange={setActiveTab}
+      <div className={`font-['Oxanium'] ${bg} min-h-screen flex flex-col pb-16`}>
+        {/* Sub-tab header */}
+        <div className={`${isDark ? 'bg-[#0a0a0a]' : 'bg-white'} border-b ${border} flex`}>
+          {[
+            { id: 'dispatched', label: 'DISPATCHED' },
+            { id: 'my-loads',   label: 'MY LOADS'   },
+          ].map(t => (
+            <button key={t.id} onClick={() => { setLoadsSubTab(t.id); goToLoadList(); }}
+              className={`flex-1 py-3 text-xs font-bold tracking-widest transition-colors ${
+                loadsSubTab === t.id
+                  ? 'text-red-500 border-b-2 border-red-500'
+                  : `${isDark ? 'text-white/40' : 'text-black/40'}`
+              }`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {loadsSubTab === 'dispatched' ? (
+            <MyLoadsScreen
+              onNavigate={() => {}}
+              onSelectLoad={handleLoadSelect}
+              onViewMap={handleLoadViewMap}
+            />
+          ) : (
+            <ManualLoadsScreen onBack={() => setActiveTab('home')} />
+          )}
+        </div>
+
+        <BottomNav activeTab={activeTab} onTabChange={t => { setActiveTab(t); resetLoadsTab(); }}
           isDark={isDark} navBg={navBg} border={border} />
       </div>
     );
@@ -217,14 +250,15 @@ const BusinessSuiteShell = () => {
           {/* Quick stats row */}
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: 'Active Loads', value: '—', note: 'Tap Loads to view' },
-              { label: 'Net This Month', value: '—', note: 'Available in Phase 2' },
+              { label: 'Dispatched Loads', value: '—', note: 'Tap Loads → Dispatched' },
+              { label: 'My Loads',         value: '—', note: 'Tap Loads → My Loads'  },
             ].map(({ label, value, note }) => (
-              <div key={label} className={`${surface} border ${border} p-4`}>
+              <button key={label} onClick={() => setActiveTab('loads')}
+                className={`text-left ${surface} border ${border} p-4 hover:border-red-600/50 transition-colors`}>
                 <p className={`text-xs tracking-wider mb-1 ${subtext}`}>{label.toUpperCase()}</p>
                 <p className={`text-2xl font-bold ${text}`}>{value}</p>
                 <p className={`text-xs mt-1 ${subtext}`}>{note}</p>
-              </div>
+              </button>
             ))}
           </div>
 
@@ -247,16 +281,28 @@ const BusinessSuiteShell = () => {
           <p className={`text-xs font-bold tracking-widest pt-2 ${subtext}`}>BUSINESS TOOLS</p>
           <div className="space-y-3">
             {TOOLS.map(tool => (
-              <div key={tool.id} className={`${surface} border ${border} p-4 flex items-center gap-4 opacity-60`}>
-                <span className="text-2xl">{tool.icon}</span>
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-bold tracking-wider ${text}`}>{tool.label}</p>
-                  <p className={`text-xs mt-0.5 ${subtext}`}>{tool.desc}</p>
+              tool.live ? (
+                <button key={tool.id} onClick={() => { setActiveTab('loads'); setLoadsSubTab('my-loads'); }}
+                  className={`w-full text-left ${surface} border ${border} p-4 flex items-center gap-4 hover:border-red-600/50 transition-colors`}>
+                  <span className="text-2xl">{tool.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-bold tracking-wider ${text}`}>{tool.label}</p>
+                    <p className={`text-xs mt-0.5 ${subtext}`}>{tool.desc}</p>
+                  </div>
+                  <span className="text-xs tracking-wider px-2 py-1 bg-green-600/20 text-green-400">LIVE</span>
+                </button>
+              ) : (
+                <div key={tool.id} className={`${surface} border ${border} p-4 flex items-center gap-4 opacity-50`}>
+                  <span className="text-2xl">{tool.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-bold tracking-wider ${text}`}>{tool.label}</p>
+                    <p className={`text-xs mt-0.5 ${subtext}`}>{tool.desc}</p>
+                  </div>
+                  <span className={`text-xs tracking-wider px-2 py-1 ${
+                    isDark ? 'bg-[#1a1a1a] text-white/40' : 'bg-[#f0f0f0] text-black/40'
+                  }`}>SOON</span>
                 </div>
-                <span className={`text-xs tracking-wider px-2 py-1 ${
-                  isDark ? 'bg-[#1a1a1a] text-white/40' : 'bg-[#f0f0f0] text-black/40'
-                }`}>SOON</span>
-              </div>
+              )
             ))}
           </div>
         </div>
@@ -268,23 +314,36 @@ const BusinessSuiteShell = () => {
           <p className={`text-xs font-bold tracking-widest mb-4 ${subtext}`}>BUSINESS TOOLS</p>
           <div className="space-y-3">
             {TOOLS.map(tool => (
-              <div key={tool.id} className={`${surface} border ${border} p-5 opacity-60`}>
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-2xl">{tool.icon}</span>
-                  <div>
-                    <p className={`text-sm font-bold tracking-wider ${text}`}>{tool.label}</p>
-                    <span className={`text-xs ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>
-                      Coming in Phase {tool.phase}
-                    </span>
+              tool.live ? (
+                <button key={tool.id} onClick={() => { setActiveTab('loads'); setLoadsSubTab('my-loads'); }}
+                  className={`w-full text-left ${surface} border ${border} p-5 hover:border-red-600/50 transition-colors`}>
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-2xl">{tool.icon}</span>
+                    <div>
+                      <p className={`text-sm font-bold tracking-wider ${text}`}>{tool.label}</p>
+                      <span className="text-xs text-green-400">✓ Available now</span>
+                    </div>
                   </div>
+                  <p className={`text-xs leading-relaxed ${subtext}`}>{tool.desc}</p>
+                </button>
+              ) : (
+                <div key={tool.id} className={`${surface} border ${border} p-5 opacity-50`}>
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-2xl">{tool.icon}</span>
+                    <div>
+                      <p className={`text-sm font-bold tracking-wider ${text}`}>{tool.label}</p>
+                      <span className={`text-xs ${isDark ? 'text-amber-400/70' : 'text-amber-600'}`}>
+                        Coming in Phase {tool.phase}
+                      </span>
+                    </div>
+                  </div>
+                  <p className={`text-xs leading-relaxed ${subtext}`}>{tool.desc}</p>
                 </div>
-                <p className={`text-xs leading-relaxed ${subtext}`}>{tool.desc}</p>
-              </div>
+              )
             ))}
           </div>
           <p className={`text-xs text-center mt-6 leading-relaxed ${subtext}`}>
-            Tools unlock when your subscription is active.{'\n'}
-            Subscribe via Profile → Subscription.
+            More tools shipping soon · Subscribe to unlock all features
           </p>
         </div>
       )}
