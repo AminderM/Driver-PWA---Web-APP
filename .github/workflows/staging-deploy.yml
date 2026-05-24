@@ -59,6 +59,7 @@ jobs:
         env:
           CI: false
           GENERATE_SOURCEMAP: false
+          REACT_APP_BACKEND_URL: https://api.staging.integratedtech.ca
           NODE_OPTIONS: --max_old_space_size=4096
 
       - name: Create deployment info file
