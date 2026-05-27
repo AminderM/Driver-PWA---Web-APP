@@ -7,12 +7,12 @@ const OpenSignupScreen = ({ onBack }) => {
   const { openSignup, loginWithPhoneRequest, theme } = useDriverApp();
   const isDark = theme === 'dark';
 
-  const bg       = isDark ? 'bg-black'          : 'bg-white';
+  const bg       = isDark ? 'bg-[#030303]'          : 'bg-white';
   const text     = isDark ? 'text-white'         : 'text-black';
   const subtext  = isDark ? 'text-white/60'      : 'text-black/60';
-  const border   = isDark ? 'border-[#262626]'   : 'border-[#e5e5e5]';
-  const inputCls = `w-full border py-4 px-4 focus:outline-none focus:ring-2 focus:ring-red-600 ${
-    isDark ? 'bg-[#0a0a0a] border-[#262626] text-white placeholder-white/40'
+  const border   = isDark ? 'border-[#1F1F1F]'   : 'border-[#e5e5e5]';
+  const inputCls = `w-full border py-4 px-4 focus:outline-none focus:ring-2 focus:ring-[#CC2222] ${
+    isDark ? 'bg-[#080808] border-[#1F1F1F] text-white placeholder-white/40'
            : 'bg-white border-[#e5e5e5] text-black placeholder-black/40'
   }`;
 
@@ -119,7 +119,7 @@ const OpenSignupScreen = ({ onBack }) => {
   const progressPct = ((step) / (STEPS.length - 1)) * 100;
 
   return (
-    <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
+    <div className={`min-h-screen flex flex-col font-['Barlow_Condensed'] ${bg}`}>
 
       {/* Header */}
       <div className={`pt-12 pb-6 px-6 border-b ${border}`}>
@@ -133,15 +133,15 @@ const OpenSignupScreen = ({ onBack }) => {
         </div>
         {/* Progress bar */}
         <div className={`h-1 w-full mt-3 ${isDark ? 'bg-[#262626]' : 'bg-[#e5e5e5]'}`}>
-          <div className="h-1 bg-red-600 transition-all duration-300" style={{ width: `${progressPct}%` }} />
+          <div className="h-1 bg-[#CC2222] transition-all duration-300" style={{ width: `${progressPct}%` }} />
         </div>
       </div>
 
       <div className="flex-1 px-6 py-8 overflow-y-auto">
 
         {error && (
-          <div className="bg-red-600/20 border border-red-600/50 p-4 mb-6">
-            <p className="text-red-500 text-sm">{error}</p>
+          <div className="bg-[#CC2222]/20 border border-[#CC2222]/50 p-4 mb-6">
+            <p className="text-[#CC2222] text-sm">{error}</p>
           </div>
         )}
 
@@ -171,8 +171,8 @@ const OpenSignupScreen = ({ onBack }) => {
                   onClick={() => handleRoleSelect(type)}
                   className={`w-full text-left p-5 border transition-colors ${
                     isDark
-                      ? 'border-[#262626] hover:border-red-600/60 hover:bg-red-600/5'
-                      : 'border-[#e5e5e5] hover:border-red-600/60 hover:bg-red-600/5'
+                      ? 'border-[#1F1F1F] hover:border-[#CC2222]/60 hover:bg-[#CC2222]/5'
+                      : 'border-[#e5e5e5] hover:border-[#CC2222]/60 hover:bg-[#CC2222]/5'
                   }`}
                 >
                   <div className="flex items-center gap-3 mb-2">
@@ -183,7 +183,7 @@ const OpenSignupScreen = ({ onBack }) => {
                 </button>
               ))}
             </div>
-            <div className={`mt-8 p-4 ${isDark ? 'bg-[#0a0a0a] border border-[#262626]' : 'bg-[#f5f5f5]'}`}>
+            <div className={`mt-8 p-4 ${isDark ? 'bg-[#080808] border border-[#1F1F1F]' : 'bg-[#f5f5f5]'}`}>
               <p className={`text-xs ${subtext}`}>
                 <span className={`font-semibold ${text}`}>Company Driver?</span> You don't sign up here.
                 Ask your dispatcher for an invite link — they'll send it to your email.
@@ -235,7 +235,7 @@ const OpenSignupScreen = ({ onBack }) => {
                 placeholder="Re-enter password" className={inputCls} required />
             </div>
             <button type="submit"
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-4 tracking-wider transition-colors mt-2">
+              className="w-full bg-[#CC2222] hover:bg-[#7A1010] text-white font-semibold py-4 tracking-wider transition-colors mt-2">
               CONTINUE →
             </button>
           </form>
@@ -267,7 +267,7 @@ const OpenSignupScreen = ({ onBack }) => {
               {logoPreview ? (
                 <div className="flex items-center gap-4">
                   <img src={logoPreview} alt="Logo preview"
-                    className="w-16 h-16 object-cover border border-[#262626]" />
+                    className="w-16 h-16 object-cover border border-[#1F1F1F]" />
                   <button type="button" onClick={() => { setLogoFile(null); setLogoPreview(null); }}
                     className={`text-sm ${subtext}`}>Remove</button>
                 </div>
@@ -275,8 +275,8 @@ const OpenSignupScreen = ({ onBack }) => {
                 <button type="button" onClick={() => logoInputRef.current?.click()}
                   className={`w-full border-2 border-dashed py-6 text-sm tracking-wider transition-colors ${
                     isDark
-                      ? 'border-[#262626] text-white/40 hover:border-red-600/50 hover:text-white/60'
-                      : 'border-[#e5e5e5] text-black/40 hover:border-red-600/50 hover:text-black/60'
+                      ? 'border-[#1F1F1F] text-white/40 hover:border-[#CC2222]/50 hover:text-white/60'
+                      : 'border-[#e5e5e5] text-black/40 hover:border-[#CC2222]/50 hover:text-black/60'
                   }`}>
                   TAP TO UPLOAD LOGO
                 </button>
@@ -285,7 +285,7 @@ const OpenSignupScreen = ({ onBack }) => {
             </div>
 
             <button type="submit" disabled={loading}
-              className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white font-semibold py-4 tracking-wider transition-colors mt-2">
+              className="w-full bg-[#CC2222] hover:bg-[#7A1010] disabled:bg-[#CC2222]/50 text-white font-semibold py-4 tracking-wider transition-colors mt-2">
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -326,8 +326,8 @@ const OpenSignupScreen = ({ onBack }) => {
                       document.getElementById(`signup-otp-${i - 1}`)?.focus();
                     }
                   }}
-                  className={`w-12 h-14 text-center text-xl font-bold border focus:outline-none focus:ring-2 focus:ring-red-600 ${
-                    isDark ? 'bg-[#0a0a0a] border-[#262626] text-white'
+                  className={`w-12 h-14 text-center text-xl font-bold border focus:outline-none focus:ring-2 focus:ring-[#CC2222] ${
+                    isDark ? 'bg-[#080808] border-[#1F1F1F] text-white'
                            : 'bg-white border-[#e5e5e5] text-black'
                   }`}
                 />
@@ -346,14 +346,14 @@ const OpenSignupScreen = ({ onBack }) => {
                     catch (err) { setError(err.message); }
                     finally { setLoading(false); }
                   }}
-                  className="text-sm text-red-500 hover:text-red-400 tracking-wider">
+                  className="text-sm text-[#CC2222] hover:text-[#FF2020] tracking-wider">
                   RESEND CODE
                 </button>
               )}
             </div>
 
             <button type="submit" disabled={loading || otp.length < 6}
-              className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white font-semibold py-4 tracking-wider transition-colors mt-4">
+              className="w-full bg-[#CC2222] hover:bg-[#7A1010] disabled:bg-[#CC2222]/50 text-white font-semibold py-4 tracking-wider transition-colors mt-4">
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

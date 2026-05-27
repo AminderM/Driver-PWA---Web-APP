@@ -9,7 +9,7 @@ const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
 const LoginHeader = ({ step, isDark, border, text, subtext }) => (
   <div className={`pt-12 pb-8 px-6 text-center border-b ${border}`}>
     <div className="w-16 h-16 bg-red-600 flex items-center justify-center mx-auto mb-4">
-      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-8 h-8 text-[#EDE9E3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
       </svg>
@@ -25,12 +25,12 @@ const DriverLogin = () => {
   const { login, loginWithPhoneRequest, loginWithPhoneVerify, loginWithGoogle, theme, devLogin } = useDriverApp();
   const isDark = theme === 'dark';
 
-  const bg       = isDark ? 'bg-black'         : 'bg-white';
-  const text     = isDark ? 'text-white'        : 'text-black';
-  const subtext  = isDark ? 'text-white/60'     : 'text-black/60';
-  const border   = isDark ? 'border-[#262626]'  : 'border-[#e5e5e5]';
+  const bg       = isDark ? 'bg-[#030303]'         : 'bg-white';
+  const text     = isDark ? 'text-[#EDE9E3]'        : 'text-black';
+  const subtext  = isDark ? 'text-[#EDE9E3]/60'     : 'text-black/60';
+  const border   = isDark ? 'border-[#1F1F1F]'  : 'border-[#e5e5e5]';
   const inputCls = `w-full border py-4 px-4 focus:outline-none focus:ring-2 focus:ring-red-600 ${
-    isDark ? 'bg-[#0a0a0a] border-[#262626] text-white placeholder-white/40'
+    isDark ? 'bg-[#080808] border-[#1F1F1F] text-[#EDE9E3] placeholder-white/40'
            : 'bg-white border-[#e5e5e5] text-black placeholder-black/40'
   }`;
 
@@ -198,7 +198,7 @@ const DriverLogin = () => {
 
   // ── Forgot password ──────────────────────────────────────────────────────
   if (step === 'forgot') return (
-    <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
+    <div className={`min-h-screen flex flex-col font-['Barlow_Condensed'] ${bg}`}>
       <LoginHeader step={step} isDark={isDark} border={border} text={text} subtext={subtext} />
       <div className="flex-1 px-6 py-8">
         <button onClick={() => setStep('login')} className={`text-sm tracking-wider mb-6 ${subtext}`}>← BACK TO LOGIN</button>
@@ -212,12 +212,12 @@ const DriverLogin = () => {
             </div>
           )}
           <div>
-            <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-white/80' : 'text-black/80'}`}>EMAIL ADDRESS</label>
+            <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-[#EDE9E3]/80' : 'text-black/80'}`}>EMAIL ADDRESS</label>
             <input type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)}
               placeholder="driver@company.com" className={inputCls} required />
           </div>
           <button type="submit" disabled={forgotLoading}
-            className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white font-semibold py-4 tracking-wider transition-colors">
+            className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-[#EDE9E3] font-semibold py-4 tracking-wider transition-colors">
             {forgotLoading ? (
               <span className="flex items-center justify-center gap-2">
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -232,7 +232,7 @@ const DriverLogin = () => {
 
   // ── Email sent ───────────────────────────────────────────────────────────
   if (step === 'sent') return (
-    <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
+    <div className={`min-h-screen flex flex-col font-['Barlow_Condensed'] ${bg}`}>
       <LoginHeader step={step} isDark={isDark} border={border} text={text} subtext={subtext} />
       <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
         <div className="w-20 h-20 bg-green-600/20 flex items-center justify-center mb-6">
@@ -245,7 +245,7 @@ const DriverLogin = () => {
           If that email is registered, a reset link has been sent. Check your inbox.
         </p>
         <button onClick={() => setStep('login')}
-          className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-4 tracking-wider transition-colors">
+          className="w-full bg-red-600 hover:bg-red-700 text-[#EDE9E3] font-semibold py-4 tracking-wider transition-colors">
           BACK TO LOGIN
         </button>
       </div>
@@ -254,7 +254,7 @@ const DriverLogin = () => {
 
   // ── Main Login ───────────────────────────────────────────────────────────
   return (
-    <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
+    <div className={`min-h-screen flex flex-col font-['Barlow_Condensed'] ${bg}`}>
       <LoginHeader step="login" isDark={isDark} border={border} text={text} subtext={subtext} />
 
       <div className="flex-1 px-6 py-6 overflow-y-auto">
@@ -285,12 +285,12 @@ const DriverLogin = () => {
               </div>
             )}
             <div>
-              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-white/80' : 'text-black/80'}`}>EMAIL ADDRESS</label>
+              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-[#EDE9E3]/80' : 'text-black/80'}`}>EMAIL ADDRESS</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                 placeholder="driver@company.com" className={inputCls} required />
             </div>
             <div>
-              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-white/80' : 'text-black/80'}`}>PASSWORD</label>
+              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-[#EDE9E3]/80' : 'text-black/80'}`}>PASSWORD</label>
               <div className="relative">
                 <input type={showPw ? 'text' : 'password'} value={password}
                   onChange={e => setPassword(e.target.value)}
@@ -311,7 +311,7 @@ const DriverLogin = () => {
               </button>
             </div>
             <button type="submit" disabled={emailLoading}
-              className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white font-semibold py-4 transition-colors mt-2 tracking-wider">
+              className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-[#EDE9E3] font-semibold py-4 transition-colors mt-2 tracking-wider">
               {emailLoading ? (
                 <span className="flex items-center justify-center gap-2">
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -334,13 +334,13 @@ const DriverLogin = () => {
             {phoneStep === 'enter_phone' ? (
               <form onSubmit={handleSendCode} className="space-y-4">
                 <div>
-                  <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-white/80' : 'text-black/80'}`}>PHONE NUMBER</label>
+                  <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-[#EDE9E3]/80' : 'text-black/80'}`}>PHONE NUMBER</label>
                   <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
                     placeholder="+1 (416) 555-0100" className={inputCls} required />
                   <p className={`text-xs mt-2 ${subtext}`}>Include country code, e.g. +1 for Canada/US</p>
                 </div>
                 <button type="submit" disabled={phoneLoading}
-                  className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white font-semibold py-4 tracking-wider transition-colors">
+                  className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-[#EDE9E3] font-semibold py-4 tracking-wider transition-colors">
                   {phoneLoading ? (
                     <span className="flex items-center justify-center gap-2">
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -352,7 +352,7 @@ const DriverLogin = () => {
             ) : (
               <form onSubmit={handleVerifyOtp} className="space-y-4">
                 <div>
-                  <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-white/80' : 'text-black/80'}`}>VERIFICATION CODE</label>
+                  <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-[#EDE9E3]/80' : 'text-black/80'}`}>VERIFICATION CODE</label>
                   <p className={`text-sm mb-4 ${subtext}`}>
                     We sent a 6-digit code to <span className={text}>{phone}</span>
                   </p>
@@ -379,7 +379,7 @@ const DriverLogin = () => {
                           }
                         }}
                         className={`w-12 h-14 text-center text-xl font-bold border focus:outline-none focus:ring-2 focus:ring-red-600 ${
-                          isDark ? 'bg-[#0a0a0a] border-[#262626] text-white'
+                          isDark ? 'bg-[#080808] border-[#1F1F1F] text-[#EDE9E3]'
                                  : 'bg-white border-[#e5e5e5] text-black'
                         }`}
                       />
@@ -409,7 +409,7 @@ const DriverLogin = () => {
                 </div>
 
                 <button type="submit" disabled={phoneLoading || otp.length < 6}
-                  className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white font-semibold py-4 tracking-wider transition-colors">
+                  className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-[#EDE9E3] font-semibold py-4 tracking-wider transition-colors">
                   {phoneLoading ? (
                     <span className="flex items-center justify-center gap-2">
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -443,8 +443,8 @@ const DriverLogin = () => {
               disabled={googleLoading}
               className={`w-full flex items-center justify-center gap-3 border py-4 font-semibold tracking-wider transition-colors ${
                 isDark
-                  ? 'border-[#262626] text-white hover:bg-white/5 disabled:opacity-50'
-                  : 'border-[#e5e5e5] text-black hover:bg-black/5 disabled:opacity-50'
+                  ? 'border-[#1F1F1F] text-[#EDE9E3] hover:bg-white/5 disabled:opacity-50'
+                  : 'border-[#e5e5e5] text-black hover:bg-[#030303]/5 disabled:opacity-50'
               }`}
             >
               {googleLoading ? (
@@ -477,7 +477,7 @@ const DriverLogin = () => {
           </button>
         </div>
 
-        <p className={`text-center text-xs mt-4 ${isDark ? 'text-white/30' : 'text-black/30'}`}>
+        <p className={`text-center text-xs mt-4 ${isDark ? 'text-[#EDE9E3]/30' : 'text-black/30'}`}>
           Company Driver? Use the invite link from your dispatcher.
         </p>
 

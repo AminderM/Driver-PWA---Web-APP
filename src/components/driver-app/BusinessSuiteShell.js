@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDriverApp } from './DriverAppProvider';
 import MyLoadsScreen from './MyLoadsScreen';
 import ManualLoadsScreen from './ManualLoadsScreen';
@@ -14,432 +14,299 @@ import ExpenseRecorderScreen from './ExpenseRecorderScreen';
 import PLScreen from './PLScreen';
 import DocumentVaultScreen from './DocumentVaultScreen';
 
-// Tool cards — Phases 2-7 all live
+// ── Mission Control design tokens ─────────────────────────────────────────────
+const MC = {
+  void:  '#030303', deep:  '#080808', steel: '#0F0F0F',
+  plate: '#161616', rivet: '#1F1F1F', scratch: '#282828',
+  red: '#CC2222', redHot: '#FF2020', redDim: '#7A1010',
+  white: '#EDE9E3', chromeMid: '#999690', chromeDim: '#555250', chromeGhost: '#2A2926',
+  green: '#2DBB62', amber: '#D4921A', blue: '#2277CC',
+};
+
+const FD = "'Barlow Condensed', sans-serif";
+const FM = "'Share Tech Mono', monospace";
+const FB = "'Barlow', sans-serif";
+
+// ── Tool catalogue ────────────────────────────────────────────────────────────
 const TOOLS = [
-  { id: 'loads',      label: 'Load Management',    icon: '📦', desc: 'Manage loads + scan rate confirmations with AI', phase: 2, live: true },
-  { id: 'calculator', label: 'Load Calculator',    icon: '🧮', desc: 'RPM, fuel cost, net profit per load',            phase: 3, live: true },
-  { id: 'invoices',   label: 'Invoice Generator',  icon: '📄', desc: 'PDF invoices from your load + letterhead',       phase: 4, live: true },
-  { id: 'expenses',   label: 'Expense Recorder',   icon: '🧾', desc: 'Scan receipts, auto-categorize costs',           phase: 5, live: true },
-  { id: 'pl',         label: 'P&L View',           icon: '📊', desc: 'Weekly / monthly / annual profit & loss',        phase: 6, live: true },
-  { id: 'vault',      label: 'Document Vault',      icon: '🗂️', desc: 'CDL, insurance, IFTA — expiry alerts',          phase: 7, live: true },
+  { id: 'loads',      label: 'Load Mgmt',   icon: '📦', desc: 'Manage loads + scan rate cons', live: true },
+  { id: 'calculator', label: 'Load Calc',   icon: '⛽', desc: 'RPM, fuel cost, net profit',    live: true },
+  { id: 'invoices',   label: 'Invoices',    icon: '📄', desc: 'PDF invoices with letterhead',  live: true },
+  { id: 'expenses',   label: 'Expenses',    icon: '🧾', desc: 'Scan receipts, track costs',    live: true },
+  { id: 'pl',         label: 'P&L View',    icon: '📊', desc: 'Weekly / monthly P&L',          live: true },
+  { id: 'vault',      label: 'Doc Vault',   icon: '🗂️', desc: 'CDL, insurance, IFTA alerts',   live: true },
 ];
 
-const NAV_TABS = [
-  { id: 'home',    label: 'Home',    icon: HomeIcon    },
-  { id: 'loads',   label: 'Loads',   icon: LoadsIcon   },
-  { id: 'tools',   label: 'Tools',   icon: ToolsIcon   },
-  { id: 'profile', label: 'Profile', icon: ProfileIcon },
-];
+// ── Live clock ────────────────────────────────────────────────────────────────
+const LiveClock = () => {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
+  const D = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  const Mo = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const h = now.getHours().toString().padStart(2,'0');
+  const m = now.getMinutes().toString().padStart(2,'0');
+  return <span style={{ fontFamily: FM, fontSize: '9px', color: MC.chromeDim }}>{D[now.getDay()]} {now.getDate()} {Mo[now.getMonth()]} · {h}:{m}</span>;
+};
 
-// ── Icon components ───────────────────────────────────────────────────────────
+// ── Eyebrow label ─────────────────────────────────────────────────────────────
+const Eyebrow = ({ children }) => (
+  <p style={{ fontFamily: FM, fontSize: '8px', letterSpacing: '0.18em', color: MC.red, textTransform: 'uppercase', margin: '0 0 2px' }}>{children}</p>
+);
 
-function HomeIcon({ active, cls }) {
-  return (
-    <svg className={`w-6 h-6 ${cls}`} fill={active ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={active ? 0 : 2}
-        d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H5a1 1 0 01-1-1V9.5z" />
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 21V12h6v9" />
-    </svg>
-  );
-}
+// ── Nav icons ─────────────────────────────────────────────────────────────────
+const NavIcon = ({ id, active }) => {
+  const c = active ? MC.red : MC.chromeDim;
+  if (id === 'home') return <svg width="22" height="22" fill={active ? c : 'none'} stroke={c} strokeWidth={active ? 0 : 1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H5a1 1 0 01-1-1V9.5z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 21V12h6v9"/></svg>;
+  if (id === 'loads') return <svg width="22" height="22" fill="none" stroke={c} strokeWidth={active ? 2 : 1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0zM13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1"/></svg>;
+  if (id === 'tools') return <svg width="22" height="22" fill="none" stroke={c} strokeWidth={active ? 2 : 1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+  if (id === 'profile') return <svg width="22" height="22" fill={active ? c : 'none'} stroke={c} strokeWidth={active ? 0 : 1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>;
+  return null;
+};
 
-function LoadsIcon({ active, cls }) {
-  return (
-    <svg className={`w-6 h-6 ${cls}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-        d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={active ? 2.5 : 2}
-        d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1" />
-    </svg>
-  );
-}
+// ── Bottom nav ────────────────────────────────────────────────────────────────
+const BottomNav = ({ activeTab, onTabChange }) => (
+  <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: MC.steel, borderTop: `1px solid ${MC.rivet}`, display: 'flex', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    {['home','loads','tools','profile'].map(id => {
+      const active = activeTab === id;
+      const label = id.charAt(0).toUpperCase() + id.slice(1);
+      return (
+        <button key={id} onClick={() => onTabChange(id)}
+          style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px 0 8px', gap: '3px', background: 'none', border: 'none', cursor: 'pointer' }}>
+          <NavIcon id={id} active={active} />
+          <span style={{ fontFamily: FD, fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: active ? MC.red : MC.chromeDim }}>{label}</span>
+        </button>
+      );
+    })}
+  </div>
+);
 
-function ToolsIcon({ active, cls }) {
-  return (
-    <svg className={`w-6 h-6 ${cls}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={active ? 2.5 : 2}
-        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-    </svg>
-  );
-}
+// ── Screen wrapper ────────────────────────────────────────────────────────────
+const Shell = ({ children, activeTab, onTabChange }) => (
+  <div style={{ background: MC.void, minHeight: '100vh', paddingBottom: '64px' }}>
+    <div className="mc-top-stripe" />
+    {children}
+    <BottomNav activeTab={activeTab} onTabChange={onTabChange} />
+  </div>
+);
 
-function ProfileIcon({ active, cls }) {
-  return (
-    <svg className={`w-6 h-6 ${cls}`} fill={active ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={active ? 0 : 2}
-        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-    </svg>
-  );
-}
-
-// ── Main shell ────────────────────────────────────────────────────────────────
-
+// ── Main component ────────────────────────────────────────────────────────────
 const BusinessSuiteShell = () => {
-  const { user, userType, theme } = useDriverApp();
-  const isDark = theme === 'dark';
+  const { user, userType } = useDriverApp();
 
-  const bg      = isDark ? 'bg-black'         : 'bg-[#f5f5f5]';
-  const surface = isDark ? 'bg-[#0a0a0a]'     : 'bg-white';
-  const text    = isDark ? 'text-white'        : 'text-black';
-  const subtext = isDark ? 'text-white/60'     : 'text-black/60';
-  const border  = isDark ? 'border-[#262626]'  : 'border-[#e5e5e5]';
-  const navBg   = isDark ? 'bg-[#0a0a0a]'     : 'bg-white';
-
-  const [activeTab, setActiveTab]       = useState('home');
-  const [loadsSubTab, setLoadsSubTab]   = useState('dispatched'); // 'dispatched' | 'my-loads'
-  const [loadScreen, setLoadScreen]     = useState('list'); // 'list' | 'route' | 'map' | 'chat' | 'docs'
-  const [selectedLoad, setSelectedLoad] = useState(null);
-  const [activeTool, setActiveTool]     = useState(null); // 'calculator' | null
+  const [activeTab,     setActiveTab]     = useState('home');
+  const [loadsSubTab,   setLoadsSubTab]   = useState('dispatched');
+  const [loadScreen,    setLoadScreen]    = useState('list');
+  const [selectedLoad,  setSelectedLoad]  = useState(null);
+  const [activeTool,    setActiveTool]    = useState(null);
 
   const userTypeLabel = userType === 'owner_operator' ? 'Owner Operator' : 'Carrier';
+  const firstName     = user?.full_name?.split(' ')[0]?.toUpperCase() || 'DRIVER';
+  const initials      = (user?.company_name || user?.full_name || 'A')[0].toUpperCase();
+  const trialDays     = user?.trial_ends_at
+    ? Math.max(0, Math.ceil((new Date(user.trial_ends_at) - Date.now()) / 86400000))
+    : 14;
 
-  // ── Loads sub-navigation (TMS screens reused unchanged) ──────────────────
-
-  const handleLoadSelect  = (load, screenType) => { setSelectedLoad(load); setLoadScreen(screenType || 'route'); };
-  const handleLoadViewMap = (load)              => { setSelectedLoad(load); setLoadScreen('map'); };
-  const goToLoadList      = ()                  => { setLoadScreen('list'); setSelectedLoad(null); };
-
-  const resetLoadsTab = () => { goToLoadList(); };
+  const goToLoadList  = () => { setLoadScreen('list'); setSelectedLoad(null); };
+  const handleLoadSelect  = (load, type) => { setSelectedLoad(load); setLoadScreen(type || 'route'); };
+  const handleLoadViewMap = (load)        => { setSelectedLoad(load); setLoadScreen('map'); };
 
   const handleToolOpen = (toolId) => {
-    if (toolId === 'loads') { setActiveTab('loads'); setLoadsSubTab('my-loads'); }
-    else if (toolId === 'calculator') { setActiveTool('calculator'); }
-    else if (toolId === 'invoices')   { setActiveTool('invoices'); }
-    else if (toolId === 'expenses')   { setActiveTool('expenses'); }
-    else if (toolId === 'pl')         { setActiveTool('pl'); }
-    else if (toolId === 'vault')      { setActiveTool('vault'); }
+    if      (toolId === 'loads')      { setActiveTab('loads'); setLoadsSubTab('my-loads'); }
+    else if (toolId === 'calculator') setActiveTool('calculator');
+    else if (toolId === 'invoices')   setActiveTool('invoices');
+    else if (toolId === 'expenses')   setActiveTool('expenses');
+    else if (toolId === 'pl')         setActiveTool('pl');
+    else if (toolId === 'vault')      setActiveTool('vault');
   };
 
-  if (activeTab === 'loads') {
-    // TMS detail screens (route, map, chat, docs) take over full screen
-    if (loadsSubTab === 'dispatched') {
-      if (loadScreen === 'route' && selectedLoad) {
-        return (
-          <div className={`font-['Oxanium'] ${bg} min-h-screen`}>
-            <RouteScreen
-              load={selectedLoad}
-              onBack={goToLoadList}
-              onViewMap={() => setLoadScreen('map')}
-              onOpenChat={(load) => { setSelectedLoad(load); setLoadScreen('chat'); }}
-            />
-            <BottomNav activeTab={activeTab} onTabChange={t => { setActiveTab(t); resetLoadsTab(); }}
-              isDark={isDark} navBg={navBg} border={border} />
-          </div>
-        );
-      }
-      if (loadScreen === 'map' && selectedLoad) {
-        return (
-          <div className={`font-['Oxanium'] ${bg} min-h-screen`}>
-            <MapScreen load={selectedLoad} onBack={() => setLoadScreen('route')} />
-            <BottomNav activeTab={activeTab} onTabChange={t => { setActiveTab(t); resetLoadsTab(); }}
-              isDark={isDark} navBg={navBg} border={border} />
-          </div>
-        );
-      }
-      if (loadScreen === 'chat' && selectedLoad) {
-        return (
-          <div className={`font-['Oxanium'] ${bg} min-h-screen`}>
-            <ChatScreen load={selectedLoad} onBack={() => setLoadScreen('route')} />
-            <BottomNav activeTab={activeTab} onTabChange={t => { setActiveTab(t); resetLoadsTab(); }}
-              isDark={isDark} navBg={navBg} border={border} />
-          </div>
-        );
-      }
-      if (loadScreen === 'docs' && selectedLoad) {
-        return (
-          <div className={`font-['Oxanium'] ${bg} min-h-screen`}>
-            <DocumentsScreen load={selectedLoad} onBack={goToLoadList} />
-            <BottomNav activeTab={activeTab} onTabChange={t => { setActiveTab(t); resetLoadsTab(); }}
-              isDark={isDark} navBg={navBg} border={border} />
-          </div>
-        );
-      }
-    }
+  const handleTabChange = (t) => { setActiveTool(null); setActiveTab(t); goToLoadList(); };
 
-    // Loads tab with sub-tab switcher at top
+  // Tool screens
+  if (activeTool === 'calculator') return <Shell activeTab={activeTab} onTabChange={handleTabChange}><LoadCalculatorScreen onBack={() => setActiveTool(null)} /></Shell>;
+  if (activeTool === 'invoices')   return <Shell activeTab={activeTab} onTabChange={handleTabChange}><InvoiceGeneratorScreen onBack={() => setActiveTool(null)} /></Shell>;
+  if (activeTool === 'expenses')   return <Shell activeTab={activeTab} onTabChange={handleTabChange}><ExpenseRecorderScreen onBack={() => setActiveTool(null)} /></Shell>;
+  if (activeTool === 'pl')         return <Shell activeTab={activeTab} onTabChange={handleTabChange}><PLScreen onBack={() => setActiveTool(null)} /></Shell>;
+  if (activeTool === 'vault')      return <Shell activeTab={activeTab} onTabChange={handleTabChange}><DocumentVaultScreen onBack={() => setActiveTool(null)} /></Shell>;
+
+  // Profile / Settings
+  if (activeTab === 'profile') return <Shell activeTab={activeTab} onTabChange={handleTabChange}><ProfileScreen onBack={() => setActiveTab('home')} onOpenScanner={() => {}} /></Shell>;
+  if (activeTab === 'settings') return <Shell activeTab={activeTab} onTabChange={handleTabChange}><SettingsScreen onBack={() => setActiveTab('home')} /></Shell>;
+
+  // Loads tab
+  if (activeTab === 'loads') {
+    if (loadsSubTab === 'dispatched') {
+      if (loadScreen === 'route' && selectedLoad) return <Shell activeTab={activeTab} onTabChange={handleTabChange}><RouteScreen load={selectedLoad} onBack={goToLoadList} onViewMap={() => setLoadScreen('map')} onOpenChat={l => { setSelectedLoad(l); setLoadScreen('chat'); }} /></Shell>;
+      if (loadScreen === 'map'   && selectedLoad) return <Shell activeTab={activeTab} onTabChange={handleTabChange}><MapScreen load={selectedLoad} onBack={() => setLoadScreen('route')} /></Shell>;
+      if (loadScreen === 'chat'  && selectedLoad) return <Shell activeTab={activeTab} onTabChange={handleTabChange}><ChatScreen load={selectedLoad} onBack={() => setLoadScreen('route')} /></Shell>;
+      if (loadScreen === 'docs'  && selectedLoad) return <Shell activeTab={activeTab} onTabChange={handleTabChange}><DocumentsScreen load={selectedLoad} onBack={goToLoadList} /></Shell>;
+    }
     return (
-      <div className={`font-['Oxanium'] ${bg} min-h-screen flex flex-col pb-16`}>
-        {/* Sub-tab header */}
-        <div className={`${isDark ? 'bg-[#0a0a0a]' : 'bg-white'} border-b ${border} flex`}>
-          {[
-            { id: 'dispatched', label: 'DISPATCHED' },
-            { id: 'my-loads',   label: 'MY LOADS'   },
-          ].map(t => (
+      <div style={{ background: MC.void, minHeight: '100vh', display: 'flex', flexDirection: 'column', paddingBottom: '64px' }}>
+        <div className="mc-top-stripe" />
+        <div style={{ background: MC.deep, borderBottom: `1px solid ${MC.rivet}`, display: 'flex' }}>
+          {[{ id: 'dispatched', label: 'DISPATCHED' }, { id: 'my-loads', label: 'MY LOADS' }].map(t => (
             <button key={t.id} onClick={() => { setLoadsSubTab(t.id); goToLoadList(); }}
-              className={`flex-1 py-3 text-xs font-bold tracking-widest transition-colors ${
-                loadsSubTab === t.id
-                  ? 'text-red-500 border-b-2 border-red-500'
-                  : `${isDark ? 'text-white/40' : 'text-black/40'}`
-              }`}>
+              style={{ flex: 1, padding: '13px 0', fontFamily: FD, fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', background: 'none', border: 'none', borderBottom: loadsSubTab === t.id ? `2px solid ${MC.red}` : '2px solid transparent', color: loadsSubTab === t.id ? MC.red : MC.chromeDim, cursor: 'pointer' }}>
               {t.label}
             </button>
           ))}
         </div>
-
-        <div className="flex-1 overflow-y-auto">
-          {loadsSubTab === 'dispatched' ? (
-            <MyLoadsScreen
-              onNavigate={() => {}}
-              onSelectLoad={handleLoadSelect}
-              onViewMap={handleLoadViewMap}
-            />
-          ) : (
-            <ManualLoadsScreen onBack={() => setActiveTab('home')} />
-          )}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {loadsSubTab === 'dispatched'
+            ? <MyLoadsScreen onNavigate={() => {}} onSelectLoad={handleLoadSelect} onViewMap={handleLoadViewMap} />
+            : <ManualLoadsScreen onBack={() => setActiveTab('home')} />}
         </div>
-
-        <BottomNav activeTab={activeTab} onTabChange={t => { setActiveTab(t); resetLoadsTab(); }}
-          isDark={isDark} navBg={navBg} border={border} />
+        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
       </div>
     );
   }
 
-  if (activeTab === 'profile') {
-    return (
-      <div className={`font-['Oxanium'] ${bg} min-h-screen pb-16`}>
-        <ProfileScreen onBack={() => setActiveTab('home')} onOpenScanner={() => {}} />
-        <BottomNav activeTab={activeTab} onTabChange={setActiveTab}
-          isDark={isDark} navBg={navBg} border={border} />
-      </div>
-    );
-  }
-
-  if (activeTab === 'settings') {
-    return (
-      <div className={`font-['Oxanium'] ${bg} min-h-screen pb-16`}>
-        <SettingsScreen onBack={() => setActiveTab('home')} />
-        <BottomNav activeTab={activeTab} onTabChange={setActiveTab}
-          isDark={isDark} navBg={navBg} border={border} />
-      </div>
-    );
-  }
-
-  if (activeTool === 'calculator') {
-    return (
-      <div className={`font-['Oxanium'] ${bg} min-h-screen pb-16`}>
-        <LoadCalculatorScreen onBack={() => setActiveTool(null)} />
-        <BottomNav activeTab={activeTab} onTabChange={t => { setActiveTool(null); setActiveTab(t); }}
-          isDark={isDark} navBg={navBg} border={border} />
-      </div>
-    );
-  }
-
-  if (activeTool === 'invoices') {
-    return (
-      <div className={`font-['Oxanium'] ${bg} min-h-screen pb-16`}>
-        <InvoiceGeneratorScreen onBack={() => setActiveTool(null)} />
-        <BottomNav activeTab={activeTab} onTabChange={t => { setActiveTool(null); setActiveTab(t); }}
-          isDark={isDark} navBg={navBg} border={border} />
-      </div>
-    );
-  }
-
-  if (activeTool === 'expenses') {
-    return (
-      <div className={`font-['Oxanium'] ${bg} min-h-screen pb-16`}>
-        <ExpenseRecorderScreen onBack={() => setActiveTool(null)} />
-        <BottomNav activeTab={activeTab} onTabChange={t => { setActiveTool(null); setActiveTab(t); }}
-          isDark={isDark} navBg={navBg} border={border} />
-      </div>
-    );
-  }
-
-  if (activeTool === 'pl') {
-    return (
-      <div className={`font-['Oxanium'] ${bg} min-h-screen pb-16`}>
-        <PLScreen onBack={() => setActiveTool(null)} />
-        <BottomNav activeTab={activeTab} onTabChange={t => { setActiveTool(null); setActiveTab(t); }}
-          isDark={isDark} navBg={navBg} border={border} />
-      </div>
-    );
-  }
-
-  if (activeTool === 'vault') {
-    return (
-      <div className={`font-['Oxanium'] ${bg} min-h-screen pb-16`}>
-        <DocumentVaultScreen onBack={() => setActiveTool(null)} />
-        <BottomNav activeTab={activeTab} onTabChange={t => { setActiveTool(null); setActiveTab(t); }}
-          isDark={isDark} navBg={navBg} border={border} />
-      </div>
-    );
-  }
-
-  // ── Home / Tools tabs ─────────────────────────────────────────────────────
+  // ── Home + Tools ──────────────────────────────────────────────────────────
   return (
-    <div className={`font-['Oxanium'] ${bg} min-h-screen pb-16`}>
+    <div style={{ background: MC.void, minHeight: '100vh', paddingBottom: '64px', fontFamily: FB }}>
+      <div className="mc-top-stripe" />
 
-      {/* Top bar */}
-      <div className={`${surface} border-b ${border} px-5 pt-10 pb-5`}>
-        <div className="flex items-center justify-between">
+      {/* Header */}
+      <div style={{ background: MC.deep, borderBottom: `1px solid ${MC.rivet}`, padding: '40px 16px 0', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '2px', background: `linear-gradient(180deg, ${MC.red}, transparent)` }} />
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(90deg, ${MC.red}, transparent 60%)` }} />
+
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px' }}>
           <div>
-            <h1 className={`text-xl font-bold tracking-wider ${text}`}>
-              {user?.full_name?.split(' ')[0]?.toUpperCase() || 'WELCOME'}
-            </h1>
-            <p className={`text-xs mt-0.5 ${subtext}`}>
-              {user?.company_name || userTypeLabel}
-              {user?.mc_dot_number ? ` · ${user.mc_dot_number}` : ''}
-            </p>
-          </div>
-          {user?.logo_url ? (
-            <img src={user.logo_url} alt="Company logo"
-              className="w-12 h-12 object-cover border border-[#262626]" />
-          ) : (
-            <div className="w-12 h-12 bg-red-600 flex items-center justify-center">
-              <span className="text-white font-bold text-lg">
-                {(user?.company_name || user?.full_name || 'A')[0].toUpperCase()}
-              </span>
+            <Eyebrow>// Driver Dashboard</Eyebrow>
+            <h1 style={{ fontFamily: FD, fontSize: '32px', fontWeight: 900, textTransform: 'uppercase', color: MC.white, lineHeight: 1, margin: 0 }}>{firstName}</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(45,187,98,0.1)', border: '1px solid rgba(45,187,98,0.25)', padding: '3px 8px' }}>
+                <div className="mc-pulse" style={{ width: '6px', height: '6px', borderRadius: '50%', background: MC.green, boxShadow: `0 0 6px ${MC.green}` }} />
+                <span style={{ fontFamily: FM, fontSize: '8px', letterSpacing: '0.1em', color: MC.green, textTransform: 'uppercase' }}>{userTypeLabel}</span>
+              </div>
+              <LiveClock />
             </div>
-          )}
+          </div>
+          {user?.logo_url
+            ? <img src={user.logo_url} alt="logo" style={{ width: '48px', height: '48px', objectFit: 'cover', border: `1px solid ${MC.rivet}` }} />
+            : <div style={{ width: '48px', height: '48px', background: MC.red, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontFamily: FD, fontSize: '22px', fontWeight: 900, color: MC.white }}>{initials}</span>
+              </div>
+          }
         </div>
 
-        {/* Tab switcher: Home / Tools */}
-        <div className={`flex mt-5 border-b ${border} -mb-px`}>
-          {['home', 'tools'].map(t => (
+        {/* Home / Tools sub-tabs */}
+        <div style={{ display: 'flex', marginLeft: '-16px', marginRight: '-16px', borderBottom: `1px solid ${MC.rivet}` }}>
+          {['home','tools'].map(t => (
             <button key={t} onClick={() => setActiveTab(t)}
-              className={`flex-1 py-2.5 text-xs font-bold tracking-widest transition-colors ${
-                activeTab === t
-                  ? 'text-red-500 border-b-2 border-red-500'
-                  : subtext
-              }`}>
+              style={{ flex: 1, padding: '11px 0', fontFamily: FD, fontSize: '11px', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', background: 'none', border: 'none', borderBottom: activeTab === t ? `2px solid ${MC.red}` : '2px solid transparent', color: activeTab === t ? MC.red : MC.chromeDim, cursor: 'pointer' }}>
               {t.toUpperCase()}
             </button>
           ))}
         </div>
       </div>
 
-      {/* ── Home tab ─────────────────────────────────────────────────────── */}
+      {/* HOME */}
       {activeTab === 'home' && (
-        <div className="px-5 py-5 space-y-4">
+        <div style={{ padding: '12px 14px 0' }}>
 
-          {/* Quick stats row */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Company card */}
+          <div className="mc-card-1" style={{ background: MC.plate, border: `1px solid ${MC.rivet}`, borderLeft: `3px solid ${MC.red}`, padding: '10px 12px', marginBottom: '8px', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', right: '-14px', top: '50%', transform: 'translateY(-50%) rotate(90deg)', fontFamily: FD, fontSize: '8px', fontWeight: 700, letterSpacing: '0.2em', color: MC.redDim, pointerEvents: 'none' }}>ON DUTY</div>
+            <Eyebrow>// Company</Eyebrow>
+            <p style={{ fontFamily: FD, fontSize: '20px', fontWeight: 800, textTransform: 'uppercase', color: MC.white, margin: 0, lineHeight: 1 }}>{user?.company_name || firstName}</p>
+            {user?.mc_dot_number && <p style={{ fontFamily: FM, fontSize: '9px', color: MC.chromeMid, margin: '3px 0 0' }}>{user.mc_dot_number}</p>}
+          </div>
+
+          {/* Stats strip */}
+          <div className="mc-card-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr 1px 1fr', background: MC.plate, border: `1px solid ${MC.rivet}`, marginBottom: '8px', overflow: 'hidden' }}>
             {[
-              { label: 'Dispatched Loads', value: '—', note: 'Tap Loads → Dispatched' },
-              { label: 'My Loads',         value: '—', note: 'Tap Loads → My Loads'  },
-            ].map(({ label, value, note }) => (
-              <button key={label} onClick={() => setActiveTab('loads')}
-                className={`text-left ${surface} border ${border} p-4 hover:border-red-600/50 transition-colors`}>
-                <p className={`text-xs tracking-wider mb-1 ${subtext}`}>{label.toUpperCase()}</p>
-                <p className={`text-2xl font-bold ${text}`}>{value}</p>
-                <p className={`text-xs mt-1 ${subtext}`}>{note}</p>
+              { k: 'Loads Today', v: '—', color: MC.white,   action: () => setActiveTab('loads') },
+              { k: 'This Week',   v: '—', color: MC.white,   action: () => setActiveTab('loads') },
+              { k: 'Expenses',    v: '—', color: MC.amber,   action: () => handleToolOpen('expenses') },
+            ].map(({ k, v, color, action }, i) => (
+              <React.Fragment key={k}>
+                {i > 0 && <div style={{ background: MC.rivet }} />}
+                <button onClick={action} style={{ padding: '10px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+                  <div style={{ fontFamily: FM, fontSize: '7px', letterSpacing: '0.1em', color: MC.chromeDim, textTransform: 'uppercase', marginBottom: '3px' }}>{k}</div>
+                  <div style={{ fontFamily: FD, fontSize: '20px', fontWeight: 800, color, lineHeight: 1 }}>{v}</div>
+                </button>
+              </React.Fragment>
+            ))}
+          </div>
+
+          {/* Quick tools grid */}
+          <div className="mc-card-3" style={{ marginBottom: '8px' }}>
+            <p style={{ fontFamily: FM, fontSize: '8px', letterSpacing: '0.18em', color: MC.chromeDim, textTransform: 'uppercase', margin: '0 0 6px' }}>// Business Tools</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '5px' }}>
+              {TOOLS.filter(t => t.id !== 'loads').slice(0,4).map(tool => (
+                <button key={tool.id} onClick={() => handleToolOpen(tool.id)}
+                  style={{ background: MC.plate, border: `1px solid ${MC.rivet}`, padding: '10px 4px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                  <span style={{ fontSize: '18px' }}>{tool.icon}</span>
+                  <span style={{ fontFamily: FD, fontSize: '9px', fontWeight: 700, letterSpacing: '0.04em', color: MC.chromeMid, textTransform: 'uppercase', textAlign: 'center', lineHeight: 1.2 }}>{tool.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Trial notice */}
+          <div className="mc-card-4" style={{ border: `1px solid rgba(212,146,26,0.35)`, borderLeft: `3px solid ${MC.amber}`, background: 'rgba(212,146,26,0.07)', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+            <span style={{ fontSize: '16px' }}>⏳</span>
+            <div>
+              <p style={{ fontFamily: FD, fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', color: MC.amber, textTransform: 'uppercase', margin: 0 }}>FREE TRIAL ACTIVE</p>
+              <p style={{ fontFamily: FM, fontSize: '8px', color: 'rgba(212,146,26,0.7)', margin: '2px 0 0' }}>{trialDays} days remaining · Upgrade to unlock all features</p>
+            </div>
+          </div>
+
+          {/* Active load shortcut */}
+          <div className="mc-card-5" style={{ marginBottom: '8px' }}>
+            <p style={{ fontFamily: FM, fontSize: '8px', letterSpacing: '0.18em', color: MC.chromeDim, textTransform: 'uppercase', margin: '0 0 6px' }}>// Active Load</p>
+            <button onClick={() => setActiveTab('loads')}
+              style={{ width: '100%', background: MC.plate, border: `1px solid ${MC.rivet}`, borderLeft: `3px solid ${MC.blue}`, padding: '12px', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <p style={{ fontFamily: FD, fontSize: '15px', fontWeight: 700, color: MC.white, textTransform: 'uppercase', margin: 0 }}>View Dispatched Loads</p>
+                <p style={{ fontFamily: FM, fontSize: '8px', color: MC.chromeDim, margin: '2px 0 0' }}>Tap to open load list</p>
+              </div>
+              <span style={{ fontFamily: FD, fontSize: '20px', color: MC.red }}>→</span>
+            </button>
+          </div>
+
+          {/* P&L + Vault shortcuts */}
+          <div className="mc-card-6" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '12px' }}>
+            {[
+              { id: 'pl',    label: 'P&L View',  icon: '📊', accent: MC.green },
+              { id: 'vault', label: 'Doc Vault',  icon: '🗂️',  accent: MC.amber },
+            ].map(({ id, label, icon, accent }) => (
+              <button key={id} onClick={() => handleToolOpen(id)}
+                style={{ background: MC.plate, border: `1px solid ${MC.rivet}`, borderTop: `2px solid ${accent}`, padding: '12px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <span style={{ fontSize: '18px' }}>{icon}</span>
+                <span style={{ fontFamily: FD, fontSize: '13px', fontWeight: 700, letterSpacing: '0.06em', color: MC.white, textTransform: 'uppercase' }}>{label}</span>
               </button>
             ))}
           </div>
 
-          {/* Subscription notice */}
-          <div className={`border ${isDark ? 'border-amber-600/40 bg-amber-600/10' : 'border-amber-500/40 bg-amber-50'} p-4`}>
-            <div className="flex items-start gap-3">
-              <span className="text-lg">⏳</span>
-              <div>
-                <p className={`text-sm font-semibold tracking-wider ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>
-                  FREE TRIAL ACTIVE
-                </p>
-                <p className={`text-xs mt-0.5 ${isDark ? 'text-amber-400/70' : 'text-amber-600'}`}>
-                  7 days free · Business tools unlock after subscription
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Tool cards */}
-          <p className={`text-xs font-bold tracking-widest pt-2 ${subtext}`}>BUSINESS TOOLS</p>
-          <div className="space-y-3">
-            {TOOLS.map(tool => (
-              tool.live ? (
-                <button key={tool.id} onClick={() => handleToolOpen(tool.id)}
-                  className={`w-full text-left ${surface} border ${border} p-4 flex items-center gap-4 hover:border-red-600/50 transition-colors`}>
-                  <span className="text-2xl">{tool.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-bold tracking-wider ${text}`}>{tool.label}</p>
-                    <p className={`text-xs mt-0.5 ${subtext}`}>{tool.desc}</p>
-                  </div>
-                  <span className="text-xs tracking-wider px-2 py-1 bg-green-600/20 text-green-400">LIVE</span>
-                </button>
-              ) : (
-                <div key={tool.id} className={`${surface} border ${border} p-4 flex items-center gap-4 opacity-50`}>
-                  <span className="text-2xl">{tool.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-bold tracking-wider ${text}`}>{tool.label}</p>
-                    <p className={`text-xs mt-0.5 ${subtext}`}>{tool.desc}</p>
-                  </div>
-                  <span className={`text-xs tracking-wider px-2 py-1 ${
-                    isDark ? 'bg-[#1a1a1a] text-white/40' : 'bg-[#f0f0f0] text-black/40'
-                  }`}>SOON</span>
-                </div>
-              )
-            ))}
-          </div>
         </div>
       )}
 
-      {/* ── Tools tab ────────────────────────────────────────────────────── */}
+      {/* TOOLS */}
       {activeTab === 'tools' && (
-        <div className="px-5 py-5">
-          <p className={`text-xs font-bold tracking-widest mb-4 ${subtext}`}>BUSINESS TOOLS</p>
-          <div className="space-y-3">
-            {TOOLS.map(tool => (
-              tool.live ? (
-                <button key={tool.id} onClick={() => handleToolOpen(tool.id)}
-                  className={`w-full text-left ${surface} border ${border} p-5 hover:border-red-600/50 transition-colors`}>
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-2xl">{tool.icon}</span>
-                    <div>
-                      <p className={`text-sm font-bold tracking-wider ${text}`}>{tool.label}</p>
-                      <span className="text-xs text-green-400">✓ Available now</span>
-                    </div>
-                  </div>
-                  <p className={`text-xs leading-relaxed ${subtext}`}>{tool.desc}</p>
-                </button>
-              ) : (
-                <div key={tool.id} className={`${surface} border ${border} p-5 opacity-50`}>
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-2xl">{tool.icon}</span>
-                    <div>
-                      <p className={`text-sm font-bold tracking-wider ${text}`}>{tool.label}</p>
-                      <span className={`text-xs ${isDark ? 'text-amber-400/70' : 'text-amber-600'}`}>
-                        Coming in Phase {tool.phase}
-                      </span>
-                    </div>
-                  </div>
-                  <p className={`text-xs leading-relaxed ${subtext}`}>{tool.desc}</p>
+        <div style={{ padding: '14px' }}>
+          <p style={{ fontFamily: FM, fontSize: '8px', letterSpacing: '0.2em', color: MC.chromeDim, textTransform: 'uppercase', margin: '0 0 10px' }}>// Business Tools</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {TOOLS.map((tool, i) => (
+              <button key={tool.id} onClick={() => handleToolOpen(tool.id)}
+                className={`mc-card-${i + 1}`}
+                style={{ width: '100%', background: MC.plate, border: `1px solid ${MC.rivet}`, borderLeft: `3px solid ${MC.red}`, padding: '14px 12px', display: 'flex', alignItems: 'center', gap: '14px', cursor: 'pointer', textAlign: 'left' }}>
+                <span style={{ fontSize: '22px', flexShrink: 0 }}>{tool.icon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontFamily: FD, fontSize: '16px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: MC.white, margin: 0 }}>{tool.label}</p>
+                  <p style={{ fontFamily: FB, fontSize: '11px', color: MC.chromeMid, margin: '2px 0 0' }}>{tool.desc}</p>
                 </div>
-              )
+                <span style={{ fontFamily: FM, fontSize: '7px', letterSpacing: '0.1em', color: MC.green, background: 'rgba(45,187,98,0.1)', border: '1px solid rgba(45,187,98,0.25)', padding: '2px 6px', flexShrink: 0 }}>LIVE</span>
+              </button>
             ))}
           </div>
-          <p className={`text-xs text-center mt-6 leading-relaxed ${subtext}`}>
-            More tools shipping soon · Subscribe to unlock all features
-          </p>
+          <p style={{ fontFamily: FM, fontSize: '8px', textAlign: 'center', marginTop: '20px', color: MC.chromeGhost, letterSpacing: '0.15em' }}>MORE TOOLS SHIPPING SOON</p>
         </div>
       )}
 
-      <BottomNav activeTab={activeTab} onTabChange={setActiveTab}
-        isDark={isDark} navBg={navBg} border={border} />
-    </div>
-  );
-};
-
-// ── Bottom navigation bar ─────────────────────────────────────────────────────
-
-const BottomNav = ({ activeTab, onTabChange, isDark, navBg, border }) => {
-  const activeColor = 'text-red-500';
-  const inactiveColor = isDark ? 'text-white/40' : 'text-black/40';
-
-  return (
-    <div className={`fixed bottom-0 left-0 right-0 ${navBg} border-t ${border} flex`}
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-      {NAV_TABS.map(({ id, label, icon: Icon }) => {
-        const active = activeTab === id || (id === 'tools' && activeTab === 'tools');
-        return (
-          <button key={id} onClick={() => onTabChange(id)}
-            className={`flex-1 flex flex-col items-center py-2.5 gap-1 transition-colors ${
-              active ? activeColor : inactiveColor
-            }`}>
-            <Icon active={active} cls="" />
-            <span className="text-[10px] tracking-wider font-medium">{label.toUpperCase()}</span>
-          </button>
-        );
-      })}
+      <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
     </div>
   );
 };

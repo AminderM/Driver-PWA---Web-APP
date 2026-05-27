@@ -252,14 +252,14 @@ const InvoiceGeneratorScreen = ({ onBack }) => {
   const { api, user, theme } = useDriverApp();
   const isDark = theme === 'dark';
 
-  const bg      = isDark ? 'bg-black'        : 'bg-[#f5f5f5]';
-  const surface = isDark ? 'bg-[#0a0a0a]'    : 'bg-white';
+  const bg      = isDark ? 'bg-[#030303]'        : 'bg-[#f5f5f5]';
+  const surface = isDark ? 'bg-[#080808]'    : 'bg-white';
   const text    = isDark ? 'text-white'       : 'text-black';
   const subtext = isDark ? 'text-white/60'    : 'text-black/60';
-  const border  = isDark ? 'border-[#262626]' : 'border-[#e5e5e5]';
-  const inputCls = `w-full border py-2.5 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-red-600 ${
+  const border  = isDark ? 'border-[#1F1F1F]' : 'border-[#e5e5e5]';
+  const inputCls = `w-full border py-2.5 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#CC2222] ${
     isDark
-      ? 'bg-[#0a0a0a] border-[#262626] text-white placeholder-white/30'
+      ? 'bg-[#080808] border-[#1F1F1F] text-white placeholder-white/30'
       : 'bg-white border-[#e5e5e5] text-black placeholder-black/30'
   }`;
 
@@ -377,7 +377,7 @@ const InvoiceGeneratorScreen = ({ onBack }) => {
   // ── Load list ─────────────────────────────────────────────────────────────
   if (screen === 'list') {
     return (
-      <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
+      <div className={`min-h-screen flex flex-col font-['Barlow_Condensed'] ${bg}`}>
         <div className={`${surface} border-b ${border} px-5 pt-10 pb-4`}>
           <button onClick={onBack} className={`text-sm tracking-wider mb-4 block ${subtext}`}>← BACK</button>
           <h1 className={`text-xl font-bold tracking-wider ${text}`}>INVOICE GENERATOR</h1>
@@ -386,15 +386,15 @@ const InvoiceGeneratorScreen = ({ onBack }) => {
 
         <div className="flex-1 overflow-y-auto px-4 py-4">
           {fetchErr && (
-            <div className="bg-red-600/20 border border-red-600/50 p-4 mb-4">
-              <p className="text-red-400 text-sm">{fetchErr}</p>
-              <button onClick={fetchLoads} className="text-red-400 text-xs mt-2 underline">Retry</button>
+            <div className="bg-[#CC2222]/20 border border-[#CC2222]/50 p-4 mb-4">
+              <p className="text-[#FF2020] text-sm">{fetchErr}</p>
+              <button onClick={fetchLoads} className="text-[#FF2020] text-xs mt-2 underline">Retry</button>
             </div>
           )}
 
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3">
-              <div className="w-8 h-8 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+              <div className="w-8 h-8 border-2 border-[#CC2222] border-t-transparent rounded-full animate-spin" />
               <p className={`text-sm ${subtext}`}>Loading loads...</p>
             </div>
           ) : loads.length === 0 ? (
@@ -409,10 +409,10 @@ const InvoiceGeneratorScreen = ({ onBack }) => {
             <div className="space-y-3">
               {loads.map(load => (
                 <button key={load.id} onClick={() => openForm(load)}
-                  className={`w-full text-left ${surface} border ${border} p-4 hover:border-red-600/50 transition-colors`}>
+                  className={`w-full text-left ${surface} border ${border} p-4 hover:border-[#CC2222]/50 transition-colors`}>
                   <div className="flex items-center justify-between mb-2">
                     <span className={`text-xs font-bold tracking-wider ${
-                      load.status === 'invoiced' ? 'text-purple-400' : 'text-green-400'
+                      load.status === 'invoiced' ? 'text-purple-400' : 'text-[#2DBB62]'
                     }`}>
                       {load.status === 'invoiced' ? '● INVOICED' : '● DELIVERED'}
                     </span>
@@ -428,7 +428,7 @@ const InvoiceGeneratorScreen = ({ onBack }) => {
                   {load.broker_name && (
                     <p className={`text-xs mt-1 ${subtext}`}>{load.broker_name}</p>
                   )}
-                  <p className={`text-sm font-bold mt-1 text-green-400`}>
+                  <p className={`text-sm font-bold mt-1 text-[#2DBB62]`}>
                     {load.rate ? `$${Number(load.rate).toLocaleString()}` : '—'}
                   </p>
                 </button>
@@ -443,15 +443,15 @@ const InvoiceGeneratorScreen = ({ onBack }) => {
   // ── Generating spinner ────────────────────────────────────────────────────
   if (screen === 'generating') {
     return (
-      <div className={`min-h-screen flex flex-col items-center justify-center font-['Oxanium'] ${bg}`}>
-        <div className="w-16 h-16 bg-red-600/20 flex items-center justify-center mb-6 animate-pulse">
+      <div className={`min-h-screen flex flex-col items-center justify-center font-['Barlow_Condensed'] ${bg}`}>
+        <div className="w-16 h-16 bg-[#CC2222]/20 flex items-center justify-center mb-6 animate-pulse">
           <span className="text-2xl">📄</span>
         </div>
         <h2 className={`text-lg font-bold tracking-wider mb-2 ${text}`}>GENERATING PDF</h2>
         <p className={`text-sm ${subtext}`}>Building your invoice...</p>
         <div className="mt-8 flex gap-1">
           {[0, 1, 2].map(i => (
-            <div key={i} className="w-2 h-2 bg-red-600 rounded-full animate-bounce"
+            <div key={i} className="w-2 h-2 bg-[#CC2222] rounded-full animate-bounce"
               style={{ animationDelay: `${i * 0.15}s` }} />
           ))}
         </div>
@@ -461,7 +461,7 @@ const InvoiceGeneratorScreen = ({ onBack }) => {
 
   // ── Invoice form ──────────────────────────────────────────────────────────
   return (
-    <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
+    <div className={`min-h-screen flex flex-col font-['Barlow_Condensed'] ${bg}`}>
       <div className={`${surface} border-b ${border} px-5 pt-10 pb-4`}>
         <button onClick={() => setScreen('list')} className={`text-sm tracking-wider mb-4 block ${subtext}`}>← BACK</button>
         <div className="flex items-start justify-between gap-2">
@@ -471,7 +471,7 @@ const InvoiceGeneratorScreen = ({ onBack }) => {
               {selectedLoad?.origin} → {selectedLoad?.destination}
             </p>
           </div>
-          <span className="text-xs bg-green-600/20 text-green-400 px-2 py-1 tracking-wider flex-shrink-0">
+          <span className="text-xs bg-[#2DBB62]/20 text-[#2DBB62] px-2 py-1 tracking-wider flex-shrink-0">
             ${Number(selectedLoad?.rate || 0).toLocaleString()}
           </span>
         </div>
@@ -480,8 +480,8 @@ const InvoiceGeneratorScreen = ({ onBack }) => {
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
 
         {genError && (
-          <div className="bg-red-600/20 border border-red-600/50 p-4">
-            <p className="text-red-400 text-sm">{genError}</p>
+          <div className="bg-[#CC2222]/20 border border-[#CC2222]/50 p-4">
+            <p className="text-[#FF2020] text-sm">{genError}</p>
           </div>
         )}
 
@@ -528,7 +528,7 @@ const InvoiceGeneratorScreen = ({ onBack }) => {
         <div className={`${surface} border ${border} p-4 space-y-3`}>
           <div className="flex items-center justify-between">
             <p className={`text-xs tracking-wider font-bold ${subtext}`}>LINE ITEMS</p>
-            <span className={`text-sm font-bold text-green-400`}>
+            <span className={`text-sm font-bold text-[#2DBB62]`}>
               ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
@@ -539,7 +539,7 @@ const InvoiceGeneratorScreen = ({ onBack }) => {
                 <span className={`text-xs tracking-wider ${subtext}`}>ITEM {idx + 1}</span>
                 {lineItems.length > 1 && (
                   <button onClick={() => removeLineItem(li.id)}
-                    className={`text-xs ${subtext} hover:text-red-500 transition-colors`}>✕ REMOVE</button>
+                    className={`text-xs ${subtext} hover:text-[#CC2222] transition-colors`}>✕ REMOVE</button>
                 )}
               </div>
               <input type="text" value={li.description}
@@ -556,7 +556,7 @@ const InvoiceGeneratorScreen = ({ onBack }) => {
           ))}
 
           <button onClick={addLineItem}
-            className={`w-full border ${border} py-2.5 text-xs tracking-wider ${subtext} hover:border-red-600/50 transition-colors`}>
+            className={`w-full border ${border} py-2.5 text-xs tracking-wider ${subtext} hover:border-[#CC2222]/50 transition-colors`}>
             + ADD LINE ITEM
           </button>
         </div>
@@ -584,9 +584,9 @@ const InvoiceGeneratorScreen = ({ onBack }) => {
 
         {/* Company info reminder */}
         {(!user?.company_name || !user?.logo_url) && (
-          <div className={`border ${isDark ? 'border-amber-600/40 bg-amber-600/10' : 'border-amber-500/30 bg-amber-50'} p-3 flex gap-3`}>
+          <div className={`border ${isDark ? 'border-amber-600/40 bg-[#D4921A]/10' : 'border-amber-500/30 bg-amber-50'} p-3 flex gap-3`}>
             <span>⚠️</span>
-            <p className={`text-xs ${isDark ? 'text-amber-400/80' : 'text-amber-700'}`}>
+            <p className={`text-xs ${isDark ? 'text-[#D4921A]/80' : 'text-amber-700'}`}>
               Add your company name and logo in Profile → Business Info for a branded invoice.
             </p>
           </div>
@@ -594,7 +594,7 @@ const InvoiceGeneratorScreen = ({ onBack }) => {
 
         {/* Generate button */}
         <button onClick={handleGenerate}
-          className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 tracking-wider transition-colors flex items-center justify-center gap-2">
+          className="w-full bg-[#CC2222] hover:bg-[#7A1010] text-white font-bold py-4 tracking-wider transition-colors flex items-center justify-center gap-2">
           <span>📄</span> GENERATE PDF INVOICE
         </button>
 
