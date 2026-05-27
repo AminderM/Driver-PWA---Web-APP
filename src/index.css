@@ -2,22 +2,80 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Google Fonts Import */
-@import url('https://fonts.googleapis.com/css2?family=Oxanium:wght@400;500;600;700&family=Source+Code+Pro:wght@400;500;600&display=swap');
+/* Mission Control — Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@300;400;500;600&family=Share+Tech+Mono&display=swap');
 
 body {
     margin: 0;
-    font-family: 'Oxanium', -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
-        "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans",
-        "Helvetica Neue", sans-serif;
+    font-family: 'Barlow', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background: #030303;
 }
 
 code {
-    font-family: 'Source Code Pro', source-code-pro, Menlo, Monaco, Consolas, "Courier New",
-        monospace;
+    font-family: 'Share Tech Mono', 'Source Code Pro', monospace;
 }
+
+/* ── Mission Control Grain Overlay ─────────────────────────────────────── */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23g)' opacity='0.06'/%3E%3C/svg%3E");
+    mix-blend-mode: overlay;
+}
+
+/* ── Mission Control Top Stripe ────────────────────────────────────────── */
+.mc-top-stripe {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #7A1010 20%, #CC2222 60%, #FF2020 100%);
+    z-index: 1000;
+    box-shadow: 0 0 10px rgba(204, 34, 34, 0.28);
+}
+
+/* ── Mission Control Animations ────────────────────────────────────────── */
+@keyframes mc-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+@keyframes mc-pulse-fast {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+@keyframes mc-bar-fill {
+    from { width: 0; }
+}
+
+@keyframes mc-card-entry {
+    from { transform: translateY(12px); opacity: 0; }
+    to   { transform: translateY(0);   opacity: 1; }
+}
+
+@keyframes mc-screen-flash {
+    0%   { opacity: 0.10; }
+    100% { opacity: 0; }
+}
+
+.mc-pulse        { animation: mc-pulse 2s infinite; }
+.mc-pulse-fast   { animation: mc-pulse-fast 0.8s infinite; }
+.mc-bar-fill     { animation: mc-bar-fill 1.5s cubic-bezier(0.22,1,0.36,1) both; }
+
+.mc-card-1  { animation: mc-card-entry 400ms ease both; animation-delay: 0ms; }
+.mc-card-2  { animation: mc-card-entry 400ms ease both; animation-delay: 60ms; }
+.mc-card-3  { animation: mc-card-entry 400ms ease both; animation-delay: 120ms; }
+.mc-card-4  { animation: mc-card-entry 400ms ease both; animation-delay: 180ms; }
+.mc-card-5  { animation: mc-card-entry 400ms ease both; animation-delay: 240ms; }
+.mc-card-6  { animation: mc-card-entry 400ms ease both; animation-delay: 300ms; }
+.mc-card-7  { animation: mc-card-entry 400ms ease both; animation-delay: 360ms; }
 
 @layer base {
   :root {
@@ -58,26 +116,26 @@ code {
   }
 
   .dark {
-    /* Dark Mode - Clean Black/White/Red */
-    --background: #000000;
-    --foreground: #ffffff;
-    --card: #0a0a0a;
-    --card-foreground: #ffffff;
-    --popover: #0a0a0a;
-    --popover-foreground: #ffffff;
-    --primary: #dc2626;
-    --primary-foreground: #ffffff;
-    --secondary: #171717;
-    --secondary-foreground: #ffffff;
-    --muted: #171717;
-    --muted-foreground: #ffffff;
-    --accent: #171717;
-    --accent-foreground: #ffffff;
-    --destructive: #dc2626;
-    --destructive-foreground: #ffffff;
-    --border: #262626;
-    --input: #262626;
-    --ring: #dc2626;
+    /* Dark Mode — Mission Control */
+    --background: #030303;
+    --foreground: #EDE9E3;
+    --card: #080808;
+    --card-foreground: #EDE9E3;
+    --popover: #080808;
+    --popover-foreground: #EDE9E3;
+    --primary: #CC2222;
+    --primary-foreground: #EDE9E3;
+    --secondary: #161616;
+    --secondary-foreground: #EDE9E3;
+    --muted: #161616;
+    --muted-foreground: #EDE9E3;
+    --accent: #161616;
+    --accent-foreground: #EDE9E3;
+    --destructive: #CC2222;
+    --destructive-foreground: #EDE9E3;
+    --border: #1F1F1F;
+    --input: #1F1F1F;
+    --ring: #CC2222;
     --chart-1: #ffffff;
     --chart-2: #ffffff;
     --chart-3: #ffffff;

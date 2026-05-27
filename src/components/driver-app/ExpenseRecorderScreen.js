@@ -68,14 +68,14 @@ const ExpenseRecorderScreen = ({ onBack }) => {
   const { api, theme } = useDriverApp();
   const isDark = theme === 'dark';
 
-  const bg      = isDark ? 'bg-black'        : 'bg-[#f5f5f5]';
-  const surface = isDark ? 'bg-[#0a0a0a]'    : 'bg-white';
+  const bg      = isDark ? 'bg-[#030303]'        : 'bg-[#f5f5f5]';
+  const surface = isDark ? 'bg-[#080808]'    : 'bg-white';
   const text    = isDark ? 'text-white'       : 'text-black';
   const subtext = isDark ? 'text-white/60'    : 'text-black/60';
-  const border  = isDark ? 'border-[#262626]' : 'border-[#e5e5e5]';
-  const inputCls = `w-full border py-2.5 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-red-600 ${
+  const border  = isDark ? 'border-[#1F1F1F]' : 'border-[#e5e5e5]';
+  const inputCls = `w-full border py-2.5 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#CC2222] ${
     isDark
-      ? 'bg-[#0a0a0a] border-[#262626] text-white placeholder-white/30'
+      ? 'bg-[#080808] border-[#1F1F1F] text-white placeholder-white/30'
       : 'bg-white border-[#e5e5e5] text-black placeholder-black/30'
   }`;
 
@@ -222,7 +222,7 @@ const ExpenseRecorderScreen = ({ onBack }) => {
 
   // ── Scan capture ──────────────────────────────────────────────────────────
   if (screen === 'scan-capture') return (
-    <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
+    <div className={`min-h-screen flex flex-col font-['Barlow_Condensed'] ${bg}`}>
       <div className={`${surface} border-b ${border} px-5 pt-10 pb-5`}>
         <button onClick={() => setScreen('list')} className={`text-sm tracking-wider mb-4 block ${subtext}`}>← CANCEL</button>
         <h1 className={`text-xl font-bold tracking-wider ${text}`}>SCAN RECEIPT</h1>
@@ -230,14 +230,14 @@ const ExpenseRecorderScreen = ({ onBack }) => {
       </div>
       <div className="flex-1 px-5 py-8 space-y-4">
         {scanError && (
-          <div className="bg-red-600/20 border border-red-600/50 p-4">
-            <p className="text-red-400 text-sm">{scanError}</p>
+          <div className="bg-[#CC2222]/20 border border-[#CC2222]/50 p-4">
+            <p className="text-[#FF2020] text-sm">{scanError}</p>
           </div>
         )}
         <button onClick={handleScanCamera}
-          className={`w-full border-2 ${isDark ? 'border-[#262626] hover:border-red-600/50' : 'border-[#e5e5e5] hover:border-red-600/50'} py-10 flex flex-col items-center gap-3 transition-colors`}>
-          <div className="w-14 h-14 bg-red-600/20 flex items-center justify-center">
-            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          className={`w-full border-2 ${isDark ? 'border-[#1F1F1F] hover:border-[#CC2222]/50' : 'border-[#e5e5e5] hover:border-[#CC2222]/50'} py-10 flex flex-col items-center gap-3 transition-colors`}>
+          <div className="w-14 h-14 bg-[#CC2222]/20 flex items-center justify-center">
+            <svg className="w-8 h-8 text-[#CC2222]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -251,7 +251,7 @@ const ExpenseRecorderScreen = ({ onBack }) => {
         <input ref={fileInputRef} type="file" accept="image/*,application/pdf"
           onChange={handleScanFileSelect} className="hidden" />
         <button onClick={() => fileInputRef.current?.click()}
-          className={`w-full border-2 ${isDark ? 'border-[#262626] hover:border-red-600/50' : 'border-[#e5e5e5] hover:border-red-600/50'} py-8 flex flex-col items-center gap-3 transition-colors`}>
+          className={`w-full border-2 ${isDark ? 'border-[#1F1F1F] hover:border-[#CC2222]/50' : 'border-[#e5e5e5] hover:border-[#CC2222]/50'} py-8 flex flex-col items-center gap-3 transition-colors`}>
           <div className="w-14 h-14 bg-blue-600/20 flex items-center justify-center">
             <svg className="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -271,7 +271,7 @@ const ExpenseRecorderScreen = ({ onBack }) => {
 
   // ── Scan preview ──────────────────────────────────────────────────────────
   if (screen === 'scan-preview') return (
-    <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
+    <div className={`min-h-screen flex flex-col font-['Barlow_Condensed'] ${bg}`}>
       <div className={`${surface} border-b ${border} px-5 pt-10 pb-5`}>
         <button onClick={() => { setScreen('scan-capture'); setScanPreview(null); setScanFile(null); }}
           className={`text-sm tracking-wider mb-4 block ${subtext}`}>← RETAKE</button>
@@ -279,8 +279,8 @@ const ExpenseRecorderScreen = ({ onBack }) => {
       </div>
       <div className="flex-1 px-5 py-6 flex flex-col gap-5">
         {scanError && (
-          <div className="bg-red-600/20 border border-red-600/50 p-4">
-            <p className="text-red-400 text-sm">{scanError}</p>
+          <div className="bg-[#CC2222]/20 border border-[#CC2222]/50 p-4">
+            <p className="text-[#FF2020] text-sm">{scanError}</p>
           </div>
         )}
         {scanPreview && (
@@ -291,11 +291,11 @@ const ExpenseRecorderScreen = ({ onBack }) => {
               <p className={`text-xs ${subtext}`}>PDF ready to parse</p>
             </div>
           ) : (
-            <img src={scanPreview} alt="Receipt" className="w-full object-contain max-h-72 border border-[#262626]" />
+            <img src={scanPreview} alt="Receipt" className="w-full object-contain max-h-72 border border-[#1F1F1F]" />
           )
         )}
         <button onClick={handleScanParse}
-          className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 tracking-wider flex items-center justify-center gap-2">
+          className="w-full bg-[#CC2222] hover:bg-[#7A1010] text-white font-bold py-4 tracking-wider flex items-center justify-center gap-2">
           <span>✨</span> PARSE WITH AI
         </button>
         <button onClick={() => openAdd()}
@@ -308,15 +308,15 @@ const ExpenseRecorderScreen = ({ onBack }) => {
 
   // ── Parsing spinner ───────────────────────────────────────────────────────
   if (screen === 'scan-parsing') return (
-    <div className={`min-h-screen flex flex-col items-center justify-center font-['Oxanium'] ${bg}`}>
-      <div className="w-16 h-16 bg-red-600/20 flex items-center justify-center mb-6 animate-pulse">
+    <div className={`min-h-screen flex flex-col items-center justify-center font-['Barlow_Condensed'] ${bg}`}>
+      <div className="w-16 h-16 bg-[#CC2222]/20 flex items-center justify-center mb-6 animate-pulse">
         <span className="text-2xl">✨</span>
       </div>
       <h2 className={`text-lg font-bold tracking-wider mb-2 ${text}`}>READING RECEIPT</h2>
       <p className={`text-sm ${subtext}`}>Claude AI is extracting expense details...</p>
       <div className="mt-8 flex gap-1">
         {[0, 1, 2].map(i => (
-          <div key={i} className="w-2 h-2 bg-red-600 rounded-full animate-bounce"
+          <div key={i} className="w-2 h-2 bg-[#CC2222] rounded-full animate-bounce"
             style={{ animationDelay: `${i * 0.15}s` }} />
         ))}
       </div>
@@ -325,7 +325,7 @@ const ExpenseRecorderScreen = ({ onBack }) => {
 
   // ── Add / Edit form ───────────────────────────────────────────────────────
   if (screen === 'add') return (
-    <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
+    <div className={`min-h-screen flex flex-col font-['Barlow_Condensed'] ${bg}`}>
       <div className={`${surface} border-b ${border} px-5 pt-10 pb-4`}>
         <button onClick={() => setScreen('list')} className={`text-sm tracking-wider mb-4 block ${subtext}`}>← BACK</button>
         <h1 className={`text-xl font-bold tracking-wider ${text}`}>
@@ -356,8 +356,8 @@ const ExpenseRecorderScreen = ({ onBack }) => {
               <button key={cat.value} type="button" onClick={() => setFormCategory(cat.value)}
                 className={`py-2 px-1 text-xs font-semibold tracking-wider border transition-colors flex flex-col items-center gap-1 ${
                   formCategory === cat.value
-                    ? 'bg-red-600 border-red-600 text-white'
-                    : `${border} ${subtext} hover:border-red-600/50`
+                    ? 'bg-[#CC2222] border-[#CC2222] text-white'
+                    : `${border} ${subtext} hover:border-[#CC2222]/50`
                 }`}>
                 <span className="text-base">{cat.icon}</span>
                 {cat.label.toUpperCase()}
@@ -386,7 +386,7 @@ const ExpenseRecorderScreen = ({ onBack }) => {
 
         {/* Save */}
         <button onClick={handleFormSave} disabled={!formAmount || parseFloat(formAmount) <= 0 || formSaving}
-          className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white font-bold py-4 tracking-wider transition-colors">
+          className="w-full bg-[#CC2222] hover:bg-[#7A1010] disabled:bg-[#CC2222]/50 text-white font-bold py-4 tracking-wider transition-colors">
           {formMode === 'edit' ? 'SAVE CHANGES' : 'ADD EXPENSE'}
         </button>
 
@@ -394,18 +394,18 @@ const ExpenseRecorderScreen = ({ onBack }) => {
         {formMode === 'edit' && (
           <div className="pb-6">
             {showDeleteConfirm ? (
-              <div className={`border ${isDark ? 'border-red-600/50 bg-red-600/10' : 'border-red-200 bg-red-50'} p-4 space-y-3`}>
-                <p className={`text-sm ${isDark ? 'text-red-400' : 'text-red-700'}`}>Delete this expense?</p>
+              <div className={`border ${isDark ? 'border-[#CC2222]/50 bg-[#CC2222]/10' : 'border-red-200 bg-red-50'} p-4 space-y-3`}>
+                <p className={`text-sm ${isDark ? 'text-[#FF2020]' : 'text-red-700'}`}>Delete this expense?</p>
                 <div className="flex gap-2">
                   <button onClick={() => setShowDeleteConfirm(false)}
                     className={`flex-1 border ${border} py-2.5 text-sm tracking-wider ${subtext}`}>CANCEL</button>
                   <button onClick={() => handleDelete(editId)}
-                    className="flex-1 bg-red-700 hover:bg-red-800 text-white text-sm py-2.5 tracking-wider">CONFIRM</button>
+                    className="flex-1 bg-[#7A1010] hover:bg-red-800 text-white text-sm py-2.5 tracking-wider">CONFIRM</button>
                 </div>
               </div>
             ) : (
               <button onClick={() => setShowDeleteConfirm(true)}
-                className={`w-full text-sm tracking-wider py-3 ${isDark ? 'text-red-500/60 hover:text-red-500' : 'text-red-400 hover:text-red-600'} transition-colors`}>
+                className={`w-full text-sm tracking-wider py-3 ${isDark ? 'text-[#CC2222]/60 hover:text-[#CC2222]' : 'text-[#FF2020] hover:text-[#CC2222]'} transition-colors`}>
                 DELETE EXPENSE
               </button>
             )}
@@ -417,7 +417,7 @@ const ExpenseRecorderScreen = ({ onBack }) => {
 
   // ── Expense list ──────────────────────────────────────────────────────────
   return (
-    <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
+    <div className={`min-h-screen flex flex-col font-['Barlow_Condensed'] ${bg}`}>
 
       {/* Header */}
       <div className={`${surface} border-b ${border} px-5 pt-10 pb-4`}>
@@ -425,11 +425,11 @@ const ExpenseRecorderScreen = ({ onBack }) => {
           <h1 className={`text-xl font-bold tracking-wider ${text}`}>EXPENSES</h1>
           <div className="flex gap-2">
             <button onClick={() => { setScanError(''); setScreen('scan-capture'); }}
-              className="h-10 px-3 bg-red-600/20 border border-red-600/40 text-red-500 text-xs font-bold tracking-wider hover:bg-red-600/30 transition-colors flex items-center gap-1.5">
+              className="h-10 px-3 bg-[#CC2222]/20 border border-[#CC2222]/40 text-[#CC2222] text-xs font-bold tracking-wider hover:bg-[#CC2222]/30 transition-colors flex items-center gap-1.5">
               ✨ SCAN
             </button>
             <button onClick={() => openAdd()}
-              className="w-10 h-10 bg-red-600 hover:bg-red-700 flex items-center justify-center transition-colors">
+              className="w-10 h-10 bg-[#CC2222] hover:bg-[#7A1010] flex items-center justify-center transition-colors">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
@@ -443,7 +443,7 @@ const ExpenseRecorderScreen = ({ onBack }) => {
             <button key={p.value} onClick={() => setPeriod(p.value)}
               className={`flex-shrink-0 px-3 py-1.5 text-xs font-semibold tracking-wider border transition-colors ${
                 period === p.value
-                  ? 'bg-red-600 border-red-600 text-white'
+                  ? 'bg-[#CC2222] border-[#CC2222] text-white'
                   : `${border} ${subtext}`
               }`}>
               {p.label.toUpperCase()}
@@ -459,7 +459,7 @@ const ExpenseRecorderScreen = ({ onBack }) => {
           <div className={`${surface} border ${border} p-4`}>
             <div className="flex items-center justify-between mb-3">
               <p className={`text-xs font-bold tracking-widest ${subtext}`}>TOTAL SPENT</p>
-              <p className={`text-2xl font-bold text-red-500`}>
+              <p className={`text-2xl font-bold text-[#CC2222]`}>
                 ${fmt(totalAmount)}
               </p>
             </div>
@@ -468,8 +468,8 @@ const ExpenseRecorderScreen = ({ onBack }) => {
                 {categoryTotals.slice(0, 4).map(cat => (
                   <div key={cat.value} className="flex items-center gap-2">
                     <span className="text-sm w-5">{cat.icon}</span>
-                    <div className={`flex-1 h-1.5 ${isDark ? 'bg-[#1a1a1a]' : 'bg-[#f0f0f0]'} overflow-hidden`}>
-                      <div className="h-full bg-red-600/70"
+                    <div className={`flex-1 h-1.5 ${isDark ? 'bg-[#161616]' : 'bg-[#f0f0f0]'} overflow-hidden`}>
+                      <div className="h-full bg-[#CC2222]/70"
                         style={{ width: totalAmount > 0 ? `${(cat.total / totalAmount) * 100}%` : '0%' }} />
                     </div>
                     <span className={`text-xs ${subtext} w-16 text-right`}>${fmt(cat.total)}</span>
@@ -484,14 +484,14 @@ const ExpenseRecorderScreen = ({ onBack }) => {
         <div className="px-4 pt-3 flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
           <button onClick={() => setCatFilter('all')}
             className={`flex-shrink-0 px-3 py-1.5 text-xs font-semibold border transition-colors ${
-              catFilter === 'all' ? 'bg-red-600 border-red-600 text-white' : `${border} ${subtext}`
+              catFilter === 'all' ? 'bg-[#CC2222] border-[#CC2222] text-white' : `${border} ${subtext}`
             }`}>
             ALL
           </button>
           {categoryTotals.map(cat => (
             <button key={cat.value} onClick={() => setCatFilter(cat.value)}
               className={`flex-shrink-0 px-3 py-1.5 text-xs font-semibold border transition-colors flex items-center gap-1 ${
-                catFilter === cat.value ? 'bg-red-600 border-red-600 text-white' : `${border} ${subtext}`
+                catFilter === cat.value ? 'bg-[#CC2222] border-[#CC2222] text-white' : `${border} ${subtext}`
               }`}>
               {cat.icon} {cat.label.toUpperCase()}
             </button>
@@ -511,7 +511,7 @@ const ExpenseRecorderScreen = ({ onBack }) => {
               </p>
               {expenses.length === 0 && (
                 <button onClick={() => openAdd()}
-                  className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 tracking-wider">
+                  className="bg-[#CC2222] hover:bg-[#7A1010] text-white font-bold px-6 py-3 tracking-wider">
                   + ADD EXPENSE
                 </button>
               )}
@@ -523,9 +523,9 @@ const ExpenseRecorderScreen = ({ onBack }) => {
                 const cat = CAT_MAP[exp.category] || CAT_MAP.other;
                 return (
                   <button key={exp.id} onClick={() => openEdit(exp)}
-                    className={`w-full text-left ${surface} border ${border} px-4 py-3 flex items-center gap-3 hover:border-red-600/50 transition-colors`}>
+                    className={`w-full text-left ${surface} border ${border} px-4 py-3 flex items-center gap-3 hover:border-[#CC2222]/50 transition-colors`}>
                     <div className={`w-10 h-10 flex items-center justify-center flex-shrink-0 ${
-                      isDark ? 'bg-[#171717]' : 'bg-[#f5f5f5]'
+                      isDark ? 'bg-[#161616]' : 'bg-[#f5f5f5]'
                     }`}>
                       <span className="text-lg">{cat.icon}</span>
                     </div>
@@ -536,7 +536,7 @@ const ExpenseRecorderScreen = ({ onBack }) => {
                       </p>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className="text-sm font-bold text-red-400">-${fmt(exp.amount)}</p>
+                      <p className="text-sm font-bold text-[#FF2020]">-${fmt(exp.amount)}</p>
                       <p className={`text-xs ${subtext}`}>
                         {new Date(exp.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </p>

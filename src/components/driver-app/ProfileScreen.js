@@ -38,8 +38,8 @@ const isExpired = (dateStr) => {
 
 const ExpiryBadge = ({ date }) => {
   if (!date) return null;
-  if (isExpired(date)) return <span className="ml-2 text-xs bg-red-600/20 text-red-400 px-2 py-0.5">EXPIRED</span>;
-  if (isExpiringSoon(date)) return <span className="ml-2 text-xs bg-amber-500/20 text-amber-400 px-2 py-0.5">EXPIRING SOON</span>;
+  if (isExpired(date)) return <span className="ml-2 text-xs bg-[#CC2222]/20 text-[#FF2020] px-2 py-0.5">EXPIRED</span>;
+  if (isExpiringSoon(date)) return <span className="ml-2 text-xs bg-amber-500/20 text-[#D4921A] px-2 py-0.5">EXPIRING SOON</span>;
   return null;
 };
 
@@ -113,14 +113,14 @@ const ProfileScreen = ({ onBack, onOpenScanner }) => {
 
   const subscriptionLabel = () => {
     const s = user?.subscription_status;
-    if (s === 'active') return { text: 'ACTIVE', cls: 'text-green-400 bg-green-600/20' };
-    if (s === 'cancelled') return { text: 'CANCELLED', cls: 'text-red-400 bg-red-600/20' };
-    if (s === 'past_due') return { text: 'PAST DUE', cls: 'text-amber-400 bg-amber-600/20' };
-    return { text: 'FREE TRIAL', cls: 'text-amber-400 bg-amber-600/20' };
+    if (s === 'active') return { text: 'ACTIVE', cls: 'text-[#2DBB62] bg-[#2DBB62]/20' };
+    if (s === 'cancelled') return { text: 'CANCELLED', cls: 'text-[#FF2020] bg-[#CC2222]/20' };
+    if (s === 'past_due') return { text: 'PAST DUE', cls: 'text-[#D4921A] bg-[#D4921A]/20' };
+    return { text: 'FREE TRIAL', cls: 'text-[#D4921A] bg-[#D4921A]/20' };
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 flex flex-col font-['Oxanium']">
+    <div className="min-h-screen bg-gray-950 flex flex-col font-['Barlow_Condensed']">
       {/* Header */}
       <div className="bg-gradient-to-r from-gray-800 to-gray-950 px-4 py-4 flex items-center gap-3">
         <button onClick={onBack} className="w-10 h-10 flex items-center justify-center">
@@ -137,9 +137,9 @@ const ProfileScreen = ({ onBack, onOpenScanner }) => {
         <div className="text-center mb-2">
           {isBusinessUser && user?.logo_url ? (
             <img src={user.logo_url} alt="Company logo"
-              className="w-24 h-24 object-cover mx-auto mb-3 border border-[#262626]" />
+              className="w-24 h-24 object-cover mx-auto mb-3 border border-[#1F1F1F]" />
           ) : (
-            <div className="w-24 h-24 bg-red-600 flex items-center justify-center mx-auto mb-3">
+            <div className="w-24 h-24 bg-[#CC2222] flex items-center justify-center mx-auto mb-3">
               <span className="text-3xl text-white font-bold">
                 {user?.full_name?.charAt(0) || 'D'}
               </span>
@@ -159,7 +159,7 @@ const ProfileScreen = ({ onBack, onOpenScanner }) => {
         </div>
 
         {/* Contact Info */}
-        <div className="bg-[#0a0a0a] border border-[#262626] p-4 space-y-3">
+        <div className="bg-[#080808] border border-[#1F1F1F] p-4 space-y-3">
           <p className="text-white/40 text-xs tracking-wider">CONTACT</p>
           <div>
             <p className="text-white/50 text-xs mb-0.5">Email</p>
@@ -179,11 +179,11 @@ const ProfileScreen = ({ onBack, onOpenScanner }) => {
 
         {/* Business Info — Owner Operator + Carrier (editable) */}
         {isBusinessUser && (
-          <div className="bg-[#0a0a0a] border border-[#262626] p-4 space-y-3">
+          <div className="bg-[#080808] border border-[#1F1F1F] p-4 space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-white/40 text-xs tracking-wider">BUSINESS INFO</p>
               {!editingBiz && (
-                <button onClick={openBizEdit} className="text-red-500 text-xs tracking-wider hover:text-red-400">
+                <button onClick={openBizEdit} className="text-[#CC2222] text-xs tracking-wider hover:text-[#FF2020]">
                   EDIT
                 </button>
               )}
@@ -192,45 +192,45 @@ const ProfileScreen = ({ onBack, onOpenScanner }) => {
             {editingBiz ? (
               <div className="space-y-3">
                 {bizError && (
-                  <div className="bg-red-600/20 border border-red-600/50 p-3">
-                    <p className="text-red-400 text-xs">{bizError}</p>
+                  <div className="bg-[#CC2222]/20 border border-[#CC2222]/50 p-3">
+                    <p className="text-[#FF2020] text-xs">{bizError}</p>
                   </div>
                 )}
                 <div>
                   <p className="text-white/50 text-xs mb-1">Company Name</p>
                   <input type="text" value={bizCompany} onChange={e => setBizCompany(e.target.value)}
                     placeholder="Smith Trucking Inc."
-                    className="w-full bg-[#171717] border border-[#262626] text-white text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-red-600 placeholder-white/30" />
+                    className="w-full bg-[#161616] border border-[#1F1F1F] text-white text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#CC2222] placeholder-white/30" />
                 </div>
                 <div>
                   <p className="text-white/50 text-xs mb-1">MC / DOT Number</p>
                   <input type="text" value={bizMcDot} onChange={e => setBizMcDot(e.target.value)}
                     placeholder="MC-123456 or USDOT 1234567"
-                    className="w-full bg-[#171717] border border-[#262626] text-white text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-red-600 placeholder-white/30 font-mono" />
+                    className="w-full bg-[#161616] border border-[#1F1F1F] text-white text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#CC2222] placeholder-white/30 font-mono" />
                 </div>
                 <div>
                   <p className="text-white/50 text-xs mb-1">Company Logo</p>
                   <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoSelect} className="hidden" />
                   {logoPreview ? (
                     <div className="flex items-center gap-3">
-                      <img src={logoPreview} alt="Logo preview" className="w-12 h-12 object-cover border border-[#262626]" />
+                      <img src={logoPreview} alt="Logo preview" className="w-12 h-12 object-cover border border-[#1F1F1F]" />
                       <button type="button" onClick={() => { setLogoFile(null); setLogoPreview(null); }}
                         className="text-white/40 text-xs hover:text-white/60">Remove</button>
                     </div>
                   ) : (
                     <button type="button" onClick={() => logoInputRef.current?.click()}
-                      className="w-full border border-dashed border-[#262626] text-white/40 text-xs py-3 tracking-wider hover:border-red-600/40 hover:text-white/60 transition-colors">
+                      className="w-full border border-dashed border-[#1F1F1F] text-white/40 text-xs py-3 tracking-wider hover:border-[#CC2222]/40 hover:text-white/60 transition-colors">
                       {user?.logo_url ? 'CHANGE LOGO' : 'UPLOAD LOGO'}
                     </button>
                   )}
                 </div>
                 <div className="flex gap-2 pt-1">
                   <button onClick={() => setEditingBiz(false)} disabled={bizSaving}
-                    className="flex-1 border border-[#262626] text-white/50 text-sm py-2.5 tracking-wider hover:bg-white/5">
+                    className="flex-1 border border-[#1F1F1F] text-white/50 text-sm py-2.5 tracking-wider hover:bg-white/5">
                     CANCEL
                   </button>
                   <button onClick={handleBizSave} disabled={bizSaving}
-                    className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white text-sm py-2.5 tracking-wider transition-colors">
+                    className="flex-1 bg-[#CC2222] hover:bg-[#7A1010] disabled:bg-[#CC2222]/50 text-white text-sm py-2.5 tracking-wider transition-colors">
                     {bizSaving ? (
                       <span className="flex items-center justify-center gap-2">
                         <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
@@ -255,7 +255,7 @@ const ProfileScreen = ({ onBack, onOpenScanner }) => {
                 {user?.logo_url && (
                   <div>
                     <p className="text-white/50 text-xs mb-1">Logo</p>
-                    <img src={user.logo_url} alt="Company logo" className="w-14 h-14 object-cover border border-[#262626]" />
+                    <img src={user.logo_url} alt="Company logo" className="w-14 h-14 object-cover border border-[#1F1F1F]" />
                   </div>
                 )}
                 {/* Legacy fields kept for existing carrier accounts */}
@@ -280,7 +280,7 @@ const ProfileScreen = ({ onBack, onOpenScanner }) => {
 
         {/* Subscription status — OO + Carrier only */}
         {isBusinessUser && (
-          <div className="bg-[#0a0a0a] border border-[#262626] p-4 space-y-3">
+          <div className="bg-[#080808] border border-[#1F1F1F] p-4 space-y-3">
             <p className="text-white/40 text-xs tracking-wider">SUBSCRIPTION</p>
             <div className="flex items-center justify-between">
               <div>
@@ -300,7 +300,7 @@ const ProfileScreen = ({ onBack, onOpenScanner }) => {
 
         {/* License & Certifications — driver and owner_operator only */}
         {userType !== 'carrier' && (
-          <div className="bg-[#0a0a0a] border border-[#262626] p-4 space-y-3">
+          <div className="bg-[#080808] border border-[#1F1F1F] p-4 space-y-3">
             <p className="text-white/40 text-xs tracking-wider">LICENSE & CERTIFICATIONS</p>
             {hasLicenseData ? (
               <>
@@ -345,7 +345,7 @@ const ProfileScreen = ({ onBack, onOpenScanner }) => {
                     <p className="text-white/50 text-xs mb-1">Endorsements</p>
                     <div className="flex flex-wrap gap-2">
                       {user.endorsements.map(e => (
-                        <span key={e} className="bg-red-600/20 border border-red-600/40 text-red-400 text-xs px-2 py-1 tracking-wider">
+                        <span key={e} className="bg-[#CC2222]/20 border border-[#CC2222]/40 text-[#FF2020] text-xs px-2 py-1 tracking-wider">
                           {e} — {ENDORSEMENT_LABELS[e] || e}
                         </span>
                       ))}
@@ -360,12 +360,12 @@ const ProfileScreen = ({ onBack, onOpenScanner }) => {
         )}
 
         {/* Scanned Documents */}
-        <div className="bg-[#0a0a0a] border border-[#262626] p-4 space-y-3">
+        <div className="bg-[#080808] border border-[#1F1F1F] p-4 space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-white/40 text-xs tracking-wider">SCANNED DOCUMENTS</p>
             <button
               onClick={onOpenScanner}
-              className="text-red-500 text-xs tracking-wider hover:text-red-400"
+              className="text-[#CC2222] text-xs tracking-wider hover:text-[#FF2020]"
             >
               + SCAN
             </button>
@@ -373,7 +373,7 @@ const ProfileScreen = ({ onBack, onOpenScanner }) => {
 
           {docsLoading ? (
             <div className="flex items-center gap-2 py-2">
-              <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-[#CC2222] border-t-transparent rounded-full animate-spin" />
               <p className="text-white/30 text-sm">Loading...</p>
             </div>
           ) : documents.length === 0 ? (
@@ -381,7 +381,7 @@ const ProfileScreen = ({ onBack, onOpenScanner }) => {
               <p className="text-white/30 text-sm mb-3">No documents scanned yet</p>
               <button
                 onClick={onOpenScanner}
-                className="border border-[#262626] text-white/50 text-sm px-6 py-3 hover:bg-white/5 tracking-wider"
+                className="border border-[#1F1F1F] text-white/50 text-sm px-6 py-3 hover:bg-white/5 tracking-wider"
               >
                 SCAN A DOCUMENT
               </button>
@@ -393,7 +393,7 @@ const ProfileScreen = ({ onBack, onOpenScanner }) => {
                   <img
                     src={doc.document_url}
                     alt={DOC_TYPE_LABELS[doc.document_type] || 'Document'}
-                    className="w-16 h-16 object-cover flex-shrink-0 bg-[#1a1a1a]"
+                    className="w-16 h-16 object-cover flex-shrink-0 bg-[#161616]"
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-white text-sm font-semibold tracking-wider">
@@ -411,13 +411,13 @@ const ProfileScreen = ({ onBack, onOpenScanner }) => {
 
         {/* Location & Status — driver and owner_operator only */}
         {userType !== 'carrier' && (
-          <div className="bg-[#0a0a0a] border border-[#262626] p-4 space-y-3">
+          <div className="bg-[#080808] border border-[#1F1F1F] p-4 space-y-3">
             <p className="text-white/40 text-xs tracking-wider">STATUS</p>
             <div>
               <p className="text-white/50 text-xs mb-0.5">Location Tracking</p>
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                <span className="text-green-400 text-sm">Active</span>
+                <span className="text-[#2DBB62] text-sm">Active</span>
               </div>
               {currentLocation && (
                 <p className="text-white/30 text-xs mt-1">Accuracy: ±{Math.round(currentLocation.accuracy_m || 0)}m</p>
@@ -432,7 +432,7 @@ const ProfileScreen = ({ onBack, onOpenScanner }) => {
 
         {/* Account ID — carrier only */}
         {userType === 'carrier' && (
-          <div className="bg-[#0a0a0a] border border-[#262626] p-4 space-y-3">
+          <div className="bg-[#080808] border border-[#1F1F1F] p-4 space-y-3">
             <p className="text-white/40 text-xs tracking-wider">ACCOUNT</p>
             <div>
               <p className="text-white/50 text-xs mb-0.5">Account ID</p>
