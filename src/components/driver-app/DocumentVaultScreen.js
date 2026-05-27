@@ -28,9 +28,9 @@ const expiryStatus = (expiryDate) => {
   today.setHours(0, 0, 0, 0);
   const exp = new Date(expiryDate);
   const diffDays = Math.ceil((exp - today) / 86400000);
-  if (diffDays < 0)        return { status: 'expired',       label: 'EXPIRED',          color: 'text-red-400',    bg: 'bg-red-600/20',    border: 'border-red-600/50',    days: diffDays };
-  if (diffDays <= WARN_DAYS) return { status: 'expiring_soon', label: `${diffDays}d LEFT`, color: 'text-amber-400',  bg: 'bg-amber-600/20',  border: 'border-amber-600/50',  days: diffDays };
-  return                          { status: 'valid',          label: 'VALID',            color: 'text-green-400',  bg: 'bg-green-600/20',  border: 'border-green-600/50',  days: diffDays };
+  if (diffDays < 0)        return { status: 'expired',       label: 'EXPIRED',          color: 'text-[#FF2020]',    bg: 'bg-[#CC2222]/20',    border: 'border-[#CC2222]/50',    days: diffDays };
+  if (diffDays <= WARN_DAYS) return { status: 'expiring_soon', label: `${diffDays}d LEFT`, color: 'text-[#D4921A]',  bg: 'bg-[#D4921A]/20',  border: 'border-amber-600/50',  days: diffDays };
+  return                          { status: 'valid',          label: 'VALID',            color: 'text-[#2DBB62]',  bg: 'bg-[#2DBB62]/20',  border: 'border-green-600/50',  days: diffDays };
 };
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -41,14 +41,14 @@ const DocumentVaultScreen = ({ onBack }) => {
   const { api, theme } = useDriverApp();
   const isDark = theme === 'dark';
 
-  const bg      = isDark ? 'bg-black'        : 'bg-[#f5f5f5]';
-  const surface = isDark ? 'bg-[#0a0a0a]'    : 'bg-white';
+  const bg      = isDark ? 'bg-[#030303]'        : 'bg-[#f5f5f5]';
+  const surface = isDark ? 'bg-[#080808]'    : 'bg-white';
   const text    = isDark ? 'text-white'       : 'text-black';
   const subtext = isDark ? 'text-white/60'    : 'text-black/60';
-  const border  = isDark ? 'border-[#262626]' : 'border-[#e5e5e5]';
-  const inputCls = `w-full border py-2.5 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-red-600 ${
+  const border  = isDark ? 'border-[#1F1F1F]' : 'border-[#e5e5e5]';
+  const inputCls = `w-full border py-2.5 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#CC2222] ${
     isDark
-      ? 'bg-[#0a0a0a] border-[#262626] text-white placeholder-white/30'
+      ? 'bg-[#080808] border-[#1F1F1F] text-white placeholder-white/30'
       : 'bg-white border-[#e5e5e5] text-black placeholder-black/30'
   }`;
 
@@ -171,7 +171,7 @@ const DocumentVaultScreen = ({ onBack }) => {
   if (screen === 'add') {
     const docTypeCfg = DOC_TYPE_MAP[formDocType];
     return (
-      <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
+      <div className={`min-h-screen flex flex-col font-['Barlow_Condensed'] ${bg}`}>
         <div className={`${surface} border-b ${border} px-5 pt-10 pb-4`}>
           <button onClick={() => setScreen('list')} className={`text-sm tracking-wider mb-4 block ${subtext}`}>← BACK</button>
           <h1 className={`text-xl font-bold tracking-wider ${text}`}>ADD DOCUMENT</h1>
@@ -179,8 +179,8 @@ const DocumentVaultScreen = ({ onBack }) => {
 
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
           {formError && (
-            <div className="bg-red-600/20 border border-red-600/50 p-4">
-              <p className="text-red-400 text-sm">{formError}</p>
+            <div className="bg-[#CC2222]/20 border border-[#CC2222]/50 p-4">
+              <p className="text-[#FF2020] text-sm">{formError}</p>
             </div>
           )}
 
@@ -192,8 +192,8 @@ const DocumentVaultScreen = ({ onBack }) => {
                 <button key={dt.value} type="button" onClick={() => setFormDocType(dt.value)}
                   className={`py-2.5 px-3 text-xs font-semibold tracking-wider border transition-colors flex items-center gap-2 ${
                     formDocType === dt.value
-                      ? 'bg-red-600 border-red-600 text-white'
-                      : `${border} ${subtext} hover:border-red-600/50`
+                      ? 'bg-[#CC2222] border-[#CC2222] text-white'
+                      : `${border} ${subtext} hover:border-[#CC2222]/50`
                   }`}>
                   <span>{dt.icon}</span>
                   <span className="truncate">{dt.label.toUpperCase()}</span>
@@ -240,8 +240,8 @@ const DocumentVaultScreen = ({ onBack }) => {
             <button onClick={() => fileInputRef.current?.click()}
               className={`w-full mt-2 border-2 border-dashed ${
                 formFile
-                  ? 'border-green-600/50 bg-green-600/5'
-                  : isDark ? 'border-[#262626] hover:border-red-600/50' : 'border-[#e5e5e5] hover:border-red-600/50'
+                  ? 'border-green-600/50 bg-[#2DBB62]/5'
+                  : isDark ? 'border-[#1F1F1F] hover:border-[#CC2222]/50' : 'border-[#e5e5e5] hover:border-[#CC2222]/50'
               } py-6 flex flex-col items-center gap-2 transition-colors`}>
               {formFile ? (
                 <>
@@ -260,7 +260,7 @@ const DocumentVaultScreen = ({ onBack }) => {
           </div>
 
           <button onClick={handleSave} disabled={formSaving}
-            className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white font-bold py-4 tracking-wider transition-colors">
+            className="w-full bg-[#CC2222] hover:bg-[#7A1010] disabled:bg-[#CC2222]/50 text-white font-bold py-4 tracking-wider transition-colors">
             {formSaving ? (
               <span className="flex items-center justify-center gap-2">
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -281,7 +281,7 @@ const DocumentVaultScreen = ({ onBack }) => {
     const status = expiryStatus(selectedDoc.expiry_date);
 
     return (
-      <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
+      <div className={`min-h-screen flex flex-col font-['Barlow_Condensed'] ${bg}`}>
         <div className={`${surface} border-b ${border} px-5 pt-10 pb-4`}>
           <button onClick={() => setScreen('list')} className={`text-sm tracking-wider mb-4 block ${subtext}`}>← BACK</button>
           <div className="flex items-center gap-3">
@@ -317,7 +317,7 @@ const DocumentVaultScreen = ({ onBack }) => {
           {/* View file */}
           {selectedDoc.file_url && (
             <button onClick={() => handleViewFile(selectedDoc)}
-              className={`w-full ${surface} border ${border} py-4 flex items-center justify-center gap-3 hover:border-red-600/50 transition-colors`}>
+              className={`w-full ${surface} border ${border} py-4 flex items-center justify-center gap-3 hover:border-[#CC2222]/50 transition-colors`}>
               <span className="text-xl">📎</span>
               <span className={`text-sm font-bold tracking-wider ${text}`}>VIEW DOCUMENT FILE</span>
             </button>
@@ -343,20 +343,20 @@ const DocumentVaultScreen = ({ onBack }) => {
           {/* Delete */}
           <div className="pb-6">
             {showDelete ? (
-              <div className={`border ${isDark ? 'border-red-600/50 bg-red-600/10' : 'border-red-200 bg-red-50'} p-4 space-y-3`}>
-                <p className={`text-sm ${isDark ? 'text-red-400' : 'text-red-700'}`}>Delete this document? This cannot be undone.</p>
+              <div className={`border ${isDark ? 'border-[#CC2222]/50 bg-[#CC2222]/10' : 'border-red-200 bg-red-50'} p-4 space-y-3`}>
+                <p className={`text-sm ${isDark ? 'text-[#FF2020]' : 'text-red-700'}`}>Delete this document? This cannot be undone.</p>
                 <div className="flex gap-2">
                   <button onClick={() => setShowDelete(false)} disabled={deleting}
                     className={`flex-1 border ${border} py-2.5 text-sm tracking-wider ${subtext}`}>CANCEL</button>
                   <button onClick={handleDelete} disabled={deleting}
-                    className="flex-1 bg-red-700 hover:bg-red-800 disabled:opacity-50 text-white text-sm py-2.5 tracking-wider">
+                    className="flex-1 bg-[#7A1010] hover:bg-red-800 disabled:opacity-50 text-white text-sm py-2.5 tracking-wider">
                     {deleting ? 'DELETING...' : 'CONFIRM DELETE'}
                   </button>
                 </div>
               </div>
             ) : (
               <button onClick={() => setShowDelete(true)}
-                className={`w-full text-sm tracking-wider py-3 ${isDark ? 'text-red-500/60 hover:text-red-500' : 'text-red-400 hover:text-red-600'} transition-colors`}>
+                className={`w-full text-sm tracking-wider py-3 ${isDark ? 'text-[#CC2222]/60 hover:text-[#CC2222]' : 'text-[#FF2020] hover:text-[#CC2222]'} transition-colors`}>
                 DELETE DOCUMENT
               </button>
             )}
@@ -376,14 +376,14 @@ const DocumentVaultScreen = ({ onBack }) => {
   });
 
   return (
-    <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
+    <div className={`min-h-screen flex flex-col font-['Barlow_Condensed'] ${bg}`}>
 
       {/* Header */}
       <div className={`${surface} border-b ${border} px-5 pt-10 pb-4`}>
         <div className="flex items-center justify-between mb-1">
           <h1 className={`text-xl font-bold tracking-wider ${text}`}>DOCUMENT VAULT</h1>
           <button onClick={openAdd}
-            className="w-10 h-10 bg-red-600 hover:bg-red-700 flex items-center justify-center transition-colors">
+            className="w-10 h-10 bg-[#CC2222] hover:bg-[#7A1010] flex items-center justify-center transition-colors">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
@@ -395,18 +395,18 @@ const DocumentVaultScreen = ({ onBack }) => {
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
 
         {fetchErr && (
-          <div className="bg-red-600/20 border border-red-600/50 p-4">
-            <p className="text-red-400 text-sm">{fetchErr}</p>
-            <button onClick={fetchDocs} className="text-red-400 text-xs mt-2 underline">Retry</button>
+          <div className="bg-[#CC2222]/20 border border-[#CC2222]/50 p-4">
+            <p className="text-[#FF2020] text-sm">{fetchErr}</p>
+            <button onClick={fetchDocs} className="text-[#FF2020] text-xs mt-2 underline">Retry</button>
           </div>
         )}
 
         {/* Alert banner */}
         {alerts.length > 0 && (
-          <div className={`border border-amber-600/50 bg-amber-600/10 p-4 flex gap-3`}>
+          <div className={`border border-amber-600/50 bg-[#D4921A]/10 p-4 flex gap-3`}>
             <span className="text-xl flex-shrink-0">⚠️</span>
             <div>
-              <p className="text-sm font-bold tracking-wider text-amber-400">
+              <p className="text-sm font-bold tracking-wider text-[#D4921A]">
                 {alerts.length} DOCUMENT{alerts.length > 1 ? 'S' : ''} NEED ATTENTION
               </p>
               <p className={`text-xs mt-0.5 ${subtext}`}>
@@ -420,7 +420,7 @@ const DocumentVaultScreen = ({ onBack }) => {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <div className="w-8 h-8 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-[#CC2222] border-t-transparent rounded-full animate-spin" />
             <p className={`text-sm ${subtext}`}>Loading documents...</p>
           </div>
         ) : sortedDocs.length === 0 ? (
@@ -431,7 +431,7 @@ const DocumentVaultScreen = ({ onBack }) => {
               Store your CDL, insurance, IFTA, and other important documents here. Get expiry alerts before they lapse.
             </p>
             <button onClick={openAdd}
-              className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 tracking-wider">
+              className="bg-[#CC2222] hover:bg-[#7A1010] text-white font-bold px-6 py-3 tracking-wider">
               + ADD DOCUMENT
             </button>
           </div>
@@ -441,12 +441,12 @@ const DocumentVaultScreen = ({ onBack }) => {
             const status = expiryStatus(doc.expiry_date);
             return (
               <button key={doc.id} onClick={() => openDetail(doc)}
-                className={`w-full text-left ${surface} border ${border} overflow-hidden hover:border-red-600/50 transition-colors`}>
+                className={`w-full text-left ${surface} border ${border} overflow-hidden hover:border-[#CC2222]/50 transition-colors`}>
                 {/* Status stripe */}
                 <div className={`h-1 w-full ${
-                  status.status === 'expired'       ? 'bg-red-600' :
+                  status.status === 'expired'       ? 'bg-[#CC2222]' :
                   status.status === 'expiring_soon' ? 'bg-amber-500' :
-                  status.status === 'valid'         ? 'bg-green-600' : 'bg-white/10'
+                  status.status === 'valid'         ? 'bg-[#2DBB62]' : 'bg-white/10'
                 }`} />
                 <div className="px-4 py-3 flex items-center gap-3">
                   <span className="text-2xl flex-shrink-0">{docCfg.icon}</span>

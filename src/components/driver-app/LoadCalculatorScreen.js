@@ -15,14 +15,14 @@ const LoadCalculatorScreen = ({ onBack }) => {
   const { user, userType, theme } = useDriverApp();
   const isDark = theme === 'dark';
 
-  const bg       = isDark ? 'bg-black'        : 'bg-[#f5f5f5]';
-  const surface  = isDark ? 'bg-[#0a0a0a]'    : 'bg-white';
+  const bg       = isDark ? 'bg-[#030303]'        : 'bg-[#f5f5f5]';
+  const surface  = isDark ? 'bg-[#080808]'    : 'bg-white';
   const text     = isDark ? 'text-white'       : 'text-black';
   const subtext  = isDark ? 'text-white/60'    : 'text-black/60';
-  const border   = isDark ? 'border-[#262626]' : 'border-[#e5e5e5]';
-  const inputCls = `w-full border py-2.5 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-red-600 ${
+  const border   = isDark ? 'border-[#1F1F1F]' : 'border-[#e5e5e5]';
+  const inputCls = `w-full border py-2.5 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#CC2222] ${
     isDark
-      ? 'bg-[#0a0a0a] border-[#262626] text-white placeholder-white/30'
+      ? 'bg-[#080808] border-[#1F1F1F] text-white placeholder-white/30'
       : 'bg-white border-[#e5e5e5] text-black placeholder-black/30'
   }`;
 
@@ -78,16 +78,16 @@ const LoadCalculatorScreen = ({ onBack }) => {
   };
 
   // ── Result color helpers ──────────────────────────────────────────────────
-  const profitColor = results.netProfit >= 0 ? 'text-green-400' : 'text-red-500';
-  const marginColor = results.margin >= 20 ? 'text-green-400'
-    : results.margin >= 10 ? 'text-amber-400'
-    : 'text-red-500';
+  const profitColor = results.netProfit >= 0 ? 'text-[#2DBB62]' : 'text-[#CC2222]';
+  const marginColor = results.margin >= 20 ? 'text-[#2DBB62]'
+    : results.margin >= 10 ? 'text-[#D4921A]'
+    : 'text-[#CC2222]';
 
   const fmt = (n) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
+    <div className={`min-h-screen flex flex-col font-['Barlow_Condensed'] ${bg}`}>
 
       {/* Header */}
       <div className={`${surface} border-b ${border} px-5 pt-10 pb-4`}>
@@ -101,18 +101,18 @@ const LoadCalculatorScreen = ({ onBack }) => {
         {/* Live results panel — shown when enough data entered */}
         {hasEnoughData && (
           <div className={`${isDark ? 'bg-[#0f0f0f]' : 'bg-white'} border ${border} overflow-hidden`}>
-            <div className="bg-red-600 px-4 py-2">
+            <div className="bg-[#CC2222] px-4 py-2">
               <p className="text-white text-xs font-bold tracking-widest">LIVE RESULTS</p>
             </div>
             <div className="grid grid-cols-2 divide-x divide-y ${isDark ? 'divide-[#262626]' : 'divide-[#e5e5e5]'}">
 
               <ResultCell label="RATE PER MILE" value={`$${fmt(results.rpm)}/mi`}
                 isDark={isDark} text={text} subtext={subtext}
-                highlight={results.rpm >= 2.5 ? 'text-green-400' : results.rpm >= 1.8 ? 'text-amber-400' : 'text-red-500'} />
+                highlight={results.rpm >= 2.5 ? 'text-[#2DBB62]' : results.rpm >= 1.8 ? 'text-[#D4921A]' : 'text-[#CC2222]'} />
 
               <ResultCell label="FUEL COST" value={`-$${fmt(results.fuelCost)}`}
                 isDark={isDark} text={text} subtext={subtext}
-                highlight={results.fuelCost > 0 ? 'text-red-400' : text}
+                highlight={results.fuelCost > 0 ? 'text-[#FF2020]' : text}
                 sub={results.gallonsNeeded > 0 ? `${fmt(results.gallonsNeeded)} gal` : null} />
 
               <ResultCell label="NET PROFIT" value={`$${fmt(results.netProfit)}`}
@@ -126,13 +126,13 @@ const LoadCalculatorScreen = ({ onBack }) => {
               {results.totalExpenses > 0 && (
                 <ResultCell label="OTHER EXPENSES" value={`-$${fmt(results.totalExpenses)}`}
                   isDark={isDark} text={text} subtext={subtext}
-                  highlight="text-red-400" />
+                  highlight="text-[#FF2020]" />
               )}
 
               {isOwnerOperator && results.driverPay > 0 && (
                 <ResultCell label="DRIVER PAY" value={`-$${fmt(results.driverPay)}`}
                   isDark={isDark} text={text} subtext={subtext}
-                  highlight="text-amber-400"
+                  highlight="text-[#D4921A]"
                   sub={`${driverPayPct}% of rate`} />
               )}
             </div>
@@ -201,7 +201,7 @@ const LoadCalculatorScreen = ({ onBack }) => {
             </div>
             {results.driverPay > 0 && (
               <p className={`text-xs ${subtext}`}>
-                Driver receives <span className="text-amber-400">${fmt(results.driverPay)}</span> ({driverPayPct}% of ${fmt(results.rate)})
+                Driver receives <span className="text-[#D4921A]">${fmt(results.driverPay)}</span> ({driverPayPct}% of ${fmt(results.rate)})
               </p>
             )}
           </div>
@@ -212,7 +212,7 @@ const LoadCalculatorScreen = ({ onBack }) => {
           <div className="flex items-center justify-between">
             <p className={`text-xs tracking-wider font-bold ${subtext}`}>ADDITIONAL EXPENSES</p>
             {expenses.length > 0 && (
-              <p className={`text-xs text-red-400`}>-${fmt(results.totalExpenses)} total</p>
+              <p className={`text-xs text-[#FF2020]`}>-${fmt(results.totalExpenses)} total</p>
             )}
           </div>
 
@@ -220,7 +220,7 @@ const LoadCalculatorScreen = ({ onBack }) => {
           <div className="flex flex-wrap gap-2">
             {EXPENSE_TEMPLATES.map(t => (
               <button key={t.label} onClick={() => quickAddExpense(t)}
-                className={`px-3 py-1.5 text-xs border ${border} ${subtext} hover:border-red-600/50 transition-colors`}>
+                className={`px-3 py-1.5 text-xs border ${border} ${subtext} hover:border-[#CC2222]/50 transition-colors`}>
                 {t.icon} {t.label}
               </button>
             ))}
@@ -232,9 +232,9 @@ const LoadCalculatorScreen = ({ onBack }) => {
               {expenses.map(exp => (
                 <div key={exp.id} className="flex items-center justify-between px-3 py-2.5 gap-3">
                   <span className={`text-sm flex-1 ${text}`}>{exp.label}</span>
-                  <span className="text-sm text-red-400">-${fmt(parseFloat(exp.amount) || 0)}</span>
+                  <span className="text-sm text-[#FF2020]">-${fmt(parseFloat(exp.amount) || 0)}</span>
                   <button onClick={() => removeExpense(exp.id)}
-                    className={`text-xs ${subtext} hover:text-red-500 transition-colors ml-1`}>✕</button>
+                    className={`text-xs ${subtext} hover:text-[#CC2222] transition-colors ml-1`}>✕</button>
                 </div>
               ))}
             </div>
@@ -254,7 +254,7 @@ const LoadCalculatorScreen = ({ onBack }) => {
                     className={`${inputCls} pl-6`} />
                 </div>
                 <button onClick={() => addExpense(newExpLabel, newExpAmt)}
-                  className="px-4 bg-red-600 text-white text-sm font-bold tracking-wider">
+                  className="px-4 bg-[#CC2222] text-white text-sm font-bold tracking-wider">
                   ADD
                 </button>
                 <button onClick={() => { setShowAddExpense(false); setNewExpLabel(''); setNewExpAmt(''); }}
@@ -267,7 +267,7 @@ const LoadCalculatorScreen = ({ onBack }) => {
 
           {!showAddExpense && (
             <button onClick={() => setShowAddExpense(true)}
-              className={`w-full border ${border} py-2.5 text-xs tracking-wider ${subtext} hover:border-red-600/50 transition-colors`}>
+              className={`w-full border ${border} py-2.5 text-xs tracking-wider ${subtext} hover:border-[#CC2222]/50 transition-colors`}>
               + ADD CUSTOM EXPENSE
             </button>
           )}
@@ -287,15 +287,15 @@ const LoadCalculatorScreen = ({ onBack }) => {
           <div className={`${surface} border ${border} p-4`}>
             <p className={`text-xs font-bold tracking-widest mb-3 ${subtext}`}>FULL BREAKDOWN</p>
             <div className="space-y-2">
-              <BreakdownRow label="Load Rate"        value={`$${fmt(results.rate)}`}      color="text-green-400" />
+              <BreakdownRow label="Load Rate"        value={`$${fmt(results.rate)}`}      color="text-[#2DBB62]" />
               {results.fuelCost > 0 && (
-                <BreakdownRow label="Fuel Cost"       value={`-$${fmt(results.fuelCost)}`}  color="text-red-400" />
+                <BreakdownRow label="Fuel Cost"       value={`-$${fmt(results.fuelCost)}`}  color="text-[#FF2020]" />
               )}
               {results.totalExpenses > 0 && (
-                <BreakdownRow label="Other Expenses"  value={`-$${fmt(results.totalExpenses)}`} color="text-red-400" />
+                <BreakdownRow label="Other Expenses"  value={`-$${fmt(results.totalExpenses)}`} color="text-[#FF2020]" />
               )}
               {isOwnerOperator && results.driverPay > 0 && (
-                <BreakdownRow label="Driver Pay"      value={`-$${fmt(results.driverPay)}`} color="text-amber-400" />
+                <BreakdownRow label="Driver Pay"      value={`-$${fmt(results.driverPay)}`} color="text-[#D4921A]" />
               )}
               <div className={`border-t ${border} pt-2 mt-2`} />
               <BreakdownRow label="Net Profit"
@@ -308,7 +308,7 @@ const LoadCalculatorScreen = ({ onBack }) => {
                 bold />
               <BreakdownRow label="Rate Per Mile"
                 value={`$${fmt(results.rpm)}/mi`}
-                color={results.rpm >= 2.5 ? 'text-green-400' : results.rpm >= 1.8 ? 'text-amber-400' : 'text-red-500'}
+                color={results.rpm >= 2.5 ? 'text-[#2DBB62]' : results.rpm >= 1.8 ? 'text-[#D4921A]' : 'text-[#CC2222]'}
                 bold />
             </div>
           </div>
@@ -323,7 +323,7 @@ const LoadCalculatorScreen = ({ onBack }) => {
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 const ResultCell = ({ label, value, highlight, sub, isDark, text, subtext, large }) => (
-  <div className={`p-4 ${isDark ? 'bg-[#0a0a0a]' : 'bg-white'} border border-transparent`}>
+  <div className={`p-4 ${isDark ? 'bg-[#080808]' : 'bg-white'} border border-transparent`}>
     <p className={`text-xs tracking-wider mb-1 ${subtext}`}>{label}</p>
     <p className={`${large ? 'text-2xl' : 'text-base'} font-bold ${highlight || text}`}>{value}</p>
     {sub && <p className={`text-xs mt-0.5 ${subtext}`}>{sub}</p>}

@@ -136,11 +136,11 @@ const PLScreen = ({ onBack }) => {
   const { api, theme } = useDriverApp();
   const isDark = theme === 'dark';
 
-  const bg      = isDark ? 'bg-black'        : 'bg-[#f5f5f5]';
-  const surface = isDark ? 'bg-[#0a0a0a]'    : 'bg-white';
+  const bg      = isDark ? 'bg-[#030303]'        : 'bg-[#f5f5f5]';
+  const surface = isDark ? 'bg-[#080808]'    : 'bg-white';
   const text    = isDark ? 'text-white'       : 'text-black';
   const subtext = isDark ? 'text-white/60'    : 'text-black/60';
-  const border  = isDark ? 'border-[#262626]' : 'border-[#e5e5e5]';
+  const border  = isDark ? 'border-[#1F1F1F]' : 'border-[#e5e5e5]';
 
   const [period, setPeriod]   = useState('month');
   const [loads, setLoads]     = useState([]);
@@ -215,7 +215,7 @@ const PLScreen = ({ onBack }) => {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
+    <div className={`min-h-screen flex flex-col font-['Barlow_Condensed'] ${bg}`}>
 
       {/* Header */}
       <div className={`${surface} border-b ${border} px-5 pt-10 pb-4`}>
@@ -226,7 +226,7 @@ const PLScreen = ({ onBack }) => {
             <p className={`text-xs mt-0.5 ${subtext}`}>Profit & loss summary</p>
           </div>
           {loading && (
-            <div className="w-5 h-5 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+            <div className="w-5 h-5 border-2 border-[#CC2222] border-t-transparent rounded-full animate-spin" />
           )}
         </div>
 
@@ -236,7 +236,7 @@ const PLScreen = ({ onBack }) => {
             <button key={p.value} onClick={() => setPeriod(p.value)}
               className={`flex-1 py-2 text-xs font-bold tracking-widest border transition-colors ${
                 period === p.value
-                  ? 'bg-red-600 border-red-600 text-white'
+                  ? 'bg-[#CC2222] border-[#CC2222] text-white'
                   : `${border} ${subtext}`
               }`}>
               {p.label.toUpperCase()}
@@ -249,8 +249,8 @@ const PLScreen = ({ onBack }) => {
 
         {/* KPI summary cards */}
         <div className="grid grid-cols-2 gap-3">
-          <KpiCard label="REVENUE"  value={fmt(totalRevenue)}  color="text-green-400" surface={surface} border={border} subtext={subtext} />
-          <KpiCard label="EXPENSES" value={fmt(totalExpenses)} color="text-red-400"   surface={surface} border={border} subtext={subtext} />
+          <KpiCard label="REVENUE"  value={fmt(totalRevenue)}  color="text-[#2DBB62]" surface={surface} border={border} subtext={subtext} />
+          <KpiCard label="EXPENSES" value={fmt(totalExpenses)} color="text-[#FF2020]"   surface={surface} border={border} subtext={subtext} />
 
           <div className={`col-span-2 ${surface} border ${border} p-4 flex items-center justify-between`}>
             <div>
@@ -285,7 +285,7 @@ const PLScreen = ({ onBack }) => {
               {['bar', 'line'].map(t => (
                 <button key={t} onClick={() => setChartType(t)}
                   className={`px-2.5 py-1 text-xs tracking-wider border transition-colors ${
-                    chartType === t ? 'bg-red-600 border-red-600 text-white' : `${border} ${subtext}`
+                    chartType === t ? 'bg-[#CC2222] border-[#CC2222] text-white' : `${border} ${subtext}`
                   }`}>
                   {t === 'bar' ? '▬' : '〜'}
                 </button>
@@ -363,10 +363,10 @@ const PLScreen = ({ onBack }) => {
                       <span className={`text-xs font-semibold tracking-wider ${text}`}>
                         {cat.charAt(0).toUpperCase() + cat.slice(1)}
                       </span>
-                      <span className="text-xs text-red-400">{fmt(total)}</span>
+                      <span className="text-xs text-[#FF2020]">{fmt(total)}</span>
                     </div>
-                    <div className={`h-1.5 ${isDark ? 'bg-[#1a1a1a]' : 'bg-[#f0f0f0]'}`}>
-                      <div className="h-full bg-red-600/60"
+                    <div className={`h-1.5 ${isDark ? 'bg-[#161616]' : 'bg-[#f0f0f0]'}`}>
+                      <div className="h-full bg-[#CC2222]/60"
                         style={{ width: totalExpenses > 0 ? `${(total / totalExpenses) * 100}%` : '0%' }} />
                     </div>
                   </div>
@@ -396,7 +396,7 @@ const PLScreen = ({ onBack }) => {
                       </p>
                     )}
                   </div>
-                  <p className="text-sm font-bold text-green-400 flex-shrink-0">
+                  <p className="text-sm font-bold text-[#2DBB62] flex-shrink-0">
                     {l.rate ? fmt(Number(l.rate)) : '—'}
                   </p>
                 </div>

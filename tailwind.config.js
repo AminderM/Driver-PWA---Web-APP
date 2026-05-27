@@ -87,8 +87,9 @@ module.exports = {
                         'accordion-up': 'accordion-up 0.2s ease-out'
                 },
                 fontFamily: {
-                        sans: ['Oxanium', 'sans-serif'],
-                        mono: ['Source Code Pro', 'monospace'],
+                        sans: ['Barlow', 'sans-serif'],
+                        display: ['Barlow Condensed', 'sans-serif'],
+                        mono: ['Share Tech Mono', 'monospace'],
                         serif: ['Source Serif 4', 'serif']
                 }
         }
