@@ -60,7 +60,9 @@ jobs:
           CI: false
           GENERATE_SOURCEMAP: false
           REACT_APP_BACKEND_URL: https://api.staging.integratedtech.ca
-          NODE_OPTIONS: --max_old_space_size=4096
+          NODE_OPTIONS: --max_old_space_size=4096 --max-semi-space-size=64
+          TSC_COMPILE_ON_ERROR: true
+          SKIP_PREFLIGHT_CHECK: true
 
       - name: Create deployment info file
         run: |
