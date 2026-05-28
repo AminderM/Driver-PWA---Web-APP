@@ -71,6 +71,13 @@ const Label = ({ children }) => (
   <p style={{ fontFamily: FD, fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: DIM, textTransform: 'uppercase', margin: '0 0 6px' }}>{children}</p>
 );
 
+// Screen wrapper — must live at module scope so React never remounts on state change
+const Screen = ({ children }) => (
+  <div style={{ minHeight: '100vh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FD, overflowX: 'hidden' }}>
+    {children}
+  </div>
+);
+
 // ── Main component ────────────────────────────────────────────────────────────
 const DriverLogin = () => {
   const { login, loginWithPhoneRequest, loginWithPhoneVerify, loginWithGoogle, theme, devLogin } = useDriverApp();
@@ -178,13 +185,6 @@ const DriverLogin = () => {
 
   // ── Register ───────────────────────────────────────────────────────────────
   if (showRegister) return <OpenSignupScreen onBack={() => setShowRegister(false)} />;
-
-  // ── Shared screen wrapper ──────────────────────────────────────────────────
-  const Screen = ({ children }) => (
-    <div style={{ minHeight: '100vh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FD, overflowX: 'hidden' }}>
-      {children}
-    </div>
-  );
 
   // ── Forgot password ────────────────────────────────────────────────────────
   if (step === 'forgot') return (
