@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
 import { useDriverApp } from './DriverAppProvider';
 
+// Defined outside component so React never remounts inputs on state change
+const Field = ({ label, children, optional, isDark, subtext }) => (
+  <div>
+    <label className={`block text-xs font-medium mb-1 tracking-wider ${isDark ? 'text-white/70' : 'text-black/70'}`}>
+      {label}{optional && <span className={`ml-1 font-normal ${subtext}`}>(optional)</span>}
+    </label>
+    {children}
+  </div>
+);
+
 const STATUS_OPTIONS = [
   { value: 'upcoming',   label: 'Upcoming'   },
   { value: 'in_transit', label: 'In Transit' },
@@ -110,17 +120,8 @@ const LoadEntryForm = ({ prefill = {}, existingLoad = null, onSave, onCancel }) 
     }
   };
 
-  const Field = ({ label, children, optional }) => (
-    <div>
-      <label className={`block text-xs font-medium mb-1 tracking-wider ${isDark ? 'text-white/70' : 'text-black/70'}`}>
-        {label}{optional && <span className={`ml-1 font-normal ${subtext}`}>(optional)</span>}
-      </label>
-      {children}
-    </div>
-  );
-
   return (
-    <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
+    <div className={`min-h-screen flex flex-col font-['Barlow_Condensed'] ${bg}`}>
       {/* Header */}
       <div className={`pt-12 pb-5 px-5 border-b ${border}`}>
         <button onClick={onCancel} className={`text-sm tracking-wider mb-4 block ${subtext}`}>← BACK</button>
@@ -165,15 +166,15 @@ const LoadEntryForm = ({ prefill = {}, existingLoad = null, onSave, onCancel }) 
           {/* Route */}
           <div className={`${surface} border ${border} p-4 space-y-3`}>
             <p className={`text-xs tracking-wider font-bold ${subtext}`}>ROUTE</p>
-            <Field label="ORIGIN">
+            <Field label="ORIGIN" isDark={isDark} subtext={subtext}>
               <input type="text" value={origin} onChange={e => setOrigin(e.target.value)}
                 placeholder="City, Province/State" className={inputCls} required />
             </Field>
-            <Field label="DESTINATION">
+            <Field label="DESTINATION" isDark={isDark} subtext={subtext}>
               <input type="text" value={destination} onChange={e => setDestination(e.target.value)}
                 placeholder="City, Province/State" className={inputCls} required />
             </Field>
-            <Field label="ESTIMATED MILES" optional>
+            <Field label="ESTIMATED MILES" optional isDark={isDark} subtext={subtext}>
               <input type="number" value={estMiles} onChange={e => setEstMiles(e.target.value)}
                 placeholder="e.g. 850" className={inputCls} min="0" />
             </Field>
@@ -182,10 +183,10 @@ const LoadEntryForm = ({ prefill = {}, existingLoad = null, onSave, onCancel }) 
           {/* Dates */}
           <div className={`${surface} border ${border} p-4 space-y-3`}>
             <p className={`text-xs tracking-wider font-bold ${subtext}`}>DATES</p>
-            <Field label="PICKUP DATE" optional>
+            <Field label="PICKUP DATE" optional isDark={isDark} subtext={subtext}>
               <input type="date" value={pickupDate} onChange={e => setPickupDate(e.target.value)} className={inputCls} />
             </Field>
-            <Field label="DELIVERY DATE" optional>
+            <Field label="DELIVERY DATE" optional isDark={isDark} subtext={subtext}>
               <input type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} className={inputCls} />
             </Field>
           </div>
@@ -193,15 +194,15 @@ const LoadEntryForm = ({ prefill = {}, existingLoad = null, onSave, onCancel }) 
           {/* Rate & Load Details */}
           <div className={`${surface} border ${border} p-4 space-y-3`}>
             <p className={`text-xs tracking-wider font-bold ${subtext}`}>RATE & FREIGHT</p>
-            <Field label="TOTAL RATE ($)">
+            <Field label="TOTAL RATE ($)" isDark={isDark} subtext={subtext}>
               <input type="number" value={rate} onChange={e => setRate(e.target.value)}
                 placeholder="e.g. 2500" className={inputCls} required min="0" step="0.01" />
             </Field>
-            <Field label="COMMODITY" optional>
+            <Field label="COMMODITY" optional isDark={isDark} subtext={subtext}>
               <input type="text" value={commodity} onChange={e => setCommodity(e.target.value)}
                 placeholder="e.g. Dry goods, Auto parts" className={inputCls} />
             </Field>
-            <Field label="WEIGHT (LBS)" optional>
+            <Field label="WEIGHT (LBS)" optional isDark={isDark} subtext={subtext}>
               <input type="number" value={weight} onChange={e => setWeight(e.target.value)}
                 placeholder="e.g. 42000" className={inputCls} min="0" />
             </Field>
@@ -210,11 +211,11 @@ const LoadEntryForm = ({ prefill = {}, existingLoad = null, onSave, onCancel }) 
           {/* Shipper & Consignee */}
           <div className={`${surface} border ${border} p-4 space-y-3`}>
             <p className={`text-xs tracking-wider font-bold ${subtext}`}>SHIPPER & CONSIGNEE</p>
-            <Field label="SHIPPER" optional>
+            <Field label="SHIPPER" optional isDark={isDark} subtext={subtext}>
               <input type="text" value={shipper} onChange={e => setShipper(e.target.value)}
                 placeholder="Company name" className={inputCls} />
             </Field>
-            <Field label="CONSIGNEE" optional>
+            <Field label="CONSIGNEE" optional isDark={isDark} subtext={subtext}>
               <input type="text" value={consignee} onChange={e => setConsignee(e.target.value)}
                 placeholder="Company name" className={inputCls} />
             </Field>
@@ -223,15 +224,15 @@ const LoadEntryForm = ({ prefill = {}, existingLoad = null, onSave, onCancel }) 
           {/* Broker */}
           <div className={`${surface} border ${border} p-4 space-y-3`}>
             <p className={`text-xs tracking-wider font-bold ${subtext}`}>BROKER INFO</p>
-            <Field label="BROKER NAME" optional>
+            <Field label="BROKER NAME" optional isDark={isDark} subtext={subtext}>
               <input type="text" value={brokerName} onChange={e => setBrokerName(e.target.value)}
                 placeholder="e.g. Echo Global Logistics" className={inputCls} />
             </Field>
-            <Field label="BROKER MC" optional>
+            <Field label="BROKER MC" optional isDark={isDark} subtext={subtext}>
               <input type="text" value={brokerMc} onChange={e => setBrokerMc(e.target.value)}
                 placeholder="MC-123456" className={inputCls} />
             </Field>
-            <Field label="BROKER CONTACT" optional>
+            <Field label="BROKER CONTACT" optional isDark={isDark} subtext={subtext}>
               <input type="text" value={brokerContact} onChange={e => setBrokerContact(e.target.value)}
                 placeholder="Name, phone, or email" className={inputCls} />
             </Field>
