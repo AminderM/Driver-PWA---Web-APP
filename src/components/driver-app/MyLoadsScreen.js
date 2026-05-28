@@ -226,7 +226,7 @@ const ActiveLoadCard = ({ load, onViewRoute, onViewDetails, theme }) => {
   );
 };
 
-const MyLoadsScreen = ({ onNavigate, onSelectLoad, onViewMap }) => {
+const MyLoadsScreen = ({ onNavigate, onSelectLoad, onViewMap, hideMenu }) => {
   const { api, user, theme, toggleTheme } = useDriverApp();
   const [availableLoads, setAvailableLoads] = useState([]);
   const [activeLoads, setActiveLoads] = useState([]);
@@ -318,9 +318,6 @@ const MyLoadsScreen = ({ onNavigate, onSelectLoad, onViewMap }) => {
       <div className={`px-4 py-4 flex items-center justify-between border-b ${isDark ? 'border-[#262626]' : 'border-[#e5e5e5]'}`}>
         <div>
           <h1 className={`text-xl font-bold tracking-wider ${isDark ? 'text-white' : 'text-black'}`}>MY LOADS</h1>
-          <p className={`text-sm ${isDark ? 'text-white/60' : 'text-black/60'}`}>
-            Welcome, {user?.full_name?.split(' ')[0]}
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -339,14 +336,16 @@ const MyLoadsScreen = ({ onNavigate, onSelectLoad, onViewMap }) => {
               </svg>
             )}
           </button>
-          <button
-            onClick={() => onNavigate('menu')}
-            className={`w-10 h-10 flex items-center justify-center ${isDark ? 'text-white' : 'text-black'}`}
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
+          {!hideMenu && (
+            <button
+              onClick={() => onNavigate('menu')}
+              className={`w-10 h-10 flex items-center justify-center ${isDark ? 'text-white' : 'text-black'}`}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
