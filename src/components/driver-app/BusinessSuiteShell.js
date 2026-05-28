@@ -86,13 +86,23 @@ const Shell = ({ children, activeTab, onTabChange }) => (
 
 // ── Main component ────────────────────────────────────────────────────────────
 const BusinessSuiteShell = () => {
-  const { user, userType, logout } = useDriverApp();
+  const { user, userType, logout, api, toggleTheme } = useDriverApp();
 
   const [activeTab,    setActiveTab]    = useState('home');
   const [loadsSubTab,  setLoadsSubTab]  = useState('dispatched');
   const [loadScreen,   setLoadScreen]   = useState('list');
   const [selectedLoad, setSelectedLoad] = useState(null);
   const [activeTool,   setActiveTool]   = useState(null);
+  const [activeLoad,   setActiveLoad]   = useState(null);
+
+  useEffect(() => {
+    api('/loads').then(data => {
+      const found = Array.isArray(data) ? data.find(l =>
+        !['available', 'assigned', 'pending', 'delivered', 'rejected'].includes(l.status)
+      ) : null;
+      setActiveLoad(found || null);
+    }).catch(() => {});
+  }, []);
 
   // Welcome screen — shown once after self-registration
   const [showWelcome,   setShowWelcome]   = useState(() => !!localStorage.getItem('driver_app_new_signup'));
@@ -108,6 +118,9 @@ const BusinessSuiteShell = () => {
   const initials = nameParts.length >= 2
     ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase()
     : (nameParts[0]?.[0] || 'D').toUpperCase();
+
+  const greetingHour = new Date().getHours();
+  const greeting = greetingHour < 12 ? '// GOOD MORNING' : greetingHour < 18 ? '// GOOD AFTERNOON' : '// GOOD EVENING';
 
   const trialDays = user?.trial_ends_at
     ? Math.max(0, Math.ceil((new Date(user.trial_ends_at) - Date.now()) / 86400000))
@@ -204,7 +217,7 @@ const BusinessSuiteShell = () => {
   // ── Loads tab ─────────────────────────────────────────────────────────────
   if (activeTab === 'loads') {
     if (loadsSubTab === 'dispatched') {
-      if (loadScreen === 'route' && selectedLoad) return <Shell activeTab={activeTab} onTabChange={handleTabChange}><RouteScreen load={selectedLoad} onBack={goToLoadList} onViewMap={() => setLoadScreen('map')} onOpenChat={l => { setSelectedLoad(l); setLoadScreen('chat'); }} /></Shell>;
+      if (loadScreen === 'route' && selectedLoad) return <Shell activeTab={activeTab} onTabChange={handleTabChange}><RouteScreen load={selectedLoad} onBack={goToLoadList} onViewMap={() => setLoadScreen('map')} onOpenChat={l => { setSelectedLoad(l); setLoadScreen('chat'); }} onViewDocs={() => setLoadScreen('docs')} /></Shell>;
       if (loadScreen === 'map'   && selectedLoad) return <Shell activeTab={activeTab} onTabChange={handleTabChange}><MapScreen load={selectedLoad} onBack={() => setLoadScreen('route')} /></Shell>;
       if (loadScreen === 'chat'  && selectedLoad) return <Shell activeTab={activeTab} onTabChange={handleTabChange}><ChatScreen load={selectedLoad} onBack={() => setLoadScreen('route')} /></Shell>;
       if (loadScreen === 'docs'  && selectedLoad) return <Shell activeTab={activeTab} onTabChange={handleTabChange}><DocumentsScreen load={selectedLoad} onBack={goToLoadList} /></Shell>;
@@ -221,7 +234,7 @@ const BusinessSuiteShell = () => {
         </div>
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {loadsSubTab === 'dispatched'
-            ? <MyLoadsScreen onNavigate={() => {}} onSelectLoad={handleLoadSelect} onViewMap={handleLoadViewMap} />
+            ? <MyLoadsScreen onNavigate={() => {}} onSelectLoad={handleLoadSelect} onViewMap={handleLoadViewMap} hideMenu={true} />
             : <ManualLoadsScreen onBack={() => setActiveTab('home')} />}
         </div>
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
@@ -240,7 +253,7 @@ const BusinessSuiteShell = () => {
 
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px' }}>
           <div>
-            <p style={{ fontFamily: FM, fontSize: '9px', letterSpacing: '0.18em', color: MC.red, textTransform: 'uppercase', margin: '0 0 2px' }}>// DRIVER DASHBOARD</p>
+            <p style={{ fontFamily: FM, fontSize: '9px', letterSpacing: '0.18em', color: MC.red, textTransform: 'uppercase', margin: '0 0 2px' }}>{greeting}</p>
             <h1 style={{ fontFamily: FD, fontSize: '34px', fontWeight: 900, textTransform: 'uppercase', color: MC.white, lineHeight: 1, margin: 0 }}>{displayName}</h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '7px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(45,187,98,0.1)', border: '1px solid rgba(45,187,98,0.25)', padding: '3px 8px' }}>
@@ -250,12 +263,20 @@ const BusinessSuiteShell = () => {
               <LiveClock />
             </div>
           </div>
-          {user?.logo_url
-            ? <img src={user.logo_url} alt="logo" style={{ width: '48px', height: '48px', objectFit: 'cover', border: `1px solid ${MC.rivet}` }} />
-            : <div style={{ width: '48px', height: '48px', background: MC.red, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span style={{ fontFamily: FD, fontSize: '20px', fontWeight: 900, color: MC.white }}>{initials}</span>
-              </div>
-          }
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button onClick={toggleTheme}
+              style={{ width: 38, height: 38, background: 'none', border: `1px solid ${MC.rivet}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="16" height="16" fill="none" stroke={MC.chromeDim} strokeWidth="1.8" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            </button>
+            {user?.logo_url
+              ? <img src={user.logo_url} alt="logo" style={{ width: '44px', height: '44px', objectFit: 'cover', border: `1px solid ${MC.rivet}` }} />
+              : <div style={{ width: '44px', height: '44px', background: MC.red, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ fontFamily: FD, fontSize: '18px', fontWeight: 900, color: MC.white }}>{initials}</span>
+                </div>
+            }
+          </div>
         </div>
 
         {/* Home / Tools sub-tabs */}
@@ -273,90 +294,95 @@ const BusinessSuiteShell = () => {
       {activeTab === 'home' && (
         <div style={{ padding: '14px 16px 0' }}>
 
-          {/* HOS section */}
-          <div style={{ background: MC.plate, border: `1px solid ${MC.rivet}`, marginBottom: 8, padding: '12px 14px' }}>
-            <p style={{ fontFamily: FM, fontSize: '9px', letterSpacing: '0.16em', color: MC.chromeDim, margin: '0 0 10px' }}>// HOURS OF SERVICE REMAINING</p>
-            <div style={{ height: 6, background: MC.rivet, overflow: 'hidden', marginBottom: 8, position: 'relative' }}>
-              <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: '60%', background: `linear-gradient(90deg, ${MC.green} 0%, ${MC.amber} 70%, ${MC.red} 100%)` }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontFamily: FM, fontSize: '11px', color: MC.chromeMid }}>—:— of 11:00 drive</span>
-              <span style={{ fontFamily: FM, fontSize: '9px', color: MC.chromeDim, letterSpacing: '0.1em' }}>HOS TRACKING</span>
-            </div>
-          </div>
+          {/* Active load route card */}
+          {activeLoad ? (
+            <button onClick={() => { setActiveTab('loads'); setLoadsSubTab('dispatched'); handleLoadSelect(activeLoad, 'route'); }}
+              style={{ display: 'block', width: '100%', background: MC.plate, border: `1px solid ${MC.rivet}`, borderLeft: `3px solid ${MC.blue}`, padding: '14px', marginBottom: 8, textAlign: 'left', cursor: 'pointer', boxSizing: 'border-box' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                <div style={{ width: 7, height: 7, borderRadius: '50%', background: MC.blue, boxShadow: `0 0 6px ${MC.blue}` }} />
+                <span style={{ fontFamily: FM, fontSize: '8px', letterSpacing: '0.14em', color: MC.blue }}>ACTIVE LOAD</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontFamily: FD, fontSize: '28px', fontWeight: 900, color: MC.white, textTransform: 'uppercase', letterSpacing: '0.03em', lineHeight: 1 }}>
+                  {(activeLoad.pickup_city || activeLoad.origin_city || '').toUpperCase()}
+                </span>
+                <span style={{ fontFamily: FM, fontSize: '11px', color: MC.red }}>→</span>
+                <span style={{ fontFamily: FD, fontSize: '28px', fontWeight: 900, color: MC.red, textTransform: 'uppercase', letterSpacing: '0.03em', lineHeight: 1 }}>
+                  {(activeLoad.delivery_city || activeLoad.destination_city || '').toUpperCase()}
+                </span>
+              </div>
+              <p style={{ fontFamily: FM, fontSize: '8px', color: MC.chromeDim, margin: '8px 0 0', letterSpacing: '0.1em' }}>
+                TAP TO UPDATE STATUS →
+              </p>
+            </button>
+          ) : (
+            <button onClick={() => setActiveTab('loads')}
+              style={{ display: 'block', width: '100%', background: MC.plate, border: `1px solid ${MC.rivet}`, borderLeft: `3px solid ${MC.rivet}`, padding: '14px', marginBottom: 8, textAlign: 'left', cursor: 'pointer', boxSizing: 'border-box' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                <div style={{ width: 7, height: 7, borderRadius: '50%', background: MC.chromeDim }} />
+                <span style={{ fontFamily: FM, fontSize: '8px', letterSpacing: '0.14em', color: MC.chromeDim }}>ACTIVE LOAD</span>
+              </div>
+              <p style={{ fontFamily: FD, fontSize: '20px', fontWeight: 800, color: MC.chromeDim, margin: '0 0 4px', letterSpacing: '0.04em' }}>NO ACTIVE LOAD</p>
+              <p style={{ fontFamily: FM, fontSize: '8px', color: MC.blue, margin: 0, letterSpacing: '0.1em' }}>VIEW AVAILABLE LOADS →</p>
+            </button>
+          )}
 
-          {/* Active Load card */}
-          <button onClick={() => setActiveTab('loads')}
-            style={{ display: 'block', width: '100%', background: MC.deep, border: `1px solid ${MC.rivet}`, borderLeft: `3px solid ${MC.blue}`, padding: '12px 14px', marginBottom: 8, textAlign: 'left', cursor: 'pointer', boxSizing: 'border-box' }}>
-            <p style={{ fontFamily: FM, fontSize: '9px', letterSpacing: '0.14em', color: MC.chromeDim, margin: '0 0 8px' }}>// ACTIVE LOAD</p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <span style={{ fontFamily: FD, fontSize: '22px', fontWeight: 900, color: MC.white, textTransform: 'uppercase', letterSpacing: '0.04em' }}>—</span>
-              <span style={{ fontFamily: FM, fontSize: '9px', color: MC.chromeDim }}>NO ACTIVE LOAD</span>
-            </div>
-            <p style={{ fontFamily: FM, fontSize: '9px', color: MC.blue, margin: 0, letterSpacing: '0.1em' }}>VIEW DISPATCHED LOADS →</p>
-          </button>
-
-          {/* Stats strip */}
+          {/* Drive stats row */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr 1px 1fr', background: MC.plate, border: `1px solid ${MC.rivet}`, marginBottom: 8, overflow: 'hidden' }}>
             {[
-              { label: 'TODAY',     value: '—', action: () => setActiveTab('loads') },
-              { label: 'THIS WEEK', value: '—', action: () => setActiveTab('loads') },
-              { label: 'MILES/WK',  value: '—', action: () => setActiveTab('loads') },
-            ].map(({ label, value, action }, i) => (
+              { label: 'DRIVE HRS', value: '—',  color: MC.white },
+              { label: 'REMAIN',    value: '—',  color: MC.amber },
+              { label: 'BREAK',     value: '—',  color: MC.white },
+            ].map(({ label, value, color }, i) => (
               <React.Fragment key={label}>
                 {i > 0 && <div style={{ background: MC.rivet }} />}
-                <button onClick={action} style={{ padding: '10px 8px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
-                  <div style={{ fontFamily: FM, fontSize: '7px', letterSpacing: '0.1em', color: MC.chromeDim, marginBottom: 3 }}>{label}</div>
-                  <div style={{ fontFamily: FD, fontSize: '22px', fontWeight: 800, color: MC.white, lineHeight: 1 }}>{value}</div>
-                </button>
+                <div style={{ padding: '11px 10px' }}>
+                  <div style={{ fontFamily: FM, fontSize: '7px', letterSpacing: '0.1em', color: MC.chromeDim, marginBottom: 4, textTransform: 'uppercase' }}>{label}</div>
+                  <div style={{ fontFamily: FD, fontSize: '24px', fontWeight: 900, color, lineHeight: 1 }}>{value}</div>
+                </div>
               </React.Fragment>
             ))}
           </div>
 
-          {/* Quick tool chips */}
+          {/* Quick tools 2×2 grid */}
           <div style={{ marginBottom: 8 }}>
-            <p style={{ fontFamily: FM, fontSize: '8px', letterSpacing: '0.18em', color: MC.chromeDim, margin: '0 0 7px' }}>// QUICK TOOLS</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+            <p style={{ fontFamily: FM, fontSize: '8px', letterSpacing: '0.2em', color: MC.chromeDim, margin: '0 0 8px', textTransform: 'uppercase' }}>// QUICK TOOLS</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
               {[
-                { id: 'calculator', label: 'FUEL\nCALC',  icon: '⛽' },
-                { id: 'pl',         label: 'PAY\nSTMT',   icon: '📊' },
-                { id: 'invoices',   label: 'INVOICE',      icon: '📄' },
-                { id: 'vault',      label: 'DOC\nVAULT',   icon: '🗂️' },
-              ].map(chip => (
-                <button key={chip.id} onClick={() => handleToolOpen(chip.id)}
-                  style={{ background: MC.plate, border: `1px solid ${MC.rivet}`, padding: '10px 4px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
-                  <span style={{ fontSize: 16 }}>{chip.icon}</span>
-                  <span style={{ fontFamily: FD, fontSize: '8px', fontWeight: 700, letterSpacing: '0.06em', color: MC.chromeMid, textTransform: 'uppercase', textAlign: 'center', lineHeight: 1.2, whiteSpace: 'pre-line' }}>{chip.label}</span>
+                {
+                  id: 'calculator', label: 'FUEL CALC', desc: 'IFTA & surcharge',
+                  icon: <svg width="22" height="22" fill="none" stroke={MC.red} strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>,
+                },
+                {
+                  id: 'pl', label: 'PAY STATEMENT', desc: 'Generate & export',
+                  icon: <svg width="22" height="22" fill="none" stroke={MC.red} strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" /></svg>,
+                },
+                {
+                  id: 'invoices', label: 'INVOICE GEN', desc: 'AI-powered',
+                  icon: <svg width="22" height="22" fill="none" stroke={MC.red} strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
+                },
+                {
+                  id: 'vault', label: 'OVERSIZE', desc: 'Permit fees',
+                  icon: <svg width="22" height="22" fill="none" stroke={MC.red} strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0zM13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1" /></svg>,
+                },
+              ].map(tool => (
+                <button key={tool.id} onClick={() => handleToolOpen(tool.id)}
+                  style={{ background: MC.plate, border: `1px solid ${MC.rivet}`, padding: '14px 12px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8, cursor: 'pointer', textAlign: 'left' }}>
+                  {tool.icon}
+                  <div>
+                    <p style={{ fontFamily: FD, fontSize: '14px', fontWeight: 800, letterSpacing: '0.06em', color: MC.white, textTransform: 'uppercase', margin: '0 0 2px' }}>{tool.label}</p>
+                    <p style={{ fontFamily: FB, fontSize: '11px', color: MC.chromeDim, margin: 0 }}>{tool.desc}</p>
+                  </div>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Smart Alerts */}
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <p style={{ fontFamily: FM, fontSize: '8px', letterSpacing: '0.18em', color: MC.chromeDim, margin: 0 }}>// SMART ALERTS</p>
-              <button onClick={() => handleToolOpen('vault')}
-                style={{ background: 'none', border: 'none', fontFamily: FM, fontSize: '8px', color: MC.red, cursor: 'pointer', letterSpacing: '0.12em', padding: 0 }}>
-                VIEW ALL
-              </button>
-            </div>
-            {[
-              { text: 'Check fuel prices in your area before dispatch', color: MC.amber },
-              { text: 'All documents up to date — no expiries soon',   color: MC.blue  },
-            ].map((alert, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', background: MC.plate, border: `1px solid ${MC.rivet}`, borderLeft: `3px solid ${alert.color}`, marginBottom: 4 }}>
-                <div style={{ width: 6, height: 6, borderRadius: '50%', background: alert.color, flexShrink: 0 }} />
-                <span style={{ fontFamily: FB, fontSize: 12, color: MC.white }}>{alert.text}</span>
-              </div>
-            ))}
-          </div>
-
           {/* Trial notice */}
           {trialDays > 0 && user?.subscription_status !== 'active' && (
-            <div style={{ border: `1px solid rgba(212,146,26,0.3)`, borderLeft: `3px solid ${MC.amber}`, background: 'rgba(212,146,26,0.06)', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ border: `1px solid rgba(212,146,26,0.3)`, borderLeft: `3px solid ${MC.amber}`, background: 'rgba(212,146,26,0.05)', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <span style={{ fontFamily: FM, fontSize: '9px', letterSpacing: '0.1em', color: MC.amber }}>FREE TRIAL ACTIVE</span>
-              <span style={{ fontFamily: FM, fontSize: '9px', color: 'rgba(212,146,26,0.6)' }}>{trialDays} DAYS LEFT</span>
+              <span style={{ fontFamily: FM, fontSize: '9px', color: 'rgba(212,146,26,0.55)' }}>{trialDays} DAYS LEFT</span>
             </div>
           )}
 

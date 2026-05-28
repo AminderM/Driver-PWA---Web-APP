@@ -2,20 +2,29 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useDriverApp } from './DriverAppProvider';
 import { takePhoto, isNative, hapticSuccess, hapticError } from '../../lib/native';
 
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const MC = {
+  void:  '#030303', deep:  '#080808', plate: '#161616', rivet: '#1F1F1F',
+  red: '#CC2222', white: '#EDE9E3', chromeMid: '#999690', chromeDim: '#555250',
+  green: '#2DBB62', amber: '#D4921A', blue: '#2277CC',
+};
+const FD = "'Barlow Condensed', sans-serif";
+const FM = "'Share Tech Mono', monospace";
+const FB = "'Barlow', sans-serif";
+
 const STATUS_CONFIG = {
-  assigned:          { label: 'ASSIGNED',             color: 'bg-amber-600',  next: 'en_route_pickup',   nextLabel: 'START ROUTE TO PICKUP'   },
-  en_route_pickup:   { label: 'EN ROUTE TO PICKUP',   color: 'bg-blue-600',   next: 'arrived_pickup',    nextLabel: 'ARRIVED AT PICKUP'        },
-  arrived_pickup:    { label: 'AT PICKUP',            color: 'bg-amber-600',  next: 'loaded',            nextLabel: 'LOADED & DEPARTING'       },
-  loaded:            { label: 'LOADED',               color: 'bg-indigo-600', next: 'en_route_delivery', nextLabel: 'START ROUTE TO DELIVERY'  },
-  en_route_delivery: { label: 'EN ROUTE TO DELIVERY', color: 'bg-blue-600',   next: 'arrived_delivery',  nextLabel: 'ARRIVED AT DELIVERY'      },
-  arrived_delivery:  { label: 'AT DELIVERY',          color: 'bg-amber-600',  next: 'delivered',         nextLabel: 'MARK AS DELIVERED'        },
-  delivered:         { label: 'DELIVERED',            color: 'bg-green-600',  next: null                                                        },
-  problem:           { label: 'PROBLEM REPORTED',     color: 'bg-red-600',    next: null                                                        },
-  failed:            { label: 'FAILED',               color: 'bg-red-800',    next: null                                                        },
-  cancelled:         { label: 'CANCELLED',            color: 'bg-gray-600',   next: null                                                        },
+  assigned:          { label: 'ASSIGNED',             color: MC.amber,  next: 'en_route_pickup',   nextLabel: 'START ROUTE TO PICKUP'   },
+  en_route_pickup:   { label: 'EN ROUTE TO PICKUP',   color: MC.blue,   next: 'arrived_pickup',    nextLabel: 'ARRIVED AT PICKUP'        },
+  arrived_pickup:    { label: 'AT PICKUP',            color: MC.amber,  next: 'loaded',            nextLabel: 'LOADED & DEPARTING'       },
+  loaded:            { label: 'LOADED',               color: '#5555cc', next: 'en_route_delivery', nextLabel: 'START ROUTE TO DELIVERY'  },
+  en_route_delivery: { label: 'EN ROUTE TO DELIVERY', color: MC.blue,   next: 'arrived_delivery',  nextLabel: 'ARRIVED AT DELIVERY'      },
+  arrived_delivery:  { label: 'AT DELIVERY',          color: MC.amber,  next: 'delivered',         nextLabel: 'MARK AS DELIVERED'        },
+  delivered:         { label: 'DELIVERED',            color: MC.green,  next: null                                                        },
+  problem:           { label: 'PROBLEM REPORTED',     color: MC.red,    next: null                                                        },
+  failed:            { label: 'FAILED',               color: '#881111', next: null                                                        },
+  cancelled:         { label: 'CANCELLED',            color: '#555555', next: null                                                        },
 };
 
-// Which status transitions require capturing an actual time
 const TIME_CAPTURES = {
   arrived_pickup:   { field: 'actual_pickup_in',   label: 'PICKUP IN TIME'    },
   loaded:           { field: 'actual_pickup_out',  label: 'PICKUP OUT TIME'   },
@@ -28,13 +37,10 @@ const toDatetimeLocal = (date = new Date()) => {
   return d.toISOString().slice(0, 16);
 };
 
-// Returns a human-readable error string that always includes the HTTP status
-// code so we can diagnose backend rejections without reading server logs.
 const formatApiError = (err, fallback) => {
   const msg = err.message || fallback;
   const code = err.status;
   if (!code) return msg;
-  // Map common codes to actionable driver-facing messages
   if (code === 401 || code === 403) return `${msg} (auth error ${code} — try logging out and back in)`;
   if (code === 404) return `Load not found on server (404) — contact dispatch`;
   if (code === 409) return `${msg} (conflict ${code} — load may already be updated)`;
@@ -42,32 +48,21 @@ const formatApiError = (err, fallback) => {
   return `${msg} [${code}]`;
 };
 
-const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
-  const { api, theme, currentLocation, setActiveLoadId } = useDriverApp();
+const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat, onViewDocs }) => {
+  const { api, currentLocation, setActiveLoadId } = useDriverApp();
   const [load, setLoad] = useState(initialLoad);
   const [updating, setUpdating] = useState(false);
   const [updateError, setUpdateError] = useState('');
   const [showProblem, setShowProblem] = useState(false);
   const [problemNote, setProblemNote] = useState('');
 
-  // Time capture modal state
-  const [pendingStatus, setPendingStatus] = useState(null); // { nextStatus, field, label, timeValue }
+  const [pendingStatus, setPendingStatus] = useState(null);
 
-  // POD (Proof of Delivery) state
-  const [podStep, setPodStep] = useState(null); // null | 'preview'
+  const [podStep, setPodStep] = useState(null);
   const [podFile, setPodFile] = useState(null);
   const [podPreviewUrl, setPodPreviewUrl] = useState(null);
-  // True once the photo has been successfully sent to the server —
-  // on retry we skip the upload and only retry the status update
   const [podUploaded, setPodUploaded] = useState(false);
   const podInputRef = useRef(null);
-
-  const isDark = theme === 'dark';
-  const bg     = isDark ? 'bg-black'  : 'bg-white';
-  const text   = isDark ? 'text-white' : 'text-black';
-  const sub    = isDark ? 'text-white/60' : 'text-black/60';
-  const card   = isDark ? 'bg-[#0a0a0a] border-[#262626]' : 'bg-white border-[#e5e5e5]';
-  const border = isDark ? 'border-[#262626]' : 'border-[#e5e5e5]';
 
   useEffect(() => {
     setActiveLoadId(load.id);
@@ -108,22 +103,15 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
     }
   };
 
-  // Called when driver taps a status button
   const handleStatusButton = (nextStatus) => {
     const capture = TIME_CAPTURES[nextStatus];
     if (capture) {
-      setPendingStatus({
-        nextStatus,
-        field: capture.field,
-        label: capture.label,
-        timeValue: toDatetimeLocal(),
-      });
+      setPendingStatus({ nextStatus, field: capture.field, label: capture.label, timeValue: toDatetimeLocal() });
     } else {
       updateStatus(nextStatus);
     }
   };
 
-  // Confirm time capture modal
   const handleTimeConfirm = async () => {
     if (!pendingStatus) return;
     const { nextStatus, field, timeValue } = pendingStatus;
@@ -132,7 +120,6 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
     await updateStatus(nextStatus, '', { [field]: isoTime });
   };
 
-  // POD handlers
   const openPodCamera = async (isRetake = false) => {
     setUpdateError('');
     if (isRetake) setPodUploaded(false);
@@ -142,9 +129,7 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
         setPodFile(photo);
         setPodPreviewUrl(dataUrl);
         setPodStep('preview');
-      } catch {
-        // user cancelled
-      }
+      } catch { /* user cancelled */ }
     } else {
       podInputRef.current?.click();
     }
@@ -162,8 +147,6 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
   const handlePodConfirm = async () => {
     setUpdating(true);
     setUpdateError('');
-
-    // ── Step 1: Upload photo (skip if already uploaded on a previous attempt) ──
     if (!podUploaded) {
       try {
         const formData = new FormData();
@@ -172,18 +155,13 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
         try {
           await api(`/loads/${load.id}/pod`, { method: 'POST', body: formData });
         } catch {
-          // /pod endpoint doesn't exist yet — fall back to generic scan
           await api('/documents/scan', { method: 'POST', body: formData });
         }
         setPodUploaded(true);
       } catch (uploadErr) {
-        // Upload failed — still attempt the status update so the driver isn't stuck.
-        // The photo stays on their device and can be re-uploaded later.
         console.error('POD upload failed, continuing to status update:', uploadErr);
       }
     }
-
-    // ── Step 2: Mark load as delivered (separate from upload — can retry independently) ──
     try {
       await api(`/loads/${load.id}/status`, {
         method: 'POST',
@@ -192,9 +170,6 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
           note: 'Delivery confirmed with proof of delivery photo',
           latitude: currentLocation?.lat,
           longitude: currentLocation?.lng,
-          // NOTE: actual_delivery_out is NOT sent here — the backend status
-          // endpoint only accepts { status, note, latitude, longitude }.
-          // Sending unknown fields was causing the "Load failed" validation error.
         }),
       });
       await refreshLoad();
@@ -215,355 +190,227 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
 
   const formatDateTime = (dateStr) => {
     if (!dateStr) return 'TBD';
-    return new Date(dateStr).toLocaleString('en-US', {
-      month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
-    });
+    return new Date(dateStr).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   };
 
   const formatActualTime = (dateStr) => {
     if (!dateStr) return null;
-    return new Date(dateStr).toLocaleString('en-US', {
-      month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
-    });
+    return new Date(dateStr).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   };
 
   const hasAnyActualTime = load.actual_pickup_in || load.actual_pickup_out || load.actual_delivery_in || load.actual_delivery_out;
+  const originCity = load.pickup_city || load.origin_city || 'ORIGIN';
+  const destCity   = load.delivery_city || load.destination_city || 'DESTINATION';
+  const loadNum    = load.order_number || `LOAD-${load.id?.slice(0, 8).toUpperCase()}`;
+  const distKm     = load.estimated_miles ? Math.round(load.estimated_miles * 1.609) : null;
+  const ratePerMi  = load.rate && load.estimated_miles ? (load.rate / load.estimated_miles).toFixed(2) : null;
+
+  const Spinner = () => (
+    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+  );
 
   return (
-    <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
-      {/* Header */}
-      <div className={`px-4 py-4 flex items-center gap-3 border-b ${border}`}>
-        <button onClick={onBack} className={`w-10 h-10 flex items-center justify-center ${text}`}>
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
+    <div style={{ minHeight: '100vh', background: MC.deep, display: 'flex', flexDirection: 'column', fontFamily: FD }}>
+
+      {/* ── Red header bar ── */}
+      <div style={{ background: MC.red, padding: '44px 16px 16px', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 80, background: 'linear-gradient(270deg, rgba(0,0,0,0.15), transparent)', pointerEvents: 'none' }} />
+        <button onClick={onBack}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: FM, fontSize: 9, letterSpacing: '0.16em', color: 'rgba(255,255,255,0.65)', marginBottom: 12, padding: 0 }}>
+          ← LOADS
         </button>
-        <div className="flex-1">
-          <h1 className={`text-lg font-bold tracking-wider ${text}`}>
-            {load.order_number || `LD-${load.id?.slice(0, 8).toUpperCase()}`}
-          </h1>
-          <span className={`${status.color} text-white text-xs px-2 py-0.5 tracking-wider`}>
-            {status.label}
-          </span>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <div>
+            <p style={{ fontFamily: FM, fontSize: 9, letterSpacing: '0.18em', color: 'rgba(255,255,255,0.55)', margin: '0 0 3px' }}>// LOAD DETAIL</p>
+            <h1 style={{ fontFamily: FD, fontSize: 26, fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{loadNum}</h1>
+          </div>
+          <div style={{ background: 'rgba(0,0,0,0.22)', border: '1px solid rgba(255,255,255,0.22)', padding: '5px 10px', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginTop: 4 }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff', boxShadow: '0 0 6px rgba(255,255,255,0.8)' }} />
+            <span style={{ fontFamily: FM, fontSize: 9, letterSpacing: '0.1em', color: '#fff' }}>{status.label}</span>
+          </div>
         </div>
-        <button
-          onClick={() => onOpenChat?.(load)}
-          className="w-10 h-10 flex items-center justify-center border border-red-600/50 text-red-500 hover:bg-red-600/10 transition-colors"
-          title="Chat with dispatcher"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-          </svg>
-        </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-        {/* Route Summary */}
-        <div className={`border p-4 ${card}`}>
-          <div className="flex items-start gap-3 mb-4">
-            <div className="flex flex-col items-center pt-1">
-              <div className="w-4 h-4 bg-green-600" />
-              <div className="w-0.5 h-12 bg-gradient-to-b from-green-600 to-red-600 mt-1" />
-            </div>
-            <div>
-              <p className="text-green-500 text-xs tracking-wider mb-0.5">PICKUP</p>
-              <p className={`font-semibold text-sm ${text}`}>{load.pickup_location || load.origin_address || 'Address TBD'}</p>
-              <p className={`text-sm ${sub}`}>{load.pickup_city || load.origin_city}, {load.pickup_state || load.origin_state}</p>
-              <p className={`text-xs mt-1 ${sub}`}>{formatDateTime(load.pickup_time_planned)}</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <div className="w-4 h-4 bg-red-600 mt-1" />
-            <div>
-              <p className="text-red-500 text-xs tracking-wider mb-0.5">DELIVERY</p>
-              <p className={`font-semibold text-sm ${text}`}>{load.delivery_location || load.destination_address || 'Address TBD'}</p>
-              <p className={`text-sm ${sub}`}>{load.delivery_city || load.destination_city}, {load.delivery_state || load.destination_state}</p>
-              <p className={`text-xs mt-1 ${sub}`}>{formatDateTime(load.delivery_time_planned)}</p>
-            </div>
-          </div>
-        </div>
+      {/* ── Body ── */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px 32px' }}>
 
-        {/* Load Details */}
-        <div className={`border p-4 ${card}`}>
-          <p className={`text-xs tracking-wider mb-3 ${sub}`}>LOAD INFO</p>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            {load.equipment_type && (
-              <div>
-                <p className={`text-xs ${sub}`}>Equipment</p>
-                <p className={`font-medium ${text}`}>{load.equipment_type}</p>
+        {/* Route card */}
+        <div style={{ background: MC.plate, border: `1px solid ${MC.rivet}`, padding: '16px 14px', marginBottom: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'stretch', gap: 14 }}>
+            {/* Dot + dashed line */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 4, minWidth: 14 }}>
+              <div style={{ width: 12, height: 12, borderRadius: '50%', background: MC.chromeMid, border: `2px solid ${MC.chromeMid}`, flexShrink: 0 }} />
+              <div style={{ flex: 1, width: 2, backgroundImage: `repeating-linear-gradient(180deg, ${MC.chromeDim} 0, ${MC.chromeDim} 4px, transparent 4px, transparent 9px)`, minHeight: 36, margin: '5px 0' }} />
+              <div style={{ width: 12, height: 12, borderRadius: '50%', background: MC.red, border: `2px solid ${MC.red}`, flexShrink: 0 }} />
+            </div>
+
+            {/* City + date */}
+            <div style={{ flex: 1 }}>
+              <div style={{ marginBottom: 18 }}>
+                <p style={{ fontFamily: FD, fontSize: 22, fontWeight: 800, color: MC.white, margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{originCity}</p>
+                <p style={{ fontFamily: FM, fontSize: 9, color: MC.chromeDim, margin: 0, letterSpacing: '0.1em' }}>{formatDateTime(load.pickup_time_planned)}</p>
               </div>
-            )}
-            {load.weight && (
               <div>
-                <p className={`text-xs ${sub}`}>Weight</p>
-                <p className={`font-medium ${text}`}>{Number(load.weight).toLocaleString()} lbs</p>
+                <p style={{ fontFamily: FD, fontSize: 22, fontWeight: 800, color: MC.red, margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{destCity}</p>
+                <p style={{ fontFamily: FM, fontSize: 9, color: MC.chromeDim, margin: 0, letterSpacing: '0.1em' }}>{formatDateTime(load.delivery_time_planned)}</p>
               </div>
-            )}
-            {load.estimated_miles && (
-              <div>
-                <p className={`text-xs ${sub}`}>Distance</p>
-                <p className={`font-medium ${text}`}>{load.estimated_miles} mi</p>
-              </div>
-            )}
-            {load.rate && (
-              <div>
-                <p className={`text-xs ${sub}`}>Pay</p>
-                <p className="font-medium text-green-500">${Number(load.rate).toLocaleString()}</p>
-              </div>
-            )}
-            {load.commodity && (
-              <div className="col-span-2">
-                <p className={`text-xs ${sub}`}>Commodity</p>
-                <p className={`font-medium ${text}`}>{load.commodity}</p>
+            </div>
+
+            {/* Distance */}
+            {distKm && (
+              <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <p style={{ fontFamily: FD, fontSize: 32, fontWeight: 900, color: MC.white, margin: 0, lineHeight: 1 }}>{distKm}</p>
+                <p style={{ fontFamily: FM, fontSize: 8, color: MC.chromeDim, letterSpacing: '0.12em', margin: '3px 0 0', textAlign: 'right' }}>KM</p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Actual Times */}
-        {hasAnyActualTime && (
-          <div className={`border p-4 ${card}`}>
-            <p className={`text-xs tracking-wider mb-3 ${sub}`}>ACTUAL TIMES</p>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <p className={`text-xs ${sub}`}>Pickup In</p>
-                <p className={`font-medium text-sm ${formatActualTime(load.actual_pickup_in) ? text : sub}`}>
-                  {formatActualTime(load.actual_pickup_in) || '—'}
-                </p>
-              </div>
-              <div>
-                <p className={`text-xs ${sub}`}>Pickup Out</p>
-                <p className={`font-medium text-sm ${formatActualTime(load.actual_pickup_out) ? text : sub}`}>
-                  {formatActualTime(load.actual_pickup_out) || '—'}
-                </p>
-              </div>
-              <div>
-                <p className={`text-xs ${sub}`}>Delivery In</p>
-                <p className={`font-medium text-sm ${formatActualTime(load.actual_delivery_in) ? text : sub}`}>
-                  {formatActualTime(load.actual_delivery_in) || '—'}
-                </p>
-              </div>
-              <div>
-                <p className={`text-xs ${sub}`}>Delivery Out</p>
-                <p className={`font-medium text-sm ${formatActualTime(load.actual_delivery_out) ? text : sub}`}>
-                  {formatActualTime(load.actual_delivery_out) || '—'}
-                </p>
-              </div>
+        {/* Specs grid 2×3 */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, background: MC.rivet, border: `1px solid ${MC.rivet}`, marginBottom: 8, overflow: 'hidden' }}>
+          {[
+            { label: 'COMMODITY',   value: load.commodity || '—' },
+            { label: 'WEIGHT',      value: load.weight ? `${Number(load.weight).toLocaleString()} LBS` : '—' },
+            { label: 'RATE ALL-IN', value: load.rate ? `$${Number(load.rate).toLocaleString()}` : '—' },
+            { label: 'RATE / MILE', value: ratePerMi ? `$${ratePerMi}/MI` : '—' },
+            { label: 'TRAILER',     value: load.equipment_type || '—' },
+            { label: 'BROKER',      value: load.broker_name || load.shipper || '—' },
+          ].map(({ label, value }) => (
+            <div key={label} style={{ background: MC.plate, padding: '10px 12px' }}>
+              <p style={{ fontFamily: FM, fontSize: 8, letterSpacing: '0.12em', color: MC.chromeDim, margin: '0 0 4px' }}>{label}</p>
+              <p style={{ fontFamily: FD, fontSize: 14, fontWeight: 700, color: MC.white, margin: 0, textTransform: 'uppercase', letterSpacing: '0.02em' }}>{value}</p>
             </div>
-          </div>
-        )}
+          ))}
+        </div>
 
-        {/* Map button */}
-        {onViewMap && (
-          <button
-            onClick={() => onViewMap()}
-            className={`w-full py-3 flex items-center justify-center gap-2 border transition-colors tracking-wider text-sm ${
-              isDark
-                ? 'bg-[#0a0a0a] border-[#262626] text-white hover:bg-[#171717]'
-                : 'bg-white border-[#e5e5e5] text-black hover:bg-[#f5f5f5]'
-            }`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-            </svg>
-            VIEW ON MAP
-          </button>
-        )}
-
-        {/* Status update errors (non-POD) — hidden while POD preview is active */}
+        {/* Error banner */}
         {updateError && podStep !== 'preview' && (
-          <div className="bg-red-600/20 border border-red-600/50 px-4 py-3 space-y-2">
-            <p className="text-red-500 text-sm font-medium">{updateError}</p>
-            <p className="text-red-400 text-xs">Screenshot this error and send it to dispatch, or use the chat button above.</p>
+          <div style={{ background: 'rgba(204,34,34,0.08)', border: `1px solid rgba(204,34,34,0.35)`, borderLeft: `3px solid ${MC.red}`, padding: '12px 14px', marginBottom: 8 }}>
+            <p style={{ fontFamily: FB, fontSize: 13, color: MC.red, margin: '0 0 4px' }}>{updateError}</p>
+            <p style={{ fontFamily: FM, fontSize: 9, color: 'rgba(204,34,34,0.55)', margin: 0, letterSpacing: '0.08em' }}>SCREENSHOT & SEND TO DISPATCH — OR USE CHAT BELOW</p>
           </div>
         )}
 
-        {/* ── Time Capture Modal ─────────────────────────────────── */}
+        {/* Time capture modal */}
         {pendingStatus && (
-          <div className={`border p-4 space-y-4 ${card}`}>
-            <div>
-              <p className={`text-sm font-bold tracking-wider ${text}`}>{pendingStatus.label}</p>
-              <p className={`text-xs mt-1 ${sub}`}>Confirm the actual time. Adjust if needed before recording.</p>
-            </div>
-            <input
-              type="datetime-local"
-              value={pendingStatus.timeValue}
+          <div style={{ background: MC.plate, border: `1px solid ${MC.rivet}`, padding: 16, marginBottom: 8 }}>
+            <p style={{ fontFamily: FD, fontSize: 16, fontWeight: 800, color: MC.white, letterSpacing: '0.06em', margin: '0 0 4px', textTransform: 'uppercase' }}>{pendingStatus.label}</p>
+            <p style={{ fontFamily: FB, fontSize: 12, color: MC.chromeDim, margin: '0 0 12px' }}>Confirm the actual time. Adjust if needed before recording.</p>
+            <input type="datetime-local" value={pendingStatus.timeValue}
               onChange={e => setPendingStatus(prev => ({ ...prev, timeValue: e.target.value }))}
-              className={`w-full border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 ${
-                isDark
-                  ? 'bg-[#171717] border-[#262626] text-white'
-                  : 'bg-[#f5f5f5] border-[#e5e5e5] text-black'
-              }`}
+              style={{ width: '100%', background: MC.deep, border: `1px solid ${MC.rivet}`, color: MC.white, fontFamily: FD, fontSize: 14, padding: '12px', outline: 'none', boxSizing: 'border-box', marginBottom: 12 }}
             />
-            <div className="flex gap-3">
-              <button
-                onClick={() => setPendingStatus(null)}
-                disabled={updating}
-                className={`flex-1 border py-3 text-sm tracking-wider disabled:opacity-40 ${
-                  isDark ? 'border-[#262626] text-white/60' : 'border-[#e5e5e5] text-black/60'
-                }`}
-              >
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setPendingStatus(null)} disabled={updating}
+                style={{ flex: 1, background: 'none', border: `1px solid ${MC.rivet}`, color: MC.chromeMid, fontFamily: FD, fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', padding: '14px', cursor: 'pointer', opacity: updating ? 0.4 : 1 }}>
                 CANCEL
               </button>
-              <button
-                onClick={handleTimeConfirm}
-                disabled={updating || !pendingStatus.timeValue}
-                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-600/40 text-white py-3 text-sm tracking-wider flex items-center justify-center gap-2"
-              >
-                {updating ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    RECORDING...
-                  </>
-                ) : 'RECORD & CONTINUE'}
+              <button onClick={handleTimeConfirm} disabled={updating || !pendingStatus.timeValue}
+                style={{ flex: 2, background: (updating || !pendingStatus.timeValue) ? 'rgba(204,34,34,0.45)' : MC.red, border: 'none', color: '#fff', fontFamily: FD, fontSize: 12, fontWeight: 800, letterSpacing: '0.1em', padding: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                {updating ? <><Spinner />RECORDING...</> : 'RECORD & CONTINUE'}
               </button>
             </div>
           </div>
         )}
 
-        {/* ── Status CTA ─────────────────────────────────────────── */}
-        {!pendingStatus && status.next && load.status !== 'delivered' && load.status !== 'problem' && (
-          status.next === 'delivered' ? (
-            podStep === null ? (
-              <div>
-                <div className="bg-amber-600/20 border border-amber-600/50 px-4 py-3 mb-3">
-                  <p className="text-amber-500 text-sm tracking-wider font-semibold">PROOF OF DELIVERY REQUIRED</p>
-                  <p className={`text-xs mt-1 ${sub}`}>Photograph the signed delivery receipt before marking as delivered.</p>
+        {/* POD — delivery step */}
+        {!pendingStatus && status.next === 'delivered' && load.status !== 'delivered' && load.status !== 'problem' && (
+          podStep === null ? (
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ background: 'rgba(212,146,26,0.07)', border: `1px solid rgba(212,146,26,0.3)`, borderLeft: `3px solid ${MC.amber}`, padding: '12px 14px', marginBottom: 8 }}>
+                <p style={{ fontFamily: FD, fontSize: 14, fontWeight: 800, color: MC.amber, letterSpacing: '0.08em', margin: '0 0 3px' }}>PROOF OF DELIVERY REQUIRED</p>
+                <p style={{ fontFamily: FB, fontSize: 12, color: MC.chromeMid, margin: 0 }}>Photograph the signed delivery receipt before marking as delivered.</p>
+              </div>
+              <button onClick={() => openPodCamera(false)}
+                style={{ width: '100%', background: MC.amber, border: 'none', color: '#fff', fontFamily: FD, fontWeight: 800, fontSize: 14, letterSpacing: '0.12em', padding: '17px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxSizing: 'border-box' }}>
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                TAKE POD PHOTO
+              </button>
+            </div>
+          ) : (
+            <div style={{ background: MC.plate, border: `1px solid ${MC.rivet}`, padding: 14, marginBottom: 8 }}>
+              <p style={{ fontFamily: FD, fontSize: 14, fontWeight: 800, color: MC.white, letterSpacing: '0.08em', margin: '0 0 10px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 8 }}>
+                PROOF OF DELIVERY
+                {podUploaded && <span style={{ fontFamily: FM, fontSize: 9, color: MC.green, letterSpacing: '0.1em' }}>✓ UPLOADED</span>}
+              </p>
+              <img src={podPreviewUrl} alt="Proof of delivery"
+                style={{ width: '100%', objectFit: 'cover', border: `1px solid ${MC.rivet}`, maxHeight: 210, marginBottom: 8 }} />
+              <p style={{ fontFamily: FB, fontSize: 12, color: MC.chromeDim, margin: '0 0 10px' }}>Make sure the signature and receipt are clearly visible.</p>
+              {updateError && (
+                <div style={{ background: 'rgba(204,34,34,0.08)', border: `1px solid rgba(204,34,34,0.3)`, padding: '10px 12px', marginBottom: 10 }}>
+                  <p style={{ fontFamily: FB, fontSize: 12, color: MC.red, margin: 0 }}>{updateError}</p>
+                  {podUploaded && <p style={{ fontFamily: FM, fontSize: 9, color: 'rgba(204,34,34,0.55)', margin: '4px 0 0', letterSpacing: '0.08em' }}>PHOTO ALREADY UPLOADED — TAP RETRY TO CONFIRM</p>}
                 </div>
-                <button
-                  onClick={() => openPodCamera(false)}
-                  className="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-4 tracking-wider transition-colors flex items-center justify-center gap-2"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  TAKE POD PHOTO
+              )}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => { setPodStep(null); setPodFile(null); setPodPreviewUrl(null); openPodCamera(true); }} disabled={updating}
+                  style={{ flex: 1, background: 'none', border: `1px solid ${MC.rivet}`, color: MC.chromeMid, fontFamily: FD, fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', padding: '14px', cursor: 'pointer', opacity: updating ? 0.4 : 1 }}>
+                  RETAKE
+                </button>
+                <button onClick={handlePodConfirm} disabled={updating}
+                  style={{ flex: 2, background: updating ? 'rgba(45,187,98,0.45)' : MC.green, border: 'none', color: '#fff', fontFamily: FD, fontSize: 12, fontWeight: 800, letterSpacing: '0.1em', padding: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  {updating ? <><Spinner />{podUploaded ? 'CONFIRMING...' : 'UPLOADING...'}</> : (updateError ? 'RETRY' : 'CONFIRM DELIVERY')}
                 </button>
               </div>
-            ) : (
-              <div className={`border p-4 space-y-3 ${card}`}>
-                <p className={`text-sm font-semibold tracking-wider ${text}`}>
-                  PROOF OF DELIVERY
-                  {podUploaded && (
-                    <span className="ml-2 text-green-500 text-xs normal-case">photo uploaded</span>
-                  )}
-                </p>
-                <img
-                  src={podPreviewUrl}
-                  alt="Proof of delivery"
-                  className={`w-full object-cover border ${isDark ? 'border-[#262626]' : 'border-[#e5e5e5]'}`}
-                  style={{ maxHeight: 220 }}
-                />
-                <p className={`text-xs ${sub}`}>Make sure the delivery receipt and signature are clearly visible.</p>
-
-                {/* Error with retry — shown only inside the preview card */}
-                {updateError && (
-                  <div className="bg-red-600/20 border border-red-600/50 px-3 py-2">
-                    <p className="text-red-500 text-xs font-medium">{updateError}</p>
-                    {podUploaded && (
-                      <p className="text-red-400 text-xs mt-1">Photo already uploaded — tap RETRY to confirm delivery without re-uploading.</p>
-                    )}
-                  </div>
-                )}
-
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => { setPodStep(null); setPodFile(null); setPodPreviewUrl(null); openPodCamera(true); }}
-                    disabled={updating}
-                    className={`flex-1 border py-3 text-sm tracking-wider disabled:opacity-40 ${
-                      isDark ? 'border-[#262626] text-white/60' : 'border-[#e5e5e5] text-black/60'
-                    }`}
-                  >
-                    RETAKE
-                  </button>
-                  <button
-                    onClick={handlePodConfirm}
-                    disabled={updating}
-                    className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-green-600/50 text-white py-3 text-sm tracking-wider transition-colors flex items-center justify-center gap-2"
-                  >
-                    {updating ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        {podUploaded ? 'CONFIRMING...' : 'UPLOADING...'}
-                      </>
-                    ) : (updateError ? 'RETRY' : 'CONFIRM DELIVERY')}
-                  </button>
-                </div>
-              </div>
-            )
-          ) : (
-            <button
-              onClick={() => handleStatusButton(status.next)}
-              disabled={updating}
-              className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white font-semibold py-4 tracking-wider transition-colors flex items-center justify-center gap-2"
-            >
-              {updating ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  UPDATING...
-                </>
-              ) : (
-                <>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  {status.nextLabel}
-                </>
-              )}
-            </button>
+            </div>
           )
         )}
 
-        {/* Delivered confirmation */}
+        {/* Main CTA — UPDATE STATUS / LOG EVENT */}
+        {!pendingStatus && status.next && status.next !== 'delivered' && load.status !== 'delivered' && load.status !== 'problem' && (
+          <button onClick={() => handleStatusButton(status.next)} disabled={updating}
+            style={{ width: '100%', background: updating ? 'rgba(204,34,34,0.45)' : MC.red, border: 'none', color: '#fff', fontFamily: FD, fontWeight: 800, fontSize: 14, letterSpacing: '0.15em', padding: '18px', cursor: updating ? 'not-allowed' : 'pointer', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxSizing: 'border-box' }}>
+            {updating
+              ? <><Spinner />UPDATING...</>
+              : <><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>UPDATE STATUS / LOG EVENT</>
+            }
+          </button>
+        )}
+
+        {/* Delivered */}
         {load.status === 'delivered' && (
-          <div className="bg-green-600/20 border border-green-600/50 px-4 py-4 text-center">
-            <p className="text-green-500 font-bold tracking-wider">LOAD DELIVERED</p>
-            <p className={`text-sm mt-1 ${sub}`}>Great work! This load has been completed.</p>
+          <div style={{ background: 'rgba(45,187,98,0.07)', border: `1px solid rgba(45,187,98,0.3)`, borderLeft: `3px solid ${MC.green}`, padding: '16px 14px', marginBottom: 8, textAlign: 'center' }}>
+            <p style={{ fontFamily: FD, fontSize: 18, fontWeight: 800, color: MC.green, letterSpacing: '0.1em', margin: '0 0 4px' }}>LOAD DELIVERED</p>
+            <p style={{ fontFamily: FB, fontSize: 12, color: MC.chromeDim, margin: 0 }}>Great work! This load has been completed.</p>
           </div>
         )}
 
-        {/* Problem Report */}
+        {/* VIEW DOCUMENTS */}
+        <button onClick={() => onViewDocs?.()}
+          style={{ width: '100%', background: MC.plate, border: `1px solid ${MC.rivet}`, color: MC.chromeMid, fontFamily: FD, fontWeight: 700, fontSize: 14, letterSpacing: '0.15em', padding: '16px', cursor: 'pointer', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxSizing: 'border-box' }}>
+          <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          VIEW DOCUMENTS
+        </button>
+
+        {/* Problem report */}
         {!pendingStatus && load.status !== 'delivered' && load.status !== 'problem' && (
           !showProblem ? (
-            <button
-              onClick={() => setShowProblem(true)}
-              className={`w-full border py-3 text-sm tracking-wider transition-colors ${
-                isDark
-                  ? 'border-red-600/40 text-red-500 hover:bg-red-600/10'
-                  : 'border-red-400/40 text-red-500 hover:bg-red-50'
-              }`}
-            >
+            <button onClick={() => setShowProblem(true)}
+              style={{ width: '100%', background: 'none', border: `1px solid rgba(204,34,34,0.32)`, color: 'rgba(204,34,34,0.65)', fontFamily: FD, fontWeight: 700, fontSize: 13, letterSpacing: '0.12em', padding: '14px', cursor: 'pointer', marginBottom: 8, boxSizing: 'border-box' }}>
               REPORT A PROBLEM
             </button>
           ) : (
-            <div className={`border p-4 ${isDark ? 'bg-[#0a0a0a] border-red-600/50' : 'bg-white border-red-400/50'}`}>
-              <p className={`text-sm tracking-wider mb-3 ${text}`}>DESCRIBE THE PROBLEM</p>
-              <textarea
-                value={problemNote}
-                onChange={e => setProblemNote(e.target.value)}
+            <div style={{ background: MC.plate, border: `1px solid rgba(204,34,34,0.35)`, padding: 14, marginBottom: 8 }}>
+              <p style={{ fontFamily: FD, fontSize: 14, fontWeight: 800, color: MC.white, letterSpacing: '0.06em', margin: '0 0 10px', textTransform: 'uppercase' }}>DESCRIBE THE PROBLEM</p>
+              <textarea value={problemNote} onChange={e => setProblemNote(e.target.value)}
                 placeholder="What's happening? Include location if relevant..."
-                className={`w-full border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 resize-none mb-3 ${
-                  isDark
-                    ? 'bg-[#171717] border-[#262626] text-white placeholder-white/30'
-                    : 'bg-[#f5f5f5] border-[#e5e5e5] text-black placeholder-black/30'
-                }`}
                 rows={3}
+                style={{ width: '100%', background: MC.deep, border: `1px solid ${MC.rivet}`, color: MC.white, fontFamily: FB, fontSize: 13, padding: '12px', outline: 'none', resize: 'none', boxSizing: 'border-box', marginBottom: 10 }}
               />
-              <div className="flex gap-3">
-                <button
-                  onClick={() => { setShowProblem(false); setProblemNote(''); }}
-                  className={`flex-1 border py-3 text-sm tracking-wider ${
-                    isDark ? 'border-[#262626] text-white/60' : 'border-[#e5e5e5] text-black/60'
-                  }`}
-                >
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => { setShowProblem(false); setProblemNote(''); }}
+                  style={{ flex: 1, background: 'none', border: `1px solid ${MC.rivet}`, color: MC.chromeMid, fontFamily: FD, fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', padding: '14px', cursor: 'pointer' }}>
                   CANCEL
                 </button>
-                <button
-                  onClick={() => updateStatus('problem', problemNote)}
-                  disabled={!problemNote.trim() || updating}
-                  className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-600/40 text-white py-3 text-sm tracking-wider"
-                >
+                <button onClick={() => updateStatus('problem', problemNote)} disabled={!problemNote.trim() || updating}
+                  style={{ flex: 1, background: (problemNote.trim() && !updating) ? MC.red : 'rgba(204,34,34,0.4)', border: 'none', color: '#fff', fontFamily: FD, fontSize: 12, fontWeight: 800, letterSpacing: '0.1em', padding: '14px', cursor: 'pointer' }}>
                   SUBMIT
                 </button>
               </div>
@@ -571,31 +418,50 @@ const RouteScreen = ({ load: initialLoad, onBack, onViewMap, onOpenChat }) => {
           )
         )}
 
-        {/* Chat CTA */}
-        <button
-          onClick={() => onOpenChat?.(load)}
-          className={`w-full py-3 flex items-center justify-center gap-2 border transition-colors tracking-wider text-sm mb-6 ${
-            isDark
-              ? 'border-[#262626] text-white/60 hover:bg-[#171717]'
-              : 'border-[#e5e5e5] text-black/60 hover:bg-[#f5f5f5]'
-          }`}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        {/* Chat */}
+        <button onClick={() => onOpenChat?.(load)}
+          style={{ width: '100%', background: 'none', border: `1px solid ${MC.rivet}`, color: MC.chromeDim, fontFamily: FD, fontWeight: 600, fontSize: 13, letterSpacing: '0.12em', padding: '14px', cursor: 'pointer', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxSizing: 'border-box' }}>
+          <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
           CHAT WITH DISPATCHER
         </button>
+
+        {/* View map */}
+        {onViewMap && (
+          <button onClick={() => onViewMap()}
+            style={{ width: '100%', background: 'none', border: `1px solid ${MC.rivet}`, color: MC.chromeDim, fontFamily: FD, fontWeight: 600, fontSize: 13, letterSpacing: '0.12em', padding: '14px', cursor: 'pointer', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxSizing: 'border-box' }}>
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+            VIEW ON MAP
+          </button>
+        )}
+
+        {/* Actual times */}
+        {hasAnyActualTime && (
+          <div style={{ background: MC.plate, border: `1px solid ${MC.rivet}`, padding: 14 }}>
+            <p style={{ fontFamily: FM, fontSize: 9, letterSpacing: '0.16em', color: MC.chromeDim, margin: '0 0 10px', textTransform: 'uppercase' }}>// ACTUAL TIMES</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              {[
+                { label: 'PICKUP IN',    value: formatActualTime(load.actual_pickup_in)    },
+                { label: 'PICKUP OUT',   value: formatActualTime(load.actual_pickup_out)   },
+                { label: 'DELIVERY IN',  value: formatActualTime(load.actual_delivery_in)  },
+                { label: 'DELIVERY OUT', value: formatActualTime(load.actual_delivery_out) },
+              ].map(({ label, value }) => (
+                <div key={label}>
+                  <p style={{ fontFamily: FM, fontSize: 8, letterSpacing: '0.1em', color: MC.chromeDim, margin: '0 0 4px' }}>{label}</p>
+                  <p style={{ fontFamily: FD, fontSize: 14, fontWeight: 700, color: value ? MC.white : MC.chromeDim, margin: 0 }}>{value || '—'}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Hidden POD file input */}
-      <input
-        ref={podInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={handlePodFileChange}
-      />
+      <input ref={podInputRef} type="file" accept="image/*" capture="environment"
+        style={{ display: 'none' }} onChange={handlePodFileChange} />
     </div>
   );
 };
