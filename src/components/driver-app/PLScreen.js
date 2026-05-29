@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
   BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
@@ -119,7 +119,7 @@ const ChartTooltip = ({ active, payload, label, isDark }) => {
   const bg  = isDark ? '#0f0f0f' : '#fff';
   const bdr = isDark ? '#262626' : '#e5e5e5';
   return (
-    <div style={{ background: bg, border: `1px solid ${bdr}`, padding: '10px 14px', fontFamily: 'Oxanium, sans-serif', fontSize: 12 }}>
+    <div style={{ background: bg, border: `1px solid ${bdr}`, padding: '10px 14px', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14 }}>
       <p style={{ color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)', marginBottom: 6, letterSpacing: 2 }}>{label}</p>
       {payload.map(p => (
         <p key={p.dataKey} style={{ color: p.color, marginBottom: 2 }}>
@@ -133,7 +133,7 @@ const ChartTooltip = ({ active, payload, label, isDark }) => {
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 const PLScreen = ({ onBack }) => {
-  const { api, theme } = useDriverApp();
+  const { api, theme, toggleTheme } = useDriverApp();
   const isDark = theme === 'dark';
 
   const bg      = isDark ? 'bg-[#030303]'        : 'bg-[#f5f5f5]';
@@ -219,22 +219,29 @@ const PLScreen = ({ onBack }) => {
 
       {/* Header */}
       <div className={`${surface} border-b ${border} px-5 pt-10 pb-4`}>
-        <button onClick={onBack} className={`text-sm tracking-wider mb-4 block ${subtext}`}>← BACK</button>
+        <button onClick={onBack} className={`text-base tracking-wider mb-4 block ${subtext}`}>← BACK</button>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className={`text-xl font-bold tracking-wider ${text}`}>P&L VIEW</h1>
-            <p className={`text-xs mt-0.5 ${subtext}`}>Profit & loss summary</p>
+            <h1 className={`text-2xl font-bold tracking-wider ${text}`}>P&L VIEW</h1>
+            <p className={`text-sm mt-0.5 ${subtext}`}>Profit & loss summary</p>
           </div>
-          {loading && (
-            <div className="w-5 h-5 border-2 border-[#CC2222] border-t-transparent rounded-full animate-spin" />
-          )}
+          <div className="flex items-center gap-2">
+            {loading && <div className="w-5 h-5 border-2 border-[#CC2222] border-t-transparent rounded-full animate-spin" />}
+            <button onClick={toggleTheme} className={`w-9 h-9 flex items-center justify-center flex-shrink-0 ${isDark ? 'text-yellow-400' : 'text-black/50'}`}>
+            {isDark ? (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+            )}
+          </button>
+          </div>
         </div>
 
         {/* Period tabs */}
         <div className="flex gap-2">
           {PERIODS.map(p => (
             <button key={p.value} onClick={() => setPeriod(p.value)}
-              className={`flex-1 py-2 text-xs font-bold tracking-widest border transition-colors ${
+              className={`flex-1 py-2 text-sm font-bold tracking-widest border transition-colors ${
                 period === p.value
                   ? 'bg-[#CC2222] border-[#CC2222] text-white'
                   : `${border} ${subtext}`
@@ -254,14 +261,14 @@ const PLScreen = ({ onBack }) => {
 
           <div className={`col-span-2 ${surface} border ${border} p-4 flex items-center justify-between`}>
             <div>
-              <p className={`text-xs tracking-wider mb-1 ${subtext}`}>NET PROFIT</p>
-              <p className={`text-3xl font-bold`} style={{ color: profitColor }}>
+              <p className={`text-sm tracking-wider mb-1 ${subtext}`}>NET PROFIT</p>
+              <p className={`text-4xl font-bold`} style={{ color: profitColor }}>
                 {netProfit < 0 ? '-' : ''}{fmt(netProfit)}
               </p>
             </div>
             <div className="text-right">
-              <p className={`text-xs tracking-wider mb-1 ${subtext}`}>MARGIN</p>
-              <p className={`text-2xl font-bold`} style={{ color: marginColor }}>
+              <p className={`text-sm tracking-wider mb-1 ${subtext}`}>MARGIN</p>
+              <p className={`text-3xl font-bold`} style={{ color: marginColor }}>
                 {margin.toFixed(1)}%
               </p>
             </div>
@@ -280,11 +287,11 @@ const PLScreen = ({ onBack }) => {
         {/* Chart */}
         <div className={`${surface} border ${border} p-4`}>
           <div className="flex items-center justify-between mb-4">
-            <p className={`text-xs font-bold tracking-widest ${subtext}`}>REVENUE VS EXPENSES</p>
+            <p className={`text-sm font-bold tracking-widest ${subtext}`}>REVENUE VS EXPENSES</p>
             <div className="flex gap-1">
               {['bar', 'line'].map(t => (
                 <button key={t} onClick={() => setChartType(t)}
-                  className={`px-2.5 py-1 text-xs tracking-wider border transition-colors ${
+                  className={`px-2.5 py-1 text-sm tracking-wider border transition-colors ${
                     chartType === t ? 'bg-[#CC2222] border-[#CC2222] text-white' : `${border} ${subtext}`
                   }`}>
                   {t === 'bar' ? '▬' : '〜'}
@@ -298,8 +305,8 @@ const PLScreen = ({ onBack }) => {
               {chartType === 'bar' ? (
                 <BarChart data={chartData} barGap={2} barSize={14}>
                   <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#1a1a1a' : '#f0f0f0'} vertical={false} />
-                  <XAxis dataKey="label" tick={{ fill: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', fontSize: 10, fontFamily: 'Oxanium' }} axisLine={false} tickLine={false} />
-                  <YAxis tickFormatter={fmtK} tick={{ fill: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', fontSize: 10, fontFamily: 'Oxanium' }} axisLine={false} tickLine={false} width={40} />
+                  <XAxis dataKey="label" tick={{ fill: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif" }} axisLine={false} tickLine={false} />
+                  <YAxis tickFormatter={fmtK} tick={{ fill: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif" }} axisLine={false} tickLine={false} width={40} />
                   <Tooltip content={<ChartTooltip isDark={isDark} />} />
                   <Bar dataKey="revenue"  name="Revenue"  fill={chartColors.revenue}  radius={[2, 2, 0, 0]} />
                   <Bar dataKey="expenses" name="Expenses" fill={chartColors.expenses} radius={[2, 2, 0, 0]} />
@@ -307,8 +314,8 @@ const PLScreen = ({ onBack }) => {
               ) : (
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#1a1a1a' : '#f0f0f0'} vertical={false} />
-                  <XAxis dataKey="label" tick={{ fill: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', fontSize: 10, fontFamily: 'Oxanium' }} axisLine={false} tickLine={false} />
-                  <YAxis tickFormatter={fmtK} tick={{ fill: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', fontSize: 10, fontFamily: 'Oxanium' }} axisLine={false} tickLine={false} width={40} />
+                  <XAxis dataKey="label" tick={{ fill: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif" }} axisLine={false} tickLine={false} />
+                  <YAxis tickFormatter={fmtK} tick={{ fill: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif" }} axisLine={false} tickLine={false} width={40} />
                   <Tooltip content={<ChartTooltip isDark={isDark} />} />
                   <Line type="monotone" dataKey="revenue"  name="Revenue"  stroke={chartColors.revenue}  strokeWidth={2} dot={false} />
                   <Line type="monotone" dataKey="expenses" name="Expenses" stroke="#f59e0b" strokeWidth={2} dot={false} strokeDasharray="4 2" />
@@ -318,7 +325,7 @@ const PLScreen = ({ onBack }) => {
             </ResponsiveContainer>
           ) : (
             <div className="h-48 flex flex-col items-center justify-center">
-              <p className={`text-sm ${subtext}`}>No data for this period yet</p>
+              <p className={`text-base ${subtext}`}>No data for this period yet</p>
             </div>
           )}
 
@@ -333,12 +340,12 @@ const PLScreen = ({ onBack }) => {
         {/* Net profit chart */}
         {chartData.some(d => d.profit !== 0) && (
           <div className={`${surface} border ${border} p-4`}>
-            <p className={`text-xs font-bold tracking-widest mb-4 ${subtext}`}>NET PROFIT PER PERIOD</p>
+            <p className={`text-sm font-bold tracking-widest mb-4 ${subtext}`}>NET PROFIT PER PERIOD</p>
             <ResponsiveContainer width="100%" height={140}>
               <BarChart data={chartData} barSize={14}>
                 <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#1a1a1a' : '#f0f0f0'} vertical={false} />
-                <XAxis dataKey="label" tick={{ fill: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', fontSize: 10, fontFamily: 'Oxanium' }} axisLine={false} tickLine={false} />
-                <YAxis tickFormatter={fmtK} tick={{ fill: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', fontSize: 10, fontFamily: 'Oxanium' }} axisLine={false} tickLine={false} width={40} />
+                <XAxis dataKey="label" tick={{ fill: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif" }} axisLine={false} tickLine={false} />
+                <YAxis tickFormatter={fmtK} tick={{ fill: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif" }} axisLine={false} tickLine={false} width={40} />
                 <Tooltip content={<ChartTooltip isDark={isDark} />} />
                 <Bar dataKey="profit" name="Profit" radius={[2, 2, 0, 0]}>
                   {chartData.map((entry, i) => (
@@ -353,17 +360,17 @@ const PLScreen = ({ onBack }) => {
         {/* Expense breakdown */}
         {expBreakdown.length > 0 && (
           <div className={`${surface} border ${border} p-4`}>
-            <p className={`text-xs font-bold tracking-widest mb-3 ${subtext}`}>EXPENSE BREAKDOWN</p>
+            <p className={`text-sm font-bold tracking-widest mb-3 ${subtext}`}>EXPENSE BREAKDOWN</p>
             <div className="space-y-2">
               {expBreakdown.map(({ cat, total }) => (
                 <div key={cat} className="flex items-center gap-3">
-                  <span className="text-base w-6">{CAT_ICONS[cat] || '➕'}</span>
+                  <span className="text-lg w-6">{CAT_ICONS[cat] || '➕'}</span>
                   <div className="flex-1">
                     <div className="flex justify-between mb-1">
-                      <span className={`text-xs font-semibold tracking-wider ${text}`}>
+                      <span className={`text-sm font-semibold tracking-wider ${text}`}>
                         {cat.charAt(0).toUpperCase() + cat.slice(1)}
                       </span>
-                      <span className="text-xs text-[#FF2020]">{fmt(total)}</span>
+                      <span className="text-sm text-[#FF2020]">{fmt(total)}</span>
                     </div>
                     <div className={`h-1.5 ${isDark ? 'bg-[#161616]' : 'bg-[#f0f0f0]'}`}>
                       <div className="h-full bg-[#CC2222]/60"
@@ -379,24 +386,24 @@ const PLScreen = ({ onBack }) => {
         {/* Load list for period */}
         {periodLoads.length > 0 && (
           <div className={`${surface} border ${border} p-4`}>
-            <p className={`text-xs font-bold tracking-widest mb-3 ${subtext}`}>
+            <p className={`text-sm font-bold tracking-widest mb-3 ${subtext}`}>
               LOADS THIS PERIOD ({loadCount})
             </p>
             <div className={`divide-y ${isDark ? 'divide-[#1a1a1a]' : 'divide-[#f0f0f0]'}`}>
               {periodLoads.map(l => (
                 <div key={l.id} className="py-2.5 flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className={`text-sm font-bold truncate ${text}`}>
+                    <p className={`text-base font-bold truncate ${text}`}>
                       {l.origin || '—'} → {l.destination || '—'}
                     </p>
                     {l.delivery_date && (
-                      <p className={`text-xs ${subtext}`}>
+                      <p className={`text-sm ${subtext}`}>
                         {new Date(l.delivery_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         {l.estimated_miles ? ` · ${Number(l.estimated_miles).toLocaleString()} mi` : ''}
                       </p>
                     )}
                   </div>
-                  <p className="text-sm font-bold text-[#2DBB62] flex-shrink-0">
+                  <p className="text-base font-bold text-[#2DBB62] flex-shrink-0">
                     {l.rate ? fmt(Number(l.rate)) : '—'}
                   </p>
                 </div>
@@ -409,8 +416,8 @@ const PLScreen = ({ onBack }) => {
         {!loading && periodLoads.length === 0 && expBreakdown.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <p className="text-4xl mb-4">📊</p>
-            <p className={`text-base font-bold tracking-wider mb-2 ${text}`}>NO DATA YET</p>
-            <p className={`text-sm ${subtext}`}>
+            <p className={`text-lg font-bold tracking-wider mb-2 ${text}`}>NO DATA YET</p>
+            <p className={`text-base ${subtext}`}>
               Mark loads as delivered and log expenses to see your P&L.
             </p>
           </div>
@@ -426,16 +433,16 @@ const PLScreen = ({ onBack }) => {
 
 const KpiCard = ({ label, value, color, surface, border, subtext, sub }) => (
   <div className={`${surface} border ${border} p-4`}>
-    <p className={`text-xs tracking-wider mb-1 ${subtext}`}>{label}</p>
-    <p className={`text-xl font-bold ${color}`}>{value}</p>
-    {sub && <p className={`text-xs mt-0.5 ${subtext}`}>{sub}</p>}
+    <p className={`text-sm tracking-wider mb-1 ${subtext}`}>{label}</p>
+    <p className={`text-2xl font-bold ${color}`}>{value}</p>
+    {sub && <p className={`text-sm mt-0.5 ${subtext}`}>{sub}</p>}
   </div>
 );
 
 const LegendDot = ({ color, label }) => (
   <div className="flex items-center gap-1.5">
     <div className="w-2.5 h-2.5" style={{ background: color }} />
-    <span style={{ fontSize: 10, color: 'rgba(150,150,150,0.8)', fontFamily: 'Oxanium', letterSpacing: 1 }}>
+    <span style={{ fontSize: 12, color: 'rgba(150,150,150,0.8)', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 1 }}>
       {label.toUpperCase()}
     </span>
   </div>
