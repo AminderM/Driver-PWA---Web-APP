@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useDriverApp } from './DriverAppProvider';
 
 const StatCard = ({ label, value, sublabel, icon, isDark, highlight }) => (
   <div className={`p-4 border ${isDark ? 'bg-[#0a0a0a] border-[#262626]' : 'bg-white border-[#e5e5e5]'} ${highlight ? 'border-green-600/50' : ''}`}>
     <div className="flex items-start justify-between">
       <div>
-        <p className={`text-xs tracking-wider ${isDark ? 'text-white/50' : 'text-black/50'}`}>{label}</p>
-        <p className={`text-2xl font-bold mt-1 ${highlight ? 'text-green-500' : isDark ? 'text-white' : 'text-black'}`}>
+        <p className={`text-sm tracking-wider ${isDark ? 'text-white/50' : 'text-black/50'}`}>{label}</p>
+        <p className={`text-3xl font-bold mt-1 ${highlight ? 'text-green-500' : isDark ? 'text-white' : 'text-black'}`}>
           {value}
         </p>
         {sublabel && (
-          <p className={`text-xs mt-1 ${isDark ? 'text-white/40' : 'text-black/40'}`}>{sublabel}</p>
+          <p className={`text-sm mt-1 ${isDark ? 'text-white/40' : 'text-black/40'}`}>{sublabel}</p>
         )}
       </div>
       <div className={`w-10 h-10 flex items-center justify-center ${isDark ? 'bg-[#171717]' : 'bg-[#f5f5f5]'}`}>
@@ -34,7 +34,7 @@ const PeriodSelector = ({ selected, onSelect, isDark }) => {
         <button
           key={period.id}
           onClick={() => onSelect(period.id)}
-          className={`flex-1 py-2 text-xs font-medium tracking-wider transition-colors ${
+          className={`flex-1 py-2 text-sm font-medium tracking-wider transition-colors ${
             selected === period.id
               ? 'bg-red-600 text-white'
               : isDark ? 'text-white/60 hover:bg-[#171717]' : 'text-black/60 hover:bg-[#f5f5f5]'
@@ -48,7 +48,7 @@ const PeriodSelector = ({ selected, onSelect, isDark }) => {
 };
 
 const AnalyticsScreen = ({ onBack }) => {
-  const { api, theme, userType } = useDriverApp();
+  const { api, theme, userType, toggleTheme } = useDriverApp();
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('7d');
@@ -91,7 +91,7 @@ const AnalyticsScreen = ({ onBack }) => {
   }
 
   return (
-    <div className={`min-h-screen flex flex-col font-['Oxanium'] ${isDark ? 'bg-black' : 'bg-white'}`}>
+    <div className={`min-h-screen flex flex-col font-['Barlow_Condensed'] ${isDark ? 'bg-black' : 'bg-white'}`}>
       {/* Header */}
       <div className={`px-4 py-4 flex items-center gap-3 border-b ${isDark ? 'border-[#262626]' : 'border-[#e5e5e5]'}`}>
         <button onClick={onBack} className={`w-10 h-10 flex items-center justify-center ${isDark ? 'text-white' : 'text-black'}`}>
@@ -99,14 +99,21 @@ const AnalyticsScreen = ({ onBack }) => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <div>
-          <h1 className={`text-xl font-bold tracking-wider ${isDark ? 'text-white' : 'text-black'}`}>
+        <div className="flex-1">
+          <h1 className={`text-2xl font-bold tracking-wider ${isDark ? 'text-white' : 'text-black'}`}>
             {isCarrier ? 'FLEET ANALYTICS' : 'MY ANALYTICS'}
           </h1>
-          <p className={`text-sm ${isDark ? 'text-white/60' : 'text-black/60'}`}>
+          <p className={`text-base ${isDark ? 'text-white/60' : 'text-black/60'}`}>
             {isCarrier ? 'Fleet performance overview' : 'Work performance overview'}
           </p>
         </div>
+        <button onClick={toggleTheme} className={`w-9 h-9 flex items-center justify-center flex-shrink-0 ${isDark ? 'text-yellow-400' : 'text-black/50'}`}>
+            {isDark ? (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+            )}
+          </button>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -168,21 +175,21 @@ const AnalyticsScreen = ({ onBack }) => {
                     </div>
                     <div>
                       <p className={`font-medium ${isDark ? 'text-white' : 'text-black'}`}>ALL TIME FLEET SUMMARY</p>
-                      <p className={`text-sm ${isDark ? 'text-white/60' : 'text-black/60'}`}>Total fleet activity</p>
+                      <p className={`text-base ${isDark ? 'text-white/60' : 'text-black/60'}`}>Total fleet activity</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div>
-                      <p className="text-green-500 font-bold text-lg">${(analytics?.all_time?.revenue || 0).toLocaleString()}</p>
-                      <p className={`text-xs ${isDark ? 'text-white/50' : 'text-black/50'}`}>REVENUE</p>
+                      <p className="text-green-500 font-bold text-xl">${(analytics?.all_time?.revenue || 0).toLocaleString()}</p>
+                      <p className={`text-sm ${isDark ? 'text-white/50' : 'text-black/50'}`}>REVENUE</p>
                     </div>
                     <div>
-                      <p className={`font-bold text-lg ${isDark ? 'text-white' : 'text-black'}`}>{analytics?.all_time?.total_loads || 0}</p>
-                      <p className={`text-xs ${isDark ? 'text-white/50' : 'text-black/50'}`}>LOADS</p>
+                      <p className={`font-bold text-xl ${isDark ? 'text-white' : 'text-black'}`}>{analytics?.all_time?.total_loads || 0}</p>
+                      <p className={`text-sm ${isDark ? 'text-white/50' : 'text-black/50'}`}>LOADS</p>
                     </div>
                     <div>
-                      <p className={`font-bold text-lg ${isDark ? 'text-white' : 'text-black'}`}>{analytics?.total_drivers || 0}</p>
-                      <p className={`text-xs ${isDark ? 'text-white/50' : 'text-black/50'}`}>DRIVERS</p>
+                      <p className={`font-bold text-xl ${isDark ? 'text-white' : 'text-black'}`}>{analytics?.total_drivers || 0}</p>
+                      <p className={`text-sm ${isDark ? 'text-white/50' : 'text-black/50'}`}>DRIVERS</p>
                     </div>
                   </div>
                 </div>
@@ -241,7 +248,7 @@ const AnalyticsScreen = ({ onBack }) => {
 
               {/* Averages */}
               <div className="py-4">
-                <h3 className={`text-sm font-medium tracking-wider mb-3 ${isDark ? 'text-white/50' : 'text-black/50'}`}>
+                <h3 className={`text-base font-medium tracking-wider mb-3 ${isDark ? 'text-white/50' : 'text-black/50'}`}>
                   PERFORMANCE AVERAGES
                 </h3>
                 <div className={`border divide-y ${isDark ? 'border-[#262626] divide-[#262626]' : 'border-[#e5e5e5] divide-[#e5e5e5]'}`}>
@@ -277,21 +284,21 @@ const AnalyticsScreen = ({ onBack }) => {
                     </div>
                     <div>
                       <p className={`font-medium ${isDark ? 'text-white' : 'text-black'}`}>ALL TIME SUMMARY</p>
-                      <p className={`text-sm ${isDark ? 'text-white/60' : 'text-black/60'}`}>Your career stats</p>
+                      <p className={`text-base ${isDark ? 'text-white/60' : 'text-black/60'}`}>Your career stats</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div>
-                      <p className="text-green-500 font-bold text-lg">${(analytics?.all_time?.earnings || 0).toLocaleString()}</p>
-                      <p className={`text-xs ${isDark ? 'text-white/50' : 'text-black/50'}`}>EARNED</p>
+                      <p className="text-green-500 font-bold text-xl">${(analytics?.all_time?.earnings || 0).toLocaleString()}</p>
+                      <p className={`text-sm ${isDark ? 'text-white/50' : 'text-black/50'}`}>EARNED</p>
                     </div>
                     <div>
-                      <p className={`font-bold text-lg ${isDark ? 'text-white' : 'text-black'}`}>{(analytics?.all_time?.miles || 0).toLocaleString()}</p>
-                      <p className={`text-xs ${isDark ? 'text-white/50' : 'text-black/50'}`}>MILES</p>
+                      <p className={`font-bold text-xl ${isDark ? 'text-white' : 'text-black'}`}>{(analytics?.all_time?.miles || 0).toLocaleString()}</p>
+                      <p className={`text-sm ${isDark ? 'text-white/50' : 'text-black/50'}`}>MILES</p>
                     </div>
                     <div>
-                      <p className={`font-bold text-lg ${isDark ? 'text-white' : 'text-black'}`}>{analytics?.all_time?.loads_completed || 0}</p>
-                      <p className={`text-xs ${isDark ? 'text-white/50' : 'text-black/50'}`}>LOADS</p>
+                      <p className={`font-bold text-xl ${isDark ? 'text-white' : 'text-black'}`}>{analytics?.all_time?.loads_completed || 0}</p>
+                      <p className={`text-sm ${isDark ? 'text-white/50' : 'text-black/50'}`}>LOADS</p>
                     </div>
                   </div>
                 </div>

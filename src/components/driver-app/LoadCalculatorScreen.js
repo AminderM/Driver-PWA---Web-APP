@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useDriverApp } from './DriverAppProvider';
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const MC = {
@@ -19,6 +20,8 @@ const inp = {
 };
 
 const LoadCalculatorScreen = ({ onBack }) => {
+  const { theme, toggleTheme } = useDriverApp();
+  const isDark = theme === 'dark';
   const [distance,   setDistance]   = useState('');
   const [efficiency, setEfficiency] = useState('6.8');
   const [diesel,     setDiesel]     = useState('');
@@ -44,9 +47,16 @@ const LoadCalculatorScreen = ({ onBack }) => {
         <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 2, background: `linear-gradient(180deg, ${MC.red}, transparent)` }} />
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${MC.red}, transparent 60%)` }} />
 
-        <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: FM, fontSize: 9, letterSpacing: '0.16em', color: MC.chromeDim, marginBottom: 14, padding: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
-          ← TOOLS
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: FM, fontSize: 9, letterSpacing: '0.16em', color: MC.chromeDim, padding: 0, display: 'flex', alignItems: 'center', gap: 6 }}>← TOOLS</button>
+          <button onClick={toggleTheme} style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? '#D4921A' : MC.chromeDim, padding: 4, display: 'flex', alignItems: 'center' }}>
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              {isDark
+                ? <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                : <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />}
+            </svg>
+          </button>
+        </div>
         <p style={{ fontFamily: FM, fontSize: 9, letterSpacing: '0.2em', color: MC.red, margin: '0 0 6px', textTransform: 'uppercase' }}>// INTEGRA AI TOOLS</p>
         <h1 style={{ fontFamily: FD, fontWeight: 900, fontSize: 40, textTransform: 'uppercase', lineHeight: 0.92, color: MC.white, margin: 0 }}>
           FUEL SURCHARGE<br />CALCULATOR
