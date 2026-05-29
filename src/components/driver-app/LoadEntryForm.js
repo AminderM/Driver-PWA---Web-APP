@@ -18,6 +18,21 @@ const STATUS_OPTIONS = [
   { value: 'invoiced',   label: 'Invoiced'   },
 ];
 
+// Convert an ISO/server datetime string to "YYYY-MM-DDTHH:mm" local time for datetime-local input
+const toLocalDT = (isoStr) => {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  if (isNaN(d)) return isoStr.slice(0, 16); // already local format
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+// Convert datetime-local string "YYYY-MM-DDTHH:mm" to UTC ISO string for API
+const toISO = (localStr) => {
+  if (!localStr) return null;
+  return new Date(localStr).toISOString();
+};
+
 // Accepts prefill object from rate con parser, or empty for manual entry
 // mode: 'create' | 'edit'
 // onSave(loadData): called with final form data
@@ -44,8 +59,8 @@ const LoadEntryForm = ({ prefill = {}, existingLoad = null, onSave, onCancel }) 
   const [consignee,      setConsignee]      = useState(init.consignee      || '');
   const [origin,         setOrigin]         = useState(init.origin         || '');
   const [destination,    setDestination]    = useState(init.destination    || '');
-  const [pickupDate,     setPickupDate]     = useState(init.pickup_date    ? init.pickup_date.slice(0, 10) : '');
-  const [deliveryDate,   setDeliveryDate]   = useState(init.delivery_date  ? init.delivery_date.slice(0, 10) : '');
+  const [pickupDate,     setPickupDate]     = useState(init.pickup_date   ? toLocalDT(init.pickup_date)   : '');
+  const [deliveryDate,   setDeliveryDate]   = useState(init.delivery_date ? toLocalDT(init.delivery_date) : '');
   const [commodity,      setCommodity]      = useState(init.commodity      || '');
   const [weight,         setWeight]         = useState(init.weight         ? String(init.weight) : '');
   const [rate,           setRate]           = useState(init.rate           ? String(init.rate)   : '');
@@ -77,8 +92,8 @@ const LoadEntryForm = ({ prefill = {}, existingLoad = null, onSave, onCancel }) 
         consignee:      consignee.trim()     || null,
         origin:         origin.trim(),
         destination:    destination.trim(),
-        pickup_date:    pickupDate           || null,
-        delivery_date:  deliveryDate         || null,
+        pickup_date:    toISO(pickupDate),
+        delivery_date:  toISO(deliveryDate),
         commodity:      commodity.trim()     || null,
         weight:         weight   ? Number(weight)   : null,
         rate:           Number(rate),
@@ -182,12 +197,12 @@ const LoadEntryForm = ({ prefill = {}, existingLoad = null, onSave, onCancel }) 
 
           {/* Dates */}
           <div className={`${surface} border ${border} p-4 space-y-3`}>
-            <p className={`text-xs tracking-wider font-bold ${subtext}`}>DATES</p>
-            <Field label="PICKUP DATE" optional isDark={isDark} subtext={subtext}>
-              <input type="date" value={pickupDate} onChange={e => setPickupDate(e.target.value)} className={inputCls} />
+            <p className={`text-xs tracking-wider font-bold ${subtext}`}>DATES & TIMES</p>
+            <Field label="PICKUP DATE & TIME" optional isDark={isDark} subtext={subtext}>
+              <input type="datetime-local" value={pickupDate} onChange={e => setPickupDate(e.target.value)} className={inputCls} />
             </Field>
-            <Field label="DELIVERY DATE" optional isDark={isDark} subtext={subtext}>
-              <input type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} className={inputCls} />
+            <Field label="DELIVERY DATE & TIME" optional isDark={isDark} subtext={subtext}>
+              <input type="datetime-local" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} className={inputCls} />
             </Field>
           </div>
 
