@@ -199,7 +199,7 @@ const BusinessSuiteShell = () => {
   // ── Profile tab ───────────────────────────────────────────────────────────
   if (activeTab === 'profile') return (
     <Shell activeTab={activeTab} onTabChange={handleTabChange}>
-      <ProfileScreen onBack={() => setActiveTab('home')} onOpenScanner={() => {}} />
+      <ProfileScreen onBack={() => setActiveTab('home')} />
       <div style={{ padding: '0 16px 32px' }}>
         <button onClick={logout}
           style={{ width: '100%', background: 'none', border: `1px solid ${MC.rivet}`, borderLeft: `3px solid ${MC.red}`, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', fontFamily: FD, fontSize: '14px', fontWeight: 700, letterSpacing: '0.1em', color: MC.red, textTransform: 'uppercase' }}>

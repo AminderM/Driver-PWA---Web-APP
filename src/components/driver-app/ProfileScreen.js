@@ -43,7 +43,21 @@ const ExpiryBadge = ({ date }) => {
   return null;
 };
 
-const ProfileScreen = ({ onBack, onOpenScanner }) => {
+const SCAN_DOC_TYPES = [
+  { value: 'drivers_license',       label: "Driver's License"       },
+  { value: 'medical_card',          label: 'Medical Card'           },
+  { value: 'vehicle_registration',  label: 'Vehicle Registration'   },
+  { value: 'cargo_insurance',       label: 'Cargo Insurance'        },
+  { value: 'liability_insurance',   label: 'Liability Insurance'    },
+  { value: 'cvor_certificate',      label: 'CVOR / NSC Certificate' },
+  { value: 'ifta_license',          label: 'IFTA License'           },
+  { value: 'operating_authority',   label: 'Operating Authority'    },
+  { value: 'abstract',              label: 'Driver Abstract'        },
+  { value: 'proof_of_delivery',     label: 'Proof of Delivery'      },
+  { value: 'other',                 label: 'Other'                  },
+];
+
+const ProfileScreen = ({ onBack }) => {
   const { user, currentLocation, api, userType, updateProfile } = useDriverApp();
   const [documents, setDocuments]     = useState([]);
   const [docsLoading, setDocsLoading] = useState(true);
@@ -57,6 +71,51 @@ const ProfileScreen = ({ onBack, onOpenScanner }) => {
   const [logoPreview, setLogoPreview]     = useState(null);
   const [logoFile, setLogoFile]           = useState(null);
   const logoInputRef                      = useRef(null);
+
+  // Document scan state
+  const scanFileInputRef                  = useRef(null);
+  const [scanFile, setScanFile]           = useState(null);
+  const [scanFileName, setScanFileName]   = useState('');
+  const [scanDocType, setScanDocType]     = useState('drivers_license');
+  const [scanSaving, setScanSaving]       = useState(false);
+  const [scanError, setScanError]         = useState('');
+  const [scanSheet, setScanSheet]         = useState(false);
+
+  const handleScanClick = () => {
+    setScanError('');
+    scanFileInputRef.current?.click();
+  };
+
+  const handleScanFileSelected = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setScanFile(file);
+    setScanFileName(file.name);
+    setScanDocType('drivers_license');
+    setScanError('');
+    setScanSheet(true);
+    e.target.value = '';
+  };
+
+  const submitScan = async () => {
+    if (!scanFile) return;
+    setScanSaving(true);
+    setScanError('');
+    try {
+      const formData = new FormData();
+      formData.append('document_type', scanDocType);
+      formData.append('file', scanFile);
+      const result = await api('/documents/scan', { method: 'POST', body: formData });
+      setDocuments(prev => [result, ...prev]);
+      setScanSheet(false);
+      setScanFile(null);
+      setScanFileName('');
+    } catch (err) {
+      setScanError(err.message || 'Scan failed. Please try again.');
+    } finally {
+      setScanSaving(false);
+    }
+  };
 
   const isBusinessUser = userType === 'owner_operator' || userType === 'carrier';
 
@@ -120,7 +179,7 @@ const ProfileScreen = ({ onBack, onOpenScanner }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 flex flex-col font-['Barlow_Condensed']">
+    <div className="min-h-screen bg-gray-950 flex flex-col font-['Barlow_Condensed'] relative">
       {/* Header */}
       <div className="bg-gradient-to-r from-gray-800 to-gray-950 px-4 py-4 flex items-center gap-3">
         <button onClick={onBack} className="w-10 h-10 flex items-center justify-center">
@@ -364,7 +423,7 @@ const ProfileScreen = ({ onBack, onOpenScanner }) => {
           <div className="flex items-center justify-between">
             <p className="text-white/40 text-xs tracking-wider">SCANNED DOCUMENTS</p>
             <button
-              onClick={onOpenScanner}
+              onClick={handleScanClick}
               className="text-[#CC2222] text-xs tracking-wider hover:text-[#FF2020]"
             >
               + SCAN
@@ -380,7 +439,7 @@ const ProfileScreen = ({ onBack, onOpenScanner }) => {
             <div className="py-4 text-center">
               <p className="text-white/30 text-sm mb-3">No documents scanned yet</p>
               <button
-                onClick={onOpenScanner}
+                onClick={handleScanClick}
                 className="border border-[#1F1F1F] text-white/50 text-sm px-6 py-3 hover:bg-white/5 tracking-wider"
               >
                 SCAN A DOCUMENT
@@ -441,6 +500,65 @@ const ProfileScreen = ({ onBack, onOpenScanner }) => {
           </div>
         )}
       </div>
+
+      {/* Hidden file input for document scan */}
+      <input
+        ref={scanFileInputRef}
+        type="file"
+        accept="image/*,application/pdf"
+        onChange={handleScanFileSelected}
+        className="hidden"
+      />
+
+      {/* Document scan bottom sheet */}
+      {scanSheet && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+          <div className="absolute inset-0 bg-black/70" onClick={() => !scanSaving && setScanSheet(false)} />
+          <div className="relative bg-[#0a0a0a] border-t border-[#1F1F1F] px-5 pt-5 pb-8 space-y-4">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-white text-lg font-bold tracking-wider">SCAN DOCUMENT</h2>
+              {!scanSaving && (
+                <button onClick={() => setScanSheet(false)} className="text-white/40 text-xl">✕</button>
+              )}
+            </div>
+
+            <p className="text-white/50 text-sm truncate">📎 {scanFileName}</p>
+
+            {scanError && (
+              <div className="bg-[#CC2222]/20 border border-[#CC2222]/50 p-3">
+                <p className="text-[#FF2020] text-sm">{scanError}</p>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-white/60 text-xs tracking-wider mb-2">DOCUMENT TYPE</label>
+              <select
+                value={scanDocType}
+                onChange={e => setScanDocType(e.target.value)}
+                disabled={scanSaving}
+                className="w-full bg-[#161616] border border-[#1F1F1F] text-white text-sm py-3 px-3 focus:outline-none focus:border-[#CC2222]"
+              >
+                {SCAN_DOC_TYPES.map(dt => (
+                  <option key={dt.value} value={dt.value}>{dt.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              onClick={submitScan}
+              disabled={scanSaving}
+              className="w-full bg-[#CC2222] hover:bg-[#7A1010] disabled:bg-[#CC2222]/50 text-white font-bold py-4 tracking-wider transition-colors"
+            >
+              {scanSaving ? (
+                <span className="flex items-center justify-center gap-2">
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  SCANNING...
+                </span>
+              ) : 'UPLOAD & SCAN'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -4,16 +4,23 @@ import { useDriverApp } from './DriverAppProvider';
 // ── Document type config ──────────────────────────────────────────────────────
 
 const DOC_TYPES = [
-  { value: 'cdl',            label: 'CDL',                    icon: '🪪', hasExpiry: true  },
-  { value: 'medical_card',   label: 'Medical Card',           icon: '🏥', hasExpiry: true  },
-  { value: 'insurance',      label: 'Insurance Certificate',  icon: '🛡️', hasExpiry: true  },
-  { value: 'ifta',           label: 'IFTA License',           icon: '⛽', hasExpiry: true  },
-  { value: 'irp',            label: 'IRP Registration',       icon: '📋', hasExpiry: true  },
-  { value: 'operating_auth', label: 'Operating Authority',    icon: '📜', hasExpiry: false },
-  { value: 'boc3',           label: 'BOC-3',                  icon: '📝', hasExpiry: false },
-  { value: 'drug_test',      label: 'Drug Test',              icon: '🧪', hasExpiry: true  },
-  { value: 'inspection',     label: 'Annual Inspection',      icon: '🔍', hasExpiry: true  },
-  { value: 'other',          label: 'Other',                  icon: '📄', hasExpiry: true  },
+  { value: 'drivers_license',       label: "Driver's License",       icon: '🪪', hasExpiry: true  },
+  { value: 'medical_card',          label: 'Medical Card',           icon: '🏥', hasExpiry: true  },
+  { value: 'hazmat_cert',           label: 'Hazmat Certification',   icon: '☢️', hasExpiry: true  },
+  { value: 'twic_card',             label: 'TWIC Card',              icon: '🪪', hasExpiry: true  },
+  { value: 'abstract',              label: 'Driver Abstract',        icon: '📋', hasExpiry: false },
+  { value: 'sin_card',              label: 'SIN Card',               icon: '🪪', hasExpiry: false },
+  { value: 'void_cheque',           label: 'Void Cheque',            icon: '🏦', hasExpiry: false },
+  { value: 'vehicle_registration',  label: 'Vehicle Registration',   icon: '🚛', hasExpiry: true  },
+  { value: 'cvor_certificate',      label: 'CVOR / NSC Certificate', icon: '📜', hasExpiry: true  },
+  { value: 'cargo_insurance',       label: 'Cargo Insurance',        icon: '🛡️', hasExpiry: true  },
+  { value: 'liability_insurance',   label: 'Liability Insurance',    icon: '🛡️', hasExpiry: true  },
+  { value: 'lease_agreement',       label: 'Lease Agreement',        icon: '📝', hasExpiry: false },
+  { value: 'ifta_license',          label: 'IFTA License',           icon: '⛽', hasExpiry: true  },
+  { value: 'business_registration', label: 'Business Registration',  icon: '🏢', hasExpiry: false },
+  { value: 'gst_hst_registration',  label: 'GST/HST Registration',   icon: '🏢', hasExpiry: false },
+  { value: 'operating_authority',   label: 'Operating Authority',    icon: '📜', hasExpiry: false },
+  { value: 'other',                 label: 'Other',                  icon: '📄', hasExpiry: false },
 ];
 
 const DOC_TYPE_MAP = Object.fromEntries(DOC_TYPES.map(d => [d.value, d]));
@@ -59,7 +66,7 @@ const DocumentVaultScreen = ({ onBack }) => {
   const [selectedDoc, setSelectedDoc] = useState(null);
 
   // Form state
-  const [formDocType,   setFormDocType]   = useState('cdl');
+  const [formDocType,   setFormDocType]   = useState('drivers_license');
   const [formLabel,     setFormLabel]     = useState('');
   const [formExpiry,    setFormExpiry]    = useState('');
   const [formNotes,     setFormNotes]     = useState('');
@@ -99,7 +106,7 @@ const DocumentVaultScreen = ({ onBack }) => {
   // ── Form helpers ──────────────────────────────────────────────────────────
 
   const openAdd = () => {
-    setFormDocType('cdl');
+    setFormDocType('drivers_license');
     setFormLabel('');
     setFormExpiry('');
     setFormNotes('');
