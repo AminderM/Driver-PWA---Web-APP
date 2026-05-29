@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { useDriverApp } from './DriverAppProvider';
 
 const STATUS_CONFIG = {
@@ -32,7 +32,7 @@ const LoadOfferCard = ({ load, onAccept, onReject, onViewRoute, accepting, accep
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
             <span className="relative inline-flex rounded-full h-3 w-3 bg-white" />
           </span>
-          <span className="text-white font-semibold text-sm tracking-wider">NEW LOAD</span>
+          <span className="text-white font-semibold text-base tracking-wider">NEW LOAD</span>
         </div>
         <span className="text-white font-bold tracking-wider">
           {load.order_number || `LD-${load.id?.slice(0, 8).toUpperCase()}`}
@@ -49,20 +49,20 @@ const LoadOfferCard = ({ load, onAccept, onReject, onViewRoute, accepting, accep
           </div>
           <div className="flex-1">
             <div className="mb-4">
-              <p className={`text-xs font-medium tracking-wider ${isDark ? 'text-white/50' : 'text-black/50'}`}>PICKUP</p>
+              <p className={`text-sm font-medium tracking-wider ${isDark ? 'text-white/50' : 'text-black/50'}`}>PICKUP</p>
               <p className={`font-semibold ${isDark ? 'text-white' : 'text-black'}`}>
                 {load.pickup_city || load.origin_city}{load.pickup_state || load.origin_state ? `, ${load.pickup_state || load.origin_state}` : ''}
               </p>
-              <p className={`text-sm truncate ${isDark ? 'text-white/60' : 'text-black/60'}`}>
+              <p className={`text-base truncate ${isDark ? 'text-white/60' : 'text-black/60'}`}>
                 {load.pickup_location || load.origin_address || 'Address TBD'}
               </p>
             </div>
             <div>
-              <p className={`text-xs font-medium tracking-wider ${isDark ? 'text-white/50' : 'text-black/50'}`}>DELIVERY</p>
+              <p className={`text-sm font-medium tracking-wider ${isDark ? 'text-white/50' : 'text-black/50'}`}>DELIVERY</p>
               <p className={`font-semibold ${isDark ? 'text-white' : 'text-black'}`}>
                 {load.delivery_city || load.destination_city}{load.delivery_state || load.destination_state ? `, ${load.delivery_state || load.destination_state}` : ''}
               </p>
-              <p className={`text-sm truncate ${isDark ? 'text-white/60' : 'text-black/60'}`}>
+              <p className={`text-base truncate ${isDark ? 'text-white/60' : 'text-black/60'}`}>
                 {load.delivery_location || load.destination_address || 'Address TBD'}
               </p>
             </div>
@@ -73,20 +73,20 @@ const LoadOfferCard = ({ load, onAccept, onReject, onViewRoute, accepting, accep
       {/* Stats */}
       <div className="px-4 pb-4 grid grid-cols-3 gap-3">
         <div className={`p-3 text-center ${isDark ? 'bg-[#171717]' : 'bg-[#f5f5f5]'}`}>
-          <p className={`text-xs ${isDark ? 'text-white/50' : 'text-black/50'}`}>DISTANCE</p>
-          <p className={`font-bold text-lg ${isDark ? 'text-white' : 'text-black'}`}>
+          <p className={`text-sm ${isDark ? 'text-white/50' : 'text-black/50'}`}>DISTANCE</p>
+          <p className={`font-bold text-xl ${isDark ? 'text-white' : 'text-black'}`}>
             {miles != null ? `${miles} mi` : '—'}
           </p>
         </div>
         <div className={`p-3 text-center ${isDark ? 'bg-[#171717]' : 'bg-[#f5f5f5]'}`}>
-          <p className={`text-xs ${isDark ? 'text-white/50' : 'text-black/50'}`}>EST. TIME</p>
-          <p className={`font-bold text-lg ${isDark ? 'text-white' : 'text-black'}`}>
+          <p className={`text-sm ${isDark ? 'text-white/50' : 'text-black/50'}`}>EST. TIME</p>
+          <p className={`font-bold text-xl ${isDark ? 'text-white' : 'text-black'}`}>
             {hours != null ? `${hours}h` : '—'}
           </p>
         </div>
         <div className="bg-green-600/20 border border-green-600/50 p-3 text-center">
-          <p className="text-xs text-green-500">PAY</p>
-          <p className="text-green-500 font-bold text-lg">
+          <p className="text-sm text-green-500">PAY</p>
+          <p className="text-green-500 font-bold text-xl">
             {pay != null ? `$${Number(pay).toLocaleString()}` : '—'}
           </p>
         </div>
@@ -96,12 +96,12 @@ const LoadOfferCard = ({ load, onAccept, onReject, onViewRoute, accepting, accep
       {(load.equipment_type || load.commodity) && (
         <div className="px-4 pb-4 flex gap-2 flex-wrap">
           {load.equipment_type && (
-            <span className={`text-xs px-3 py-1 ${isDark ? 'bg-[#171717] text-white/70' : 'bg-[#f5f5f5] text-black/70'}`}>
+            <span className={`text-sm px-3 py-1 ${isDark ? 'bg-[#171717] text-white/70' : 'bg-[#f5f5f5] text-black/70'}`}>
               {load.equipment_type}
             </span>
           )}
           {load.commodity && (
-            <span className={`text-xs px-3 py-1 ${isDark ? 'bg-[#171717] text-white/70' : 'bg-[#f5f5f5] text-black/70'}`}>
+            <span className={`text-sm px-3 py-1 ${isDark ? 'bg-[#171717] text-white/70' : 'bg-[#f5f5f5] text-black/70'}`}>
               {load.commodity}
             </span>
           )}
@@ -128,7 +128,7 @@ const LoadOfferCard = ({ load, onAccept, onReject, onViewRoute, accepting, accep
       {/* Accept error */}
       {acceptError && (
         <div className="mx-4 mb-3 bg-red-600/20 border border-red-600/50 px-4 py-3">
-          <p className="text-red-500 text-sm">{acceptError}</p>
+          <p className="text-red-500 text-base">{acceptError}</p>
         </div>
       )}
 
@@ -184,11 +184,11 @@ const ActiveLoadCard = ({ load, onViewRoute, onViewDetails, theme }) => {
             <span className={`font-bold tracking-wider ${isDark ? 'text-white' : 'text-black'}`}>
               {load.order_number || `LD-${load.id?.slice(0, 8).toUpperCase()}`}
             </span>
-            <span className={`${status.color} text-white text-xs px-2 py-0.5 tracking-wider`}>
+            <span className={`${status.color} text-white text-sm px-2 py-0.5 tracking-wider`}>
               {status.label}
             </span>
           </div>
-          <p className={`text-sm ${isDark ? 'text-white/60' : 'text-black/60'}`}>
+          <p className={`text-base ${isDark ? 'text-white/60' : 'text-black/60'}`}>
             {load.pickup_city || load.origin_city} → {load.delivery_city || load.destination_city}
           </p>
         </div>
@@ -200,7 +200,7 @@ const ActiveLoadCard = ({ load, onViewRoute, onViewDetails, theme }) => {
       <div className={`flex border-t ${isDark ? 'border-[#262626]' : 'border-[#e5e5e5]'}`}>
         <button
           onClick={() => onViewRoute(load)}
-          className={`flex-1 py-3 text-sm font-medium tracking-wider transition-colors flex items-center justify-center gap-1 text-red-600 ${
+          className={`flex-1 py-3 text-base font-medium tracking-wider transition-colors flex items-center justify-center gap-1 text-red-600 ${
             isDark ? 'hover:bg-red-600/10' : 'hover:bg-red-50'
           }`}
         >
@@ -212,7 +212,7 @@ const ActiveLoadCard = ({ load, onViewRoute, onViewDetails, theme }) => {
         <div className={`w-px ${isDark ? 'bg-[#262626]' : 'bg-[#e5e5e5]'}`} />
         <button
           onClick={() => onViewDetails(load)}
-          className={`flex-1 py-3 text-sm font-medium tracking-wider transition-colors flex items-center justify-center gap-1 ${
+          className={`flex-1 py-3 text-base font-medium tracking-wider transition-colors flex items-center justify-center gap-1 ${
             isDark ? 'text-white/60 hover:bg-[#171717]' : 'text-black/60 hover:bg-[#f5f5f5]'
           }`}
         >
@@ -227,7 +227,7 @@ const ActiveLoadCard = ({ load, onViewRoute, onViewDetails, theme }) => {
 };
 
 const MyLoadsScreen = ({ onNavigate, onSelectLoad, onViewMap, hideMenu }) => {
-  const { api, user, theme, toggleTheme } = useDriverApp();
+  const { api, user, theme } = useDriverApp();
   const [availableLoads, setAvailableLoads] = useState([]);
   const [activeLoads, setActiveLoads] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -313,40 +313,22 @@ const MyLoadsScreen = ({ onNavigate, onSelectLoad, onViewMap, hideMenu }) => {
   }
 
   return (
-    <div className={`min-h-screen flex flex-col font-['Oxanium'] ${isDark ? 'bg-black' : 'bg-white'}`}>
+    <div className={`min-h-screen flex flex-col font-['Barlow_Condensed'] ${isDark ? 'bg-black' : 'bg-white'}`}>
       {/* Header */}
       <div className={`px-4 py-4 flex items-center justify-between border-b ${isDark ? 'border-[#262626]' : 'border-[#e5e5e5]'}`}>
         <div>
-          <h1 className={`text-xl font-bold tracking-wider ${isDark ? 'text-white' : 'text-black'}`}>MY LOADS</h1>
+          <h1 className={`text-2xl font-bold tracking-wider ${isDark ? 'text-white' : 'text-black'}`}>MY LOADS</h1>
         </div>
-        <div className="flex items-center gap-2">
+        {!hideMenu && (
           <button
-            onClick={toggleTheme}
-            className={`w-10 h-10 flex items-center justify-center border ${
-              isDark ? 'border-[#262626] text-white' : 'border-[#e5e5e5] text-black'
-            }`}
+            onClick={() => onNavigate('menu')}
+            className={`w-10 h-10 flex items-center justify-center ${isDark ? 'text-white' : 'text-black'}`}
           >
-            {isDark ? (
-              <svg className="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-              </svg>
-            )}
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
           </button>
-          {!hideMenu && (
-            <button
-              onClick={() => onNavigate('menu')}
-              className={`w-10 h-10 flex items-center justify-center ${isDark ? 'text-white' : 'text-black'}`}
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -358,13 +340,13 @@ const MyLoadsScreen = ({ onNavigate, onSelectLoad, onViewMap, hideMenu }) => {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex-1 py-3 text-sm font-medium tracking-wider transition-colors relative ${
+            className={`flex-1 py-3 text-base font-medium tracking-wider transition-colors relative ${
               tab === t.id ? 'text-red-600' : isDark ? 'text-white/50' : 'text-black/50'
             }`}
           >
             {t.label}
             {t.count > 0 && (
-              <span className="ml-1 bg-red-600 text-white text-xs px-1.5 py-0.5">{t.count}</span>
+              <span className="ml-1 bg-red-600 text-white text-sm px-1.5 py-0.5">{t.count}</span>
             )}
             {tab === t.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600" />}
           </button>
@@ -382,7 +364,7 @@ const MyLoadsScreen = ({ onNavigate, onSelectLoad, onViewMap, hideMenu }) => {
                 </svg>
               </div>
               <h3 className={`font-medium mb-1 tracking-wider ${isDark ? 'text-white' : 'text-black'}`}>NO LOADS AVAILABLE</h3>
-              <p className={`text-sm ${isDark ? 'text-white/50' : 'text-black/50'}`}>New loads will appear here</p>
+              <p className={`text-base ${isDark ? 'text-white/50' : 'text-black/50'}`}>New loads will appear here</p>
             </div>
           ) : (
             availableLoads.map(load => (
@@ -407,7 +389,7 @@ const MyLoadsScreen = ({ onNavigate, onSelectLoad, onViewMap, hideMenu }) => {
                 </svg>
               </div>
               <h3 className={`font-medium mb-1 tracking-wider ${isDark ? 'text-white' : 'text-black'}`}>NO ACTIVE LOADS</h3>
-              <p className={`text-sm ${isDark ? 'text-white/50' : 'text-black/50'}`}>Accept a load to get started</p>
+              <p className={`text-base ${isDark ? 'text-white/50' : 'text-black/50'}`}>Accept a load to get started</p>
             </div>
           ) : (
             activeLoads.map(load => (

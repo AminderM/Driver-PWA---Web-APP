@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { useDriverApp } from './DriverAppProvider';
 import RateConScanner from './RateConScanner';
 import LoadEntryForm from './LoadEntryForm';
@@ -19,7 +19,7 @@ const STATUS_CONFIG = {
 };
 
 const ManualLoadsScreen = ({ onBack }) => {
-  const { api, theme } = useDriverApp();
+  const { api, theme, toggleTheme } = useDriverApp();
   const isDark = theme === 'dark';
 
   const bg      = isDark ? 'bg-black'         : 'bg-[#f5f5f5]';
@@ -112,9 +112,9 @@ const ManualLoadsScreen = ({ onBack }) => {
       <button onClick={() => openEdit(load)} className={`w-full text-left ${surface} border ${border} overflow-hidden mb-3`}>
         {/* Status bar */}
         <div className={`${cfg.bg} px-4 py-1.5 flex items-center justify-between`}>
-          <span className="text-white text-xs font-bold tracking-widest">{cfg.label}</span>
+          <span className="text-white text-sm font-bold tracking-widest">{cfg.label}</span>
           {load.pickup_date && (
-            <span className="text-white/70 text-xs">
+            <span className="text-white/70 text-sm">
               {new Date(load.pickup_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
           )}
@@ -124,41 +124,41 @@ const ManualLoadsScreen = ({ onBack }) => {
           {/* Route */}
           <div className="flex items-center gap-2 mb-2">
             <div className="flex-1 min-w-0">
-              <p className={`text-xs ${subtext} tracking-wider`}>FROM</p>
-              <p className={`text-sm font-bold truncate ${text}`}>{load.origin || '—'}</p>
+              <p className={`text-sm ${subtext} tracking-wider`}>FROM</p>
+              <p className={`text-base font-bold truncate ${text}`}>{load.origin || '—'}</p>
             </div>
             <svg className={`w-5 h-5 flex-shrink-0 ${subtext}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
             </svg>
             <div className="flex-1 min-w-0 text-right">
-              <p className={`text-xs ${subtext} tracking-wider`}>TO</p>
-              <p className={`text-sm font-bold truncate ${text}`}>{load.destination || '—'}</p>
+              <p className={`text-sm ${subtext} tracking-wider`}>TO</p>
+              <p className={`text-base font-bold truncate ${text}`}>{load.destination || '—'}</p>
             </div>
           </div>
 
           {/* Stats row */}
           <div className={`grid grid-cols-3 gap-2 mt-2 pt-2 border-t ${border}`}>
             <div className={`text-center p-2 ${isDark ? 'bg-[#171717]' : 'bg-[#f5f5f5]'}`}>
-              <p className={`text-xs ${subtext} tracking-wider`}>RATE</p>
-              <p className={`text-sm font-bold ${text}`}>
+              <p className={`text-sm ${subtext} tracking-wider`}>RATE</p>
+              <p className={`text-base font-bold ${text}`}>
                 {load.rate ? `$${Number(load.rate).toLocaleString()}` : '—'}
               </p>
             </div>
             <div className={`text-center p-2 ${isDark ? 'bg-[#171717]' : 'bg-[#f5f5f5]'}`}>
-              <p className={`text-xs ${subtext} tracking-wider`}>MILES</p>
-              <p className={`text-sm font-bold ${text}`}>
+              <p className={`text-sm ${subtext} tracking-wider`}>MILES</p>
+              <p className={`text-base font-bold ${text}`}>
                 {load.estimated_miles ? Number(load.estimated_miles).toLocaleString() : '—'}
               </p>
             </div>
             <div className={`text-center p-2 ${isDark ? 'bg-[#171717]' : 'bg-[#f5f5f5]'}`}>
-              <p className={`text-xs ${subtext} tracking-wider`}>RPM</p>
-              <p className={`text-sm font-bold ${rpm ? 'text-green-400' : text}`}>{rpm || '—'}</p>
+              <p className={`text-sm ${subtext} tracking-wider`}>RPM</p>
+              <p className={`text-base font-bold ${rpm ? 'text-green-400' : text}`}>{rpm || '—'}</p>
             </div>
           </div>
 
           {/* Broker / commodity */}
           {(load.broker_name || load.commodity) && (
-            <p className={`text-xs mt-2 ${subtext} truncate`}>
+            <p className={`text-sm mt-2 ${subtext} truncate`}>
               {[load.broker_name, load.commodity].filter(Boolean).join(' · ')}
             </p>
           )}
@@ -179,11 +179,18 @@ const ManualLoadsScreen = ({ onBack }) => {
 
   // ── Main list ─────────────────────────────────────────────────────────────
   return (
-    <div className={`flex-1 flex flex-col font-['Oxanium'] ${bg}`}>
+    <div className={`flex-1 flex flex-col font-['Barlow_Condensed'] ${bg}`}>
       {/* Header */}
       <div className={`${surface} border-b ${border} px-5 pt-10 pb-4`}>
         <div className="flex items-center justify-between mb-1">
-          <h1 className={`text-xl font-bold tracking-wider ${text}`}>MY LOADS</h1>
+          <h1 className={`text-2xl font-bold tracking-wider ${text}`}>MY LOADS</h1>
+          <button onClick={toggleTheme} className={`w-9 h-9 flex items-center justify-center flex-shrink-0 ${isDark ? 'text-yellow-400' : 'text-black/50'}`}>
+            {isDark ? (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+            )}
+          </button>
           <button
             onClick={() => setShowAddSheet(true)}
             className="w-10 h-10 bg-red-600 hover:bg-red-700 flex items-center justify-center transition-colors"
@@ -196,7 +203,7 @@ const ManualLoadsScreen = ({ onBack }) => {
 
         {/* Revenue summary */}
         {totalRevenue > 0 && (
-          <p className={`text-xs ${subtext}`}>
+          <p className={`text-sm ${subtext}`}>
             Delivered + invoiced: <span className="text-green-400 font-semibold">${totalRevenue.toLocaleString()}</span>
           </p>
         )}
@@ -209,7 +216,7 @@ const ManualLoadsScreen = ({ onBack }) => {
               <button
                 key={f.value}
                 onClick={() => setFilter(f.value)}
-                className={`flex-shrink-0 px-3 py-1.5 text-xs font-semibold tracking-wider border transition-colors ${
+                className={`flex-shrink-0 px-3 py-1.5 text-sm font-semibold tracking-wider border transition-colors ${
                   filter === f.value
                     ? 'bg-red-600 border-red-600 text-white'
                     : `${border} ${subtext}`
@@ -231,15 +238,15 @@ const ManualLoadsScreen = ({ onBack }) => {
       <div className="flex-1 overflow-y-auto px-4 py-4">
         {fetchError && (
           <div className="bg-red-600/20 border border-red-600/50 p-4 mb-4">
-            <p className="text-red-400 text-sm">{fetchError}</p>
-            <button onClick={fetchLoads} className="text-red-400 text-xs mt-2 underline">Retry</button>
+            <p className="text-red-400 text-base">{fetchError}</p>
+            <button onClick={fetchLoads} className="text-red-400 text-sm mt-2 underline">Retry</button>
           </div>
         )}
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <div className="w-8 h-8 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
-            <p className={`text-sm ${subtext}`}>Loading loads...</p>
+            <p className={`text-base ${subtext}`}>Loading loads...</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-6">
@@ -249,10 +256,10 @@ const ManualLoadsScreen = ({ onBack }) => {
                   d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0zM13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1" />
               </svg>
             </div>
-            <p className={`text-base font-bold tracking-wider mb-2 ${text}`}>
+            <p className={`text-lg font-bold tracking-wider mb-2 ${text}`}>
               {filter === 'all' ? 'NO LOADS YET' : `NO ${filter.toUpperCase().replace('_', ' ')} LOADS`}
             </p>
-            <p className={`text-sm mb-6 ${subtext}`}>
+            <p className={`text-base mb-6 ${subtext}`}>
               {filter === 'all'
                 ? 'Add your first load manually or scan a rate confirmation.'
                 : 'No loads with this status.'}
@@ -277,18 +284,18 @@ const ManualLoadsScreen = ({ onBack }) => {
           <div className={`relative ${surface} border-t ${border} px-5 pt-5 pb-10`}
             onClick={e => e.stopPropagation()}>
             <div className={`w-10 h-1 ${isDark ? 'bg-white/20' : 'bg-black/20'} mx-auto mb-5`} />
-            <p className={`text-xs font-bold tracking-widest mb-4 ${subtext}`}>ADD LOAD</p>
+            <p className={`text-sm font-bold tracking-widest mb-4 ${subtext}`}>ADD LOAD</p>
             <div className="space-y-3">
               <button
                 onClick={() => { setShowAddSheet(false); setScreen('scanner'); setPrefillData({}); setEditLoad(null); }}
                 className={`w-full flex items-center gap-4 p-4 border ${border} hover:border-red-600/50 transition-colors`}
               >
                 <div className="w-10 h-10 bg-red-600/20 flex items-center justify-center flex-shrink-0">
-                  <span className="text-lg">✨</span>
+                  <span className="text-xl">✨</span>
                 </div>
                 <div className="text-left">
-                  <p className={`text-sm font-bold tracking-wider ${text}`}>SCAN RATE CONFIRMATION</p>
-                  <p className={`text-xs mt-0.5 ${subtext}`}>AI extracts all details automatically</p>
+                  <p className={`text-base font-bold tracking-wider ${text}`}>SCAN RATE CONFIRMATION</p>
+                  <p className={`text-sm mt-0.5 ${subtext}`}>AI extracts all details automatically</p>
                 </div>
               </button>
 
@@ -303,8 +310,8 @@ const ManualLoadsScreen = ({ onBack }) => {
                   </svg>
                 </div>
                 <div className="text-left">
-                  <p className={`text-sm font-bold tracking-wider ${text}`}>ENTER MANUALLY</p>
-                  <p className={`text-xs mt-0.5 ${subtext}`}>Fill in the form yourself</p>
+                  <p className={`text-base font-bold tracking-wider ${text}`}>ENTER MANUALLY</p>
+                  <p className={`text-sm mt-0.5 ${subtext}`}>Fill in the form yourself</p>
                 </div>
               </button>
             </div>

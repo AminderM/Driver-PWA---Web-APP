@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+﻿import React, { useState, useRef } from 'react';
 import { useDriverApp } from './DriverAppProvider';
 import { takePhoto, isNative, hapticSuccess } from '../../lib/native';
 
@@ -116,7 +116,7 @@ const DocumentScanScreen = ({ onComplete, requiredDocs = [] }) => {
   const completeLabel = userType === 'carrier' ? 'GO TO MY FLEET' : 'GO TO MY LOADS';
 
   if (step === 'welcome') return (
-    <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
+    <div className={`min-h-screen flex flex-col font-['Barlow_Condensed'] ${bg}`}>
       <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
         <div className="w-20 h-20 bg-red-600 flex items-center justify-center mb-6">
           <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -124,8 +124,8 @@ const DocumentScanScreen = ({ onComplete, requiredDocs = [] }) => {
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z" />
           </svg>
         </div>
-        <h1 className={`text-2xl font-bold tracking-wider mb-3 ${text}`}>COMPLETE YOUR PROFILE</h1>
-        <p className={`text-sm mb-10 max-w-xs leading-relaxed ${subtext}`}>
+        <h1 className={`text-3xl font-bold tracking-wider mb-3 ${text}`}>COMPLETE YOUR PROFILE</h1>
+        <p className={`text-base mb-10 max-w-xs leading-relaxed ${subtext}`}>
           {userType === 'carrier'
             ? 'Upload your business documents to complete your carrier profile.'
             : "Scan your driver's license or other documents to get started."}
@@ -149,10 +149,10 @@ const DocumentScanScreen = ({ onComplete, requiredDocs = [] }) => {
   );
 
   if (step === 'select-type') return (
-    <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
+    <div className={`min-h-screen flex flex-col font-['Barlow_Condensed'] ${bg}`}>
       <div className={`pt-14 pb-6 px-6 border-b ${isDark ? 'border-[#262626]' : 'border-[#e5e5e5]'}`}>
-        <button onClick={() => setStep('welcome')} className={`text-sm tracking-wider mb-4 ${subtext}`}>← BACK</button>
-        <h1 className={`text-xl font-bold tracking-wider ${text}`}>SELECT DOCUMENT TYPE</h1>
+        <button onClick={() => setStep('welcome')} className={`text-base tracking-wider mb-4 ${subtext}`}>← BACK</button>
+        <h1 className={`text-2xl font-bold tracking-wider ${text}`}>SELECT DOCUMENT TYPE</h1>
       </div>
       <div className="flex-1 px-6 py-6 space-y-3">
         {documentTypes.map((dt) => {
@@ -167,10 +167,10 @@ const DocumentScanScreen = ({ onComplete, requiredDocs = [] }) => {
                   : isDark ? 'border-[#262626] hover:bg-white/5' : 'border-[#e5e5e5] hover:bg-black/5'
               }`}
             >
-              <span className="text-2xl">{dt.emoji}</span>
+              <span className="text-3xl">{dt.emoji}</span>
               <span className={`flex-1 font-semibold tracking-wider ${text}`}>{dt.label}</span>
               {isRequired && (
-                <span className="text-xs bg-red-600 text-white px-2 py-0.5 tracking-wider">REQUIRED</span>
+                <span className="text-sm bg-red-600 text-white px-2 py-0.5 tracking-wider">REQUIRED</span>
               )}
             </button>
           );
@@ -198,10 +198,10 @@ const DocumentScanScreen = ({ onComplete, requiredDocs = [] }) => {
   if (step === 'preview') {
     const label = ALL_DOC_TYPES[docType]?.label || 'Document';
     return (
-      <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
+      <div className={`min-h-screen flex flex-col font-['Barlow_Condensed'] ${bg}`}>
         <div className={`pt-14 pb-6 px-6 border-b ${isDark ? 'border-[#262626]' : 'border-[#e5e5e5]'}`}>
-          <h1 className={`text-xl font-bold tracking-wider ${text}`}>{label.toUpperCase()}</h1>
-          <p className={`text-sm mt-1 ${subtext}`}>Make sure the document is clear and readable</p>
+          <h1 className={`text-2xl font-bold tracking-wider ${text}`}>{label.toUpperCase()}</h1>
+          <p className={`text-base mt-1 ${subtext}`}>Make sure the document is clear and readable</p>
         </div>
         <div className="flex-1 px-6 py-6 flex flex-col">
           <div className={`flex-1 border flex items-center justify-center overflow-hidden ${isDark ? 'border-[#262626]' : 'border-[#e5e5e5]'}`} style={{ minHeight: 280 }}>
@@ -237,16 +237,16 @@ const DocumentScanScreen = ({ onComplete, requiredDocs = [] }) => {
   }
 
   if (step === 'uploading') return (
-    <div className={`min-h-screen flex flex-col items-center justify-center font-['Oxanium'] ${bg}`}>
+    <div className={`min-h-screen flex flex-col items-center justify-center font-['Barlow_Condensed'] ${bg}`}>
       <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-6" />
-      <p className={`text-sm tracking-wider ${subtext}`}>UPLOADING DOCUMENT...</p>
+      <p className={`text-base tracking-wider ${subtext}`}>UPLOADING DOCUMENT...</p>
     </div>
   );
 
   if (step === 'success') {
     const label = ALL_DOC_TYPES[docType]?.label || 'Document';
     return (
-      <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
+      <div className={`min-h-screen flex flex-col font-['Barlow_Condensed'] ${bg}`}>
         <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
           <div className={`w-20 h-20 flex items-center justify-center mb-6 ${uploadError ? 'bg-amber-500/20' : 'bg-green-600/20'}`}>
             {uploadError
@@ -254,10 +254,10 @@ const DocumentScanScreen = ({ onComplete, requiredDocs = [] }) => {
               : <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
             }
           </div>
-          <h1 className={`text-2xl font-bold tracking-wider mb-3 ${text}`}>
+          <h1 className={`text-3xl font-bold tracking-wider mb-3 ${text}`}>
             {uploadError ? 'SAVED LOCALLY' : 'DOCUMENT UPLOADED'}
           </h1>
-          <p className={`text-sm mb-10 max-w-xs leading-relaxed ${subtext}`}>
+          <p className={`text-base mb-10 max-w-xs leading-relaxed ${subtext}`}>
             {uploadError || `Your ${label.toLowerCase()} has been scanned and uploaded successfully.`}
           </p>
           <div className="w-full space-y-3">

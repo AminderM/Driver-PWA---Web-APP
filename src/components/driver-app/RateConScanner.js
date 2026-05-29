@@ -1,9 +1,9 @@
-import React, { useState, useRef } from 'react';
+﻿import React, { useState, useRef } from 'react';
 import { useDriverApp } from './DriverAppProvider';
 import { takePhoto, isNative } from '../../lib/native';
 
 const RateConScanner = ({ onParsed, onCancel }) => {
-  const { api, theme } = useDriverApp();
+  const { api, theme, toggleTheme } = useDriverApp();
   const isDark = theme === 'dark';
 
   const bg       = isDark ? 'bg-black'         : 'bg-white';
@@ -62,11 +62,20 @@ const RateConScanner = ({ onParsed, onCancel }) => {
 
   // ── Capture ───────────────────────────────────────────────────────────────
   if (step === 'capture') return (
-    <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
+    <div className={`min-h-screen flex flex-col font-['Barlow_Condensed'] ${bg}`}>
       <div className={`pt-12 pb-6 px-5 border-b ${border}`}>
-        <button onClick={onCancel} className={`text-sm tracking-wider mb-4 block ${subtext}`}>← CANCEL</button>
-        <h1 className={`text-xl font-bold tracking-wider ${text}`}>SCAN RATE CONFIRMATION</h1>
-        <p className={`text-xs mt-1 ${subtext}`}>AI will extract load details automatically</p>
+        <div className="flex items-center justify-between mb-4">
+          <button onClick={onCancel} className={`text-base tracking-wider ${subtext}`}>← CANCEL</button>
+          <button onClick={toggleTheme} className={`w-9 h-9 flex items-center justify-center flex-shrink-0 ${isDark ? 'text-yellow-400' : 'text-black/50'}`}>
+            {isDark ? (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+            )}
+          </button>
+        </div>
+        <h1 className={`text-2xl font-bold tracking-wider ${text}`}>SCAN RATE CONFIRMATION</h1>
+        <p className={`text-sm mt-1 ${subtext}`}>AI will extract load details automatically</p>
       </div>
 
       <div className="flex-1 px-5 py-8 space-y-4">
@@ -81,10 +90,10 @@ const RateConScanner = ({ onParsed, onCancel }) => {
             </svg>
           </div>
           <div className="text-center">
-            <p className={`font-bold tracking-wider text-sm ${text}`}>
+            <p className={`font-bold tracking-wider text-base ${text}`}>
               {isNative() ? 'TAKE PHOTO' : 'USE CAMERA'}
             </p>
-            <p className={`text-xs mt-1 ${subtext}`}>Point camera at your rate con</p>
+            <p className={`text-sm mt-1 ${subtext}`}>Point camera at your rate con</p>
           </div>
         </button>
 
@@ -100,16 +109,16 @@ const RateConScanner = ({ onParsed, onCancel }) => {
             </svg>
           </div>
           <div className="text-center">
-            <p className={`font-bold tracking-wider text-sm ${text}`}>UPLOAD FILE</p>
-            <p className={`text-xs mt-1 ${subtext}`}>PDF or image from your phone</p>
+            <p className={`font-bold tracking-wider text-base ${text}`}>UPLOAD FILE</p>
+            <p className={`text-sm mt-1 ${subtext}`}>PDF or image from your phone</p>
           </div>
         </button>
 
         <div className={`${surface} border ${border} p-4 flex gap-3`}>
-          <span className="text-lg">✨</span>
+          <span className="text-xl">✨</span>
           <div>
-            <p className={`text-xs font-bold tracking-wider ${text}`}>POWERED BY CLAUDE AI</p>
-            <p className={`text-xs mt-1 ${subtext}`}>
+            <p className={`text-sm font-bold tracking-wider ${text}`}>POWERED BY CLAUDE AI</p>
+            <p className={`text-sm mt-1 ${subtext}`}>
               Extracts shipper, consignee, origin, destination, dates, rate, broker info and more — instantly.
             </p>
           </div>
@@ -120,17 +129,17 @@ const RateConScanner = ({ onParsed, onCancel }) => {
 
   // ── Preview ───────────────────────────────────────────────────────────────
   if (step === 'preview') return (
-    <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
+    <div className={`min-h-screen flex flex-col font-['Barlow_Condensed'] ${bg}`}>
       <div className={`pt-12 pb-6 px-5 border-b ${border}`}>
         <button onClick={() => { setStep('capture'); setPreviewUrl(null); setFile(null); }}
-          className={`text-sm tracking-wider mb-4 block ${subtext}`}>← RETAKE</button>
-        <h1 className={`text-xl font-bold tracking-wider ${text}`}>CONFIRM IMAGE</h1>
+          className={`text-base tracking-wider mb-4 block ${subtext}`}>← RETAKE</button>
+        <h1 className={`text-2xl font-bold tracking-wider ${text}`}>CONFIRM IMAGE</h1>
       </div>
 
       <div className="flex-1 px-5 py-6 flex flex-col gap-5">
         {parseError && (
           <div className="bg-red-600/20 border border-red-600/50 p-4">
-            <p className="text-red-400 text-sm">{parseError}</p>
+            <p className="text-red-400 text-base">{parseError}</p>
           </div>
         )}
 
@@ -141,8 +150,8 @@ const RateConScanner = ({ onParsed, onCancel }) => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
               </svg>
-              <p className={`text-sm font-bold tracking-wider ${text}`}>{file?.name || 'Rate Confirmation PDF'}</p>
-              <p className={`text-xs ${subtext}`}>PDF ready to parse</p>
+              <p className={`text-base font-bold tracking-wider ${text}`}>{file?.name || 'Rate Confirmation PDF'}</p>
+              <p className={`text-sm ${subtext}`}>PDF ready to parse</p>
             </div>
           ) : (
             <img src={previewUrl} alt="Rate confirmation" className="w-full object-contain max-h-72 border border-[#262626]" />
@@ -151,12 +160,12 @@ const RateConScanner = ({ onParsed, onCancel }) => {
 
         <button onClick={handleParse}
           className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 tracking-wider flex items-center justify-center gap-2">
-          <span className="text-lg">✨</span>
+          <span className="text-xl">✨</span>
           PARSE WITH AI
         </button>
 
         <button onClick={onCancel}
-          className={`w-full border ${border} py-3 text-sm tracking-wider ${subtext}`}>
+          className={`w-full border ${border} py-3 text-base tracking-wider ${subtext}`}>
           ENTER MANUALLY INSTEAD
         </button>
       </div>
@@ -165,12 +174,12 @@ const RateConScanner = ({ onParsed, onCancel }) => {
 
   // ── Parsing ───────────────────────────────────────────────────────────────
   if (step === 'parsing') return (
-    <div className={`min-h-screen flex flex-col items-center justify-center font-['Oxanium'] ${bg}`}>
+    <div className={`min-h-screen flex flex-col items-center justify-center font-['Barlow_Condensed'] ${bg}`}>
       <div className="w-16 h-16 bg-red-600/20 flex items-center justify-center mb-6 animate-pulse">
-        <span className="text-2xl">✨</span>
+        <span className="text-3xl">✨</span>
       </div>
-      <h2 className={`text-lg font-bold tracking-wider mb-2 ${text}`}>PARSING RATE CON</h2>
-      <p className={`text-sm ${subtext}`}>Claude AI is extracting load details...</p>
+      <h2 className={`text-xl font-bold tracking-wider mb-2 ${text}`}>PARSING RATE CON</h2>
+      <p className={`text-base ${subtext}`}>Claude AI is extracting load details...</p>
       <div className="mt-8 flex gap-1">
         {[0, 1, 2].map(i => (
           <div key={i} className="w-2 h-2 bg-red-600 rounded-full animate-bounce"
@@ -198,18 +207,18 @@ const RateConScanner = ({ onParsed, onCancel }) => {
     ].filter(f => f.value);
 
     return (
-      <div className={`min-h-screen flex flex-col font-['Oxanium'] ${bg}`}>
+      <div className={`min-h-screen flex flex-col font-['Barlow_Condensed'] ${bg}`}>
         <div className={`pt-12 pb-6 px-5 border-b ${border}`}>
-          <h1 className={`text-xl font-bold tracking-wider ${text}`}>REVIEW PARSED DATA</h1>
-          <p className={`text-xs mt-1 text-green-400`}>✓ {fields.length} fields extracted — review before saving</p>
+          <h1 className={`text-2xl font-bold tracking-wider ${text}`}>REVIEW PARSED DATA</h1>
+          <p className={`text-sm mt-1 text-green-400`}>✓ {fields.length} fields extracted — review before saving</p>
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4">
           <div className={`${surface} border ${border} divide-y ${isDark ? 'divide-[#1a1a1a]' : 'divide-[#f0f0f0]'}`}>
             {fields.map(({ label, value }) => (
               <div key={label} className="px-4 py-3 flex justify-between items-start gap-4">
-                <span className={`text-xs tracking-wider flex-shrink-0 ${subtext}`}>{label}</span>
-                <span className={`text-sm text-right ${text}`}>{value}</span>
+                <span className={`text-sm tracking-wider flex-shrink-0 ${subtext}`}>{label}</span>
+                <span className={`text-base text-right ${text}`}>{value}</span>
               </div>
             ))}
           </div>
@@ -220,7 +229,7 @@ const RateConScanner = ({ onParsed, onCancel }) => {
               USE THIS DATA →
             </button>
             <button onClick={() => setStep('capture')}
-              className={`w-full border ${border} py-3 text-sm tracking-wider ${subtext}`}>
+              className={`w-full border ${border} py-3 text-base tracking-wider ${subtext}`}>
               SCAN AGAIN
             </button>
           </div>
