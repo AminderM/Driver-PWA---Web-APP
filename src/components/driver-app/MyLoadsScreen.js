@@ -281,7 +281,7 @@ const MyLoadsScreen = ({ onNavigate, onSelectLoad, onViewMap, hideMenu }) => {
       pauseHandle?.remove();
       resumeHandle?.remove();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line
 
   const handleAccept = async (load) => {
     setAccepting(load.id);

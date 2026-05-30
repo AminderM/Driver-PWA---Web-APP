@@ -159,7 +159,7 @@ const ChatTab = ({ load }) => {
     scheduleNext();
 
     return () => clearTimeout(timeoutId);
-  }, [load.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [load.id]); // eslint-disable-line
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
