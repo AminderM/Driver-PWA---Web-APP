@@ -12,209 +12,248 @@ const generateInvoicePdf = async (invoice, user) => {
   const margin = 48;
   let y = margin;
 
-  const darkGray  = [30, 30, 30];
-  const medGray   = [100, 100, 100];
-  const lightGray = [230, 230, 230];
-  const red       = [200, 30, 30];
+  const dark    = [26, 26, 26];
+  const red     = [211, 32, 39];
+  const medGray = [119, 119, 119];
+  const ltGray  = [238, 238, 238];
+  const bgLight = [250, 250, 250];
 
-  // ── Logo / company header ────────────────────────────────────────────────
+  // ── LEFT: logo / IA icon + company ───────────────────────────────────────
+  const companyName = user?.company_name || user?.full_name || 'Your Company';
+  let leftBottomY = y;
+
   if (user?.logo_url) {
     try {
       const img = await loadImage(user.logo_url);
       const ratio = img.width / img.height;
-      const logoH = 50;
-      const logoW = Math.min(logoH * ratio, 120);
-      doc.addImage(img, 'PNG', margin, y, logoW, logoH);
-      y += logoH + 10;
-    } catch (_) { /* skip if logo fails */ }
+      const lh = 42; const lw = Math.min(lh * ratio, 130);
+      doc.addImage(img, 'PNG', margin, y, lw, lh);
+      leftBottomY = y + lh + 10;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.setTextColor(...dark);
+      doc.text(companyName, margin, leftBottomY);
+      leftBottomY += 14;
+    } catch (_) {}
+  } else {
+    // IA icon box
+    doc.setFillColor(...dark);
+    doc.roundedRect(margin, y, 42, 42, 5, 5, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(17);
+    doc.setTextColor(...red);
+    doc.text('IA', margin + 21, y + 27, { align: 'center' });
+    // Company name to the right of icon
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(...dark);
+    doc.text(companyName, margin + 54, y + 16);
+    leftBottomY = y + 42 + 8;
   }
 
-  // Company name
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
-  doc.setTextColor(...darkGray);
-  doc.text((user?.company_name || user?.full_name || 'Company Name').toUpperCase(), margin, y);
-  y += 18;
-
-  // MC/DOT
-  if (user?.mc_dot_number) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(...medGray);
-    doc.text(user.mc_dot_number, margin, y);
-    y += 13;
-  }
-
-  // ── INVOICE header (top-right) ────────────────────────────────────────────
-  const headerY = margin;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(28);
-  doc.setTextColor(...red);
-  doc.text('INVOICE', W - margin, headerY, { align: 'right' });
-
+  // Address + website
+  const addrLines = [
+    user?.address || 'Toronto, ON, Canada',
+    user?.mc_dot_number ? `MC/DOT: ${user.mc_dot_number}` : 'integratedtech.ca',
+  ];
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(...medGray);
-  const invoiceLines = [
-    ['Invoice #:', invoice.invoiceNumber],
-    ['Date:', invoice.invoiceDate],
-    ['Due Date:', invoice.dueDate],
-  ];
-  let infoY = headerY + 20;
-  invoiceLines.forEach(([label, value]) => {
-    doc.setFont('helvetica', 'bold');
-    doc.text(label, W - margin - 80, infoY, { align: 'right' });
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...darkGray);
-    doc.text(String(value || '—'), W - margin, infoY, { align: 'right' });
-    doc.setTextColor(...medGray);
-    infoY += 14;
+  addrLines.forEach(line => {
+    doc.text(line, margin, leftBottomY);
+    leftBottomY += 13;
   });
 
-  y = Math.max(y, infoY) + 20;
+  // ── RIGHT: INVOICE + meta ─────────────────────────────────────────────────
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(34);
+  doc.setTextColor(...red);
+  doc.text('INVOICE', W - margin, y, { align: 'right' });
 
-  // Divider
-  doc.setDrawColor(...lightGray);
+  const metaRows = [
+    ['Invoice #:', invoice.invoiceNumber, true],
+    ['Date:',      invoice.invoiceDate,   false],
+    ['Due date:',  invoice.dueDate,       false],
+    ['Terms:',     invoice.terms || 'Net 30', true],
+  ];
+  let metaY = y + 22;
+  metaRows.forEach(([label, value, bold]) => {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...medGray);
+    doc.text(label, W - margin - 85, metaY, { align: 'right' });
+    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    doc.setTextColor(...dark);
+    doc.text(String(value || '—'), W - margin, metaY, { align: 'right' });
+    metaY += 14;
+  });
+
+  y = Math.max(leftBottomY + 10, metaY + 10);
+
+  // ── Divider ───────────────────────────────────────────────────────────────
+  doc.setDrawColor(...ltGray);
   doc.setLineWidth(0.5);
   doc.line(margin, y, W - margin, y);
-  y += 20;
+  y += 16;
 
-  // ── Bill To ───────────────────────────────────────────────────────────────
+  // ── BILL TO ───────────────────────────────────────────────────────────────
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(...medGray);
   doc.text('BILL TO', margin, y);
-  y += 13;
+  y += 11;
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(...darkGray);
+  doc.setFontSize(13);
+  doc.setTextColor(...dark);
   doc.text(invoice.billToName || '—', margin, y);
   y += 14;
-  if (invoice.billToContact) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(...medGray);
-    doc.text(invoice.billToContact, margin, y);
-    y += 13;
+  [invoice.billToContact, invoice.billToMc ? `MC: ${invoice.billToMc}` : null]
+    .filter(Boolean)
+    .forEach(line => {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(...medGray);
+      doc.text(line, margin, y);
+      y += 12;
+    });
+  y += 14;
+
+  // ── LOAD DETAILS table ────────────────────────────────────────────────────
+  const loadRows = [
+    ['Origin',        invoice.origin],
+    ['Destination',   invoice.destination],
+    ['Pickup Date',   invoice.pickupDate],
+    ['Delivery Date', invoice.deliveryDate],
+    ['Commodity',     invoice.commodity],
+    ['Miles',         invoice.miles ? `${Number(invoice.miles).toLocaleString()} mi` : null],
+    ['Weight',        invoice.weight ? `${Number(invoice.weight).toLocaleString()} lbs` : null],
+  ].filter(([, v]) => v);
+
+  if (loadRows.length) {
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      head: [['LOAD DETAILS', '']],
+      body: loadRows,
+      headStyles: { fillColor: dark, textColor: [255,255,255], fontStyle: 'bold', fontSize: 8, halign: 'left' },
+      bodyStyles: { fontSize: 10, textColor: dark },
+      alternateRowStyles: { fillColor: bgLight },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 120, textColor: medGray } },
+      theme: 'striped',
+    });
+    y = doc.lastAutoTable.finalY + 18;
   }
-  if (invoice.billToMc) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(...medGray);
-    doc.text(`MC: ${invoice.billToMc}`, margin, y);
-    y += 13;
-  }
 
-  y += 20;
-
-  // ── Load details table ────────────────────────────────────────────────────
-  autoTable(doc, {
-    startY: y,
-    margin: { left: margin, right: margin },
-    head: [['LOAD DETAILS', '']],
-    body: [
-      ['Origin',        invoice.origin        || '—'],
-      ['Destination',   invoice.destination   || '—'],
-      ['Pickup Date',   invoice.pickupDate     || '—'],
-      ['Delivery Date', invoice.deliveryDate   || '—'],
-      ['Commodity',     invoice.commodity      || '—'],
-      ['Miles',         invoice.miles ? `${Number(invoice.miles).toLocaleString()} mi` : '—'],
-      ['Weight',        invoice.weight ? `${Number(invoice.weight).toLocaleString()} lbs` : '—'],
-    ].filter(([, v]) => v !== '—'),
-    headStyles: {
-      fillColor: darkGray,
-      textColor: [255, 255, 255],
-      fontStyle: 'bold',
-      fontSize: 8,
-      halign: 'left',
-    },
-    bodyStyles: { fontSize: 9, textColor: darkGray },
-    alternateRowStyles: { fillColor: [248, 248, 248] },
-    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 120, textColor: medGray } },
-    theme: 'striped',
-  });
-
-  y = doc.lastAutoTable.finalY + 20;
-
-  // ── Line items table ──────────────────────────────────────────────────────
+  // ── LINE ITEMS table ──────────────────────────────────────────────────────
   const lineItems = invoice.lineItems.filter(li => li.description && li.amount);
+
+  // Auto sub-line for first (freight) line item
+  const freightSubLine = (() => {
+    const parts = [];
+    if (invoice.miles) parts.push(`${Number(invoice.miles).toLocaleString()} mi`);
+    const rpm = invoice.miles && lineItems[0]?.amount
+      ? parseFloat(lineItems[0].amount) / Number(invoice.miles) : null;
+    if (rpm) parts.push(`@ $${rpm.toFixed(2)}/mi`);
+    if (invoice.commodity) parts.push(invoice.commodity);
+    return parts.join(' · ');
+  })();
 
   autoTable(doc, {
     startY: y,
     margin: { left: margin, right: margin },
     head: [['DESCRIPTION', 'AMOUNT']],
-    body: lineItems.map(li => [li.description, `$${Number(li.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]),
-    headStyles: {
-      fillColor: red,
-      textColor: [255, 255, 255],
-      fontStyle: 'bold',
-      fontSize: 8,
-    },
-    bodyStyles: { fontSize: 10, textColor: darkGray },
+    body: lineItems.map((li, idx) => [
+      idx === 0 && freightSubLine ? `${li.description}\n${freightSubLine}` : li.description,
+      `$${Number(li.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    ]),
+    headStyles: { fillColor: red, textColor: [255,255,255], fontStyle: 'bold', fontSize: 8 },
+    bodyStyles: { fontSize: 10, textColor: dark, cellPadding: { top: 10, bottom: 10, left: 12, right: 12 } },
     columnStyles: {
       0: { cellWidth: 'auto' },
       1: { halign: 'right', cellWidth: 100, fontStyle: 'bold' },
     },
+    alternateRowStyles: { fillColor: bgLight },
     theme: 'striped',
-    alternateRowStyles: { fillColor: [248, 248, 248] },
+    didDrawCell: (data) => {
+      if (data.section === 'body' && data.column.index === 0) {
+        const raw = String(data.cell.raw || '');
+        const nl = raw.indexOf('\n');
+        if (nl !== -1) {
+          // Redraw sub-line in gray smaller font
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8.5);
+          doc.setTextColor(136, 136, 136);
+          doc.text(raw.slice(nl + 1), data.cell.x + 12, data.cell.y + data.cell.height - 9);
+        }
+      }
+    },
   });
 
-  y = doc.lastAutoTable.finalY;
+  y = doc.lastAutoTable.finalY + 10;
 
-  // Total row
-  const totalAmt = lineItems.reduce((s, li) => s + (parseFloat(li.amount) || 0), 0);
-  doc.setFillColor(...darkGray);
-  doc.rect(margin, y, W - margin * 2, 28, 'F');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.setTextColor(255, 255, 255);
-  doc.text('TOTAL DUE', margin + 10, y + 18);
-  doc.text(
-    `$${totalAmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-    W - margin - 10, y + 18, { align: 'right' }
-  );
+  // ── Subtotal + Tax ────────────────────────────────────────────────────────
+  const subtotal = lineItems.reduce((s, li) => s + (parseFloat(li.amount) || 0), 0);
+  const tax      = parseFloat(invoice.taxAmount) || 0;
+  const total    = subtotal + tax;
+  const fmt = n => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  y += 50;
-
-  // ── Payment instructions / notes ──────────────────────────────────────────
-  if (invoice.paymentInstructions || invoice.notes) {
-    doc.setDrawColor(...lightGray);
-    doc.line(margin, y, W - margin, y);
+  [['Subtotal', subtotal], ['Tax', tax]].forEach(([label, amt]) => {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(...medGray);
+    doc.text(label, W - margin - 105, y, { align: 'right' });
+    doc.setTextColor(...dark);
+    doc.text(fmt(amt), W - margin, y, { align: 'right' });
     y += 16;
+  });
 
-    if (invoice.paymentInstructions) {
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.setTextColor(...medGray);
-      doc.text('PAYMENT INSTRUCTIONS', margin, y);
-      y += 12;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(...darkGray);
-      const piLines = doc.splitTextToSize(invoice.paymentInstructions, W - margin * 2);
-      doc.text(piLines, margin, y);
-      y += piLines.length * 12 + 10;
-    }
+  y += 6;
 
-    if (invoice.notes) {
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.setTextColor(...medGray);
-      doc.text('NOTES', margin, y);
-      y += 12;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(...darkGray);
-      const noteLines = doc.splitTextToSize(invoice.notes, W - margin * 2);
-      doc.text(noteLines, margin, y);
-    }
-  }
+  // ── TOTAL DUE rounded box ─────────────────────────────────────────────────
+  doc.setFillColor(...dark);
+  doc.roundedRect(margin, y, W - margin * 2, 36, 6, 6, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(255, 255, 255);
+  doc.text('TOTAL DUE', margin + 16, y + 23);
+  doc.setFontSize(18);
+  doc.text(fmt(total), W - margin - 16, y + 23, { align: 'right' });
 
-  // Footer
+  y += 54;
+
+  // ── Footer: PAYMENT | NOTES (two columns) ────────────────────────────────
+  doc.setDrawColor(...ltGray);
+  doc.setLineWidth(0.5);
+  doc.line(margin, y, W - margin, y);
+  y += 14;
+
+  const colW  = (W - margin * 2 - 28) / 2;
+  const col2X = margin + colW + 28;
+
+  const drawFooterCol = (x, heading, body) => {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(...medGray);
+    doc.text(heading, x, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(102, 102, 102);
+    const lines = doc.splitTextToSize(body, colW);
+    doc.text(lines, x, y + 13);
+  };
+
+  const payText = invoice.paymentInstructions ||
+    `Please remit within 30 days of invoice date. Reference invoice #${invoice.invoiceNumber} with payment.`;
+  const noteText = invoice.notes || 'Thank you for your business.';
+
+  drawFooterCol(margin, 'PAYMENT', payText);
+  drawFooterCol(col2X, 'NOTES',   noteText);
+
+  // Page footer
   const pageH = doc.internal.pageSize.getHeight();
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.setTextColor(...lightGray);
+  doc.setTextColor(...ltGray);
   doc.text('Generated by Integra AI · integratedtech.ca', W / 2, pageH - 20, { align: 'center' });
 
   return doc;
@@ -278,6 +317,7 @@ const InvoiceGeneratorScreen = ({ onBack }) => {
   const [billToContact, setBillToContact] = useState('');
   const [billToMc, setBillToMc]           = useState('');
   const [lineItems, setLineItems]         = useState([]);
+  const [terms, setTerms]                 = useState('Net 30');
   const [paymentInstructions, setPaymentInstructions] = useState('');
   const [notes, setNotes]                 = useState('');
 
@@ -307,6 +347,7 @@ const InvoiceGeneratorScreen = ({ onBack }) => {
     setLineItems([
       { id: 1, description: `Freight Services — ${load.origin || ''} to ${load.destination || ''}`, amount: String(load.rate || '') },
     ]);
+    setTerms('Net 30');
     setPaymentInstructions('');
     setNotes(load.notes || '');
     setGenError('');
@@ -337,6 +378,8 @@ const InvoiceGeneratorScreen = ({ onBack }) => {
     try {
       const invoice = {
         invoiceNumber, invoiceDate, dueDate,
+        terms: terms.trim() || 'Net 30',
+        taxAmount: 0,
         billToName: billToName.trim(),
         billToContact: billToContact.trim(),
         billToMc: billToMc.trim(),
@@ -510,6 +553,11 @@ const InvoiceGeneratorScreen = ({ onBack }) => {
               <label className={LabelCls(isDark)}>DUE DATE</label>
               <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className={inputCls} />
             </div>
+          </div>
+          <div>
+            <label className={LabelCls(isDark)}>TERMS</label>
+            <input type="text" value={terms} onChange={e => setTerms(e.target.value)}
+              placeholder="e.g. Net 30" className={inputCls} />
           </div>
         </div>
 
