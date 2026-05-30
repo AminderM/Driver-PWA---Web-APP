@@ -1,5 +1,46 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
-import { getCurrentPosition, watchPosition as nativeWatchPosition } from '../../lib/native';
+import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
+import { getCurrentPosition, watchPosition as nativeWatchPosition, registerForPushNotifications, isNative } from '../../lib/native';
+
+// ── Env guard (C4) ─────────────────────────────────────────────────────────────
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || '';
+if (!process.env.REACT_APP_BACKEND_URL && process.env.NODE_ENV === 'production') {
+  console.error('[DriverApp] CRITICAL: REACT_APP_BACKEND_URL is not set. All API calls will fail.');
+}
+
+// ── Secure storage abstraction (C5) ───────────────────────────────────────────
+// Uses @capacitor/preferences on native (encrypted), falls back to localStorage on web
+const storage = {
+  async getItem(key) {
+    try {
+      if (isNative()) {
+        const { Preferences } = await import('@capacitor/preferences');
+        const { value } = await Preferences.get({ key });
+        return value;
+      }
+    } catch { /* plugin not available, fall through */ }
+    return localStorage.getItem(key);
+  },
+  async setItem(key, value) {
+    try {
+      if (isNative()) {
+        const { Preferences } = await import('@capacitor/preferences');
+        await Preferences.set({ key, value });
+        return;
+      }
+    } catch { /* fall through */ }
+    localStorage.setItem(key, value);
+  },
+  async removeItem(key) {
+    try {
+      if (isNative()) {
+        const { Preferences } = await import('@capacitor/preferences');
+        await Preferences.remove({ key });
+        return;
+      }
+    } catch { /* fall through */ }
+    localStorage.removeItem(key);
+  },
+};
 
 // Driver App Context
 const DriverAppContext = createContext(null);
@@ -78,6 +119,8 @@ export const DriverAppProvider = ({ children }) => {
   const [isMobile, setIsMobile] = useState(true);
   const [locationGranted, setLocationGranted] = useState(false);
   const [locationError, setLocationError] = useState(null);
+  const [locationPingFailing, setLocationPingFailing] = useState(false); // C1
+  const pingFailCount = useRef(0); // C1
   const [currentLocation, setCurrentLocation] = useState(null);
   const [isCheckingDevice, setIsCheckingDevice] = useState(true);
   const [user, setUser] = useState(null);
@@ -121,28 +164,31 @@ export const DriverAppProvider = ({ children }) => {
     return () => window.removeEventListener('resize', checkDevice);
   }, []);
 
-  // Load auth state
+  // Load auth state — async so secure storage (Capacitor Preferences) can be awaited (C5)
   useEffect(() => {
-    const savedToken = localStorage.getItem('driver_app_token');
-    const savedUser = localStorage.getItem('driver_app_user');
-    if (savedToken && savedUser) {
-      const u = JSON.parse(savedUser);
-      setToken(savedToken);
-      setUser(u);
-      const localComplete = localStorage.getItem(`driver_profile_complete_${u.id}`) === 'true';
-      setProfileComplete(localComplete || u.first_login === false);
-    }
+    const loadAuth = async () => {
+      const savedToken = await storage.getItem('driver_app_token');
+      const savedUserStr = await storage.getItem('driver_app_user');
+      if (savedToken && savedUserStr) {
+        const u = JSON.parse(savedUserStr);
+        setToken(savedToken);
+        setUser(u);
+        const localComplete = await storage.getItem(`driver_profile_complete_${u.id}`) === 'true';
+        setProfileComplete(localComplete || u.first_login === false);
+      }
+    };
+    loadAuth();
   }, []);
 
   const completeProfile = () => {
-    if (user) localStorage.setItem(`driver_profile_complete_${user.id}`, 'true');
+    if (user) storage.setItem(`driver_profile_complete_${user.id}`, 'true');
     setProfileComplete(true);
   };
 
   const mergeUserData = (newData) => {
     setUser(prev => {
       const updated = { ...prev, ...newData };
-      localStorage.setItem('driver_app_user', JSON.stringify(updated));
+      storage.setItem('driver_app_user', JSON.stringify(updated));
       return updated;
     });
   };
@@ -167,17 +213,24 @@ export const DriverAppProvider = ({ children }) => {
 
     const pingLocation = async (loc) => {
       setCurrentLocation(loc);
+      // C1: track consecutive failures and warn driver
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
       try {
-        await fetch(`${process.env.REACT_APP_BACKEND_URL || ''}/api/driver-mobile/location/ping`, {
+        await fetch(`${BASE_URL}/api/driver-mobile/location/ping`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ ...loc, load_id: activeLoadId })
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ ...loc, load_id: activeLoadId }),
+          signal: controller.signal,
         });
+        pingFailCount.current = 0;
+        if (locationPingFailing) setLocationPingFailing(false);
       } catch (err) {
         console.error('Location ping failed:', err);
+        pingFailCount.current += 1;
+        if (pingFailCount.current >= 2) setLocationPingFailing(true);
+      } finally {
+        clearTimeout(timeoutId);
       }
     };
 
@@ -188,14 +241,26 @@ export const DriverAppProvider = ({ children }) => {
     return () => { unsubscribe?.(); };
   }, [locationGranted, user, token, activeLoadId]);
 
+  // Helper to finalize session after any login method
+  const _finalizeSession = async (data) => {
+    setToken(data.access_token);
+    setUser(data.user);
+    await storage.setItem('driver_app_token', data.access_token);
+    await storage.setItem('driver_app_user', JSON.stringify(data.user));
+    const localComplete = await storage.getItem(`driver_profile_complete_${data.user.id}`) === 'true';
+    setProfileComplete(localComplete || data.user.first_login === false);
+    // H13: register for push notifications after login
+    registerForPushNotifications().catch(e => console.warn('Push registration failed:', e));
+  };
+
   // Login
   const login = async (email, password) => {
-    const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || ''}/api/driver-mobile/login`, {
+    const response = await fetch(`${BASE_URL}/api/driver-mobile/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       const detail = error.detail;
@@ -204,14 +269,9 @@ export const DriverAppProvider = ({ children }) => {
         : (typeof detail === 'string' ? detail : 'Login failed');
       throw new Error(message);
     }
-    
+
     const data = await response.json();
-    setToken(data.access_token);
-    setUser(data.user);
-    localStorage.setItem('driver_app_token', data.access_token);
-    localStorage.setItem('driver_app_user', JSON.stringify(data.user));
-    const localComplete = localStorage.getItem(`driver_profile_complete_${data.user.id}`) === 'true';
-    setProfileComplete(localComplete || data.user.first_login === false);
+    await _finalizeSession(data);
     return data;
   };
 
@@ -220,47 +280,67 @@ export const DriverAppProvider = ({ children }) => {
     setToken(null);
     setUser(null);
     setLocationGranted(false);
-    localStorage.removeItem('driver_app_token');
-    localStorage.removeItem('driver_app_user');
+    storage.removeItem('driver_app_token');
+    storage.removeItem('driver_app_user');
   };
 
-  // API helper
+  // API helper — H8: 401 auto-logout, H9: 15s timeout via AbortController
   const api = async (endpoint, options = {}) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
     const isFormData = options.body instanceof FormData;
-    const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || ''}/api/driver-mobile${endpoint}`, {
-      ...options,
-      headers: {
-        // Don't set Content-Type for FormData — browser must set it with the multipart boundary
-        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
-        'Authorization': `Bearer ${token}`,
-        ...options.headers,
+    try {
+      const response = await fetch(`${BASE_URL}/api/driver-mobile${endpoint}`, {
+        ...options,
+        signal: controller.signal,
+        headers: {
+          ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+          'Authorization': `Bearer ${token}`,
+          ...options.headers,
+        }
+      });
+
+      // H8: expired token — auto logout and surface a clear message
+      if (response.status === 401) {
+        logout();
+        const err = new Error('Session expired. Please sign in again.');
+        err.status = 401;
+        throw err;
       }
-    });
 
-    if (!response.ok) {
-      let message = 'Request failed';
-      let rawDetail = null;
-      try {
-        const error = await response.json();
-        rawDetail = error.detail || error.message || error.error;
-        message = typeof rawDetail === 'string' ? rawDetail
-          : Array.isArray(rawDetail) ? rawDetail.map(e => e.msg || JSON.stringify(e)).join('. ')
-          : message;
-      } catch { /* response body not JSON */ }
-      // Attach HTTP status so callers can distinguish 401/403/404/409/500
-      const err = new Error(message);
-      err.status = response.status;
-      err.detail = rawDetail;
+      if (!response.ok) {
+        let message = 'Request failed';
+        let rawDetail = null;
+        try {
+          const error = await response.json();
+          rawDetail = error.detail || error.message || error.error;
+          message = typeof rawDetail === 'string' ? rawDetail
+            : Array.isArray(rawDetail) ? rawDetail.map(e => e.msg || JSON.stringify(e)).join('. ')
+            : message;
+        } catch { /* response body not JSON */ }
+        const err = new Error(message);
+        err.status = response.status;
+        err.detail = rawDetail;
+        throw err;
+      }
+
+      const text = await response.text();
+      return text ? JSON.parse(text) : null;
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        const timeoutErr = new Error('Request timed out. Please check your connection.');
+        timeoutErr.status = 0;
+        throw timeoutErr;
+      }
       throw err;
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    const text = await response.text();
-    return text ? JSON.parse(text) : null;
   };
 
   const validateInvite = async (inviteCode) => {
     const response = await fetch(
-      `${process.env.REACT_APP_BACKEND_URL || ''}/api/driver-mobile/invite/${encodeURIComponent(inviteCode)}`
+      `${BASE_URL}/api/driver-mobile/invite/${encodeURIComponent(inviteCode)}`
     );
     if (response.status === 404) {
       throw new Error('Invite code not found, already used, or expired.');
@@ -273,14 +353,11 @@ export const DriverAppProvider = ({ children }) => {
   };
 
   const signup = async ({ inviteCode, phone, password }) => {
-    const response = await fetch(
-      `${process.env.REACT_APP_BACKEND_URL || ''}/api/driver-mobile/signup`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: inviteCode, phone, password }),
-      }
-    );
+    const response = await fetch(`${BASE_URL}/api/driver-mobile/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: inviteCode, phone, password }),
+    });
     if (!response.ok) {
       const err = await response.json();
       const detail = err.detail;
@@ -292,11 +369,11 @@ export const DriverAppProvider = ({ children }) => {
     const data = await response.json();
     setToken(data.access_token);
     setUser(data.user);
-    localStorage.setItem('driver_app_token', data.access_token);
-    localStorage.setItem('driver_app_user', JSON.stringify(data.user));
-    // first_login: true → DocumentScanScreen will show after this
+    await storage.setItem('driver_app_token', data.access_token);
+    await storage.setItem('driver_app_user', JSON.stringify(data.user));
     setProfileComplete(false);
     setInviteToken(null);
+    registerForPushNotifications().catch(e => console.warn('Push registration failed:', e));
     return data;
   };
 
@@ -322,7 +399,7 @@ export const DriverAppProvider = ({ children }) => {
     if (logoFile)    formData.append('logo', logoFile);
     if (otp)         formData.append('otp', otp);
 
-    const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || ''}/api/driver-mobile/signup/open`, {
+    const response = await fetch(`${BASE_URL}/api/driver-mobile/signup/open`, {
       method: 'POST',
       body: formData,
     });
@@ -337,16 +414,17 @@ export const DriverAppProvider = ({ children }) => {
     const data = await response.json();
     setToken(data.access_token);
     setUser(data.user);
-    localStorage.setItem('driver_app_token', data.access_token);
-    localStorage.setItem('driver_app_user', JSON.stringify(data.user));
+    await storage.setItem('driver_app_token', data.access_token);
+    await storage.setItem('driver_app_user', JSON.stringify(data.user));
     setProfileComplete(true);
     setInviteToken(null);
+    registerForPushNotifications().catch(e => console.warn('Push registration failed:', e));
     return data;
   };
 
   // Phone OTP login — send code (unauthenticated)
   const loginWithPhoneRequest = async (phone) => {
-    const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || ''}/api/driver-mobile/auth/phone/request-otp`, {
+    const response = await fetch(`${BASE_URL}/api/driver-mobile/auth/phone/request-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone }),
@@ -359,7 +437,7 @@ export const DriverAppProvider = ({ children }) => {
 
   // Phone OTP login — verify code, returns JWT + user
   const loginWithPhoneVerify = async (phone, otp) => {
-    const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || ''}/api/driver-mobile/auth/phone/verify-otp`, {
+    const response = await fetch(`${BASE_URL}/api/driver-mobile/auth/phone/verify-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, otp }),
@@ -369,18 +447,13 @@ export const DriverAppProvider = ({ children }) => {
       throw new Error(err.detail || 'Invalid or expired code.');
     }
     const data = await response.json();
-    setToken(data.access_token);
-    setUser(data.user);
-    localStorage.setItem('driver_app_token', data.access_token);
-    localStorage.setItem('driver_app_user', JSON.stringify(data.user));
-    const localComplete = localStorage.getItem(`driver_profile_complete_${data.user.id}`) === 'true';
-    setProfileComplete(localComplete || data.user.first_login === false);
+    await _finalizeSession(data);
     return data;
   };
 
   // Google OAuth — exchange Google ID token for app JWT
   const loginWithGoogle = async (googleIdToken) => {
-    const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || ''}/api/driver-mobile/auth/google`, {
+    const response = await fetch(`${BASE_URL}/api/driver-mobile/auth/google`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id_token: googleIdToken }),
@@ -390,12 +463,7 @@ export const DriverAppProvider = ({ children }) => {
       throw new Error(err.detail || 'Google sign-in failed.');
     }
     const data = await response.json();
-    setToken(data.access_token);
-    setUser(data.user);
-    localStorage.setItem('driver_app_token', data.access_token);
-    localStorage.setItem('driver_app_user', JSON.stringify(data.user));
-    const localComplete = localStorage.getItem(`driver_profile_complete_${data.user.id}`) === 'true';
-    setProfileComplete(localComplete || data.user.first_login === false);
+    await _finalizeSession(data);
     return data;
   };
 
@@ -440,6 +508,7 @@ export const DriverAppProvider = ({ children }) => {
     userType,
     currentLocation, activeLoadId, setActiveLoadId,
     locationGranted, requestLocation,
+    locationPingFailing, // C1 — screens can show a warning banner
     profileComplete, completeProfile, mergeUserData,
     inviteToken, setInviteToken, validateInvite, signup,
     openSignup, loginWithPhoneRequest, loginWithPhoneVerify, loginWithGoogle, updateProfile,

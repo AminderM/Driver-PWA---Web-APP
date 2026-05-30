@@ -199,10 +199,12 @@ const MapScreen = ({ load, onBack, onStartNavigation }) => {
           </Marker>
         </MapContainer>
 
-        {/* Back button overlay */}
+        {/* Back button overlay — M14: 48px min touch target */}
         <button
           onClick={onBack}
-          className="absolute top-4 left-4 z-[1000] w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center shadow-lg"
+          aria-label="Go back"
+          className="absolute top-4 left-4 z-[1000] w-12 h-12 bg-gray-900 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+          style={{ marginTop: 'env(safe-area-inset-top)' }}
         >
           <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -215,15 +217,15 @@ const MapScreen = ({ load, onBack, onStartNavigation }) => {
         </div>
       </div>
 
-      {/* Bottom Panel */}
-      <div className="bg-gray-900 border-t border-gray-800 p-4 safe-area-bottom">
+      {/* Bottom Panel — M17: truncate long city names, M19: safe area for gesture bar */}
+      <div className="bg-gray-900 border-t border-gray-800 p-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
         {/* Route Summary */}
         <div className="flex items-center justify-between mb-4">
-          <div>
+          <div className="min-w-0 flex-1 mr-4">
             <p className="text-gray-400 text-xs">TOTAL DISTANCE</p>
             <p className="text-white text-2xl font-bold">{routeInfo?.miles || '--'} mi</p>
           </div>
-          <div className="text-right">
+          <div className="text-right shrink-0">
             <p className="text-gray-400 text-xs">EST. TIME</p>
             <p className="text-white text-2xl font-bold">{routeInfo?.hours || '--'}h {Math.round(routeInfo?.minutes || 0)}m</p>
           </div>
@@ -231,15 +233,15 @@ const MapScreen = ({ load, onBack, onStartNavigation }) => {
 
         {/* Route stops */}
         <div className="flex items-center gap-3 mb-4 bg-gray-800 rounded-xl p-3">
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center shrink-0">
             <div className="w-3 h-3 rounded-full bg-green-500"></div>
             <div className="w-0.5 h-8 bg-gray-600"></div>
             <div className="w-3 h-3 rounded-full bg-red-500"></div>
           </div>
-          <div className="flex-1">
-            <p className="text-white text-sm font-medium">{load.pickup_city}, {load.pickup_state}</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-white text-sm font-medium truncate">{load.pickup_city}, {load.pickup_state}</p>
             <p className="text-gray-600 text-xs my-1">↓</p>
-            <p className="text-white text-sm font-medium">{load.delivery_city}, {load.delivery_state}</p>
+            <p className="text-white text-sm font-medium truncate">{load.delivery_city}, {load.delivery_state}</p>
           </div>
         </div>
 
