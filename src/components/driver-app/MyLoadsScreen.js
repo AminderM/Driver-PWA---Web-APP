@@ -1,5 +1,7 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useDriverApp } from './DriverAppProvider';
+import { getNetworkStatus, isNative } from '../../lib/native';
+import { PENDING_STATUSES, TERMINAL_STATUSES } from './loadConstants';
 
 const STATUS_CONFIG = {
   available:         { label: 'NEW LOAD',    color: 'bg-red-600'    },
@@ -137,8 +139,8 @@ const LoadOfferCard = ({ load, onAccept, onReject, onViewRoute, accepting, accep
         <button
           onClick={() => onReject(load)}
           disabled={accepting}
-          className={`flex-1 py-4 font-semibold tracking-wider transition-colors flex items-center justify-center gap-2 disabled:opacity-40 text-red-600 ${
-            isDark ? 'hover:bg-red-600/10' : 'hover:bg-red-50'
+          className={`flex-1 py-4 font-semibold tracking-wider transition-colors flex items-center justify-center gap-2 disabled:opacity-40 text-red-600 active:scale-95 ${
+            isDark ? 'hover:bg-red-600/10 active:bg-red-600/20' : 'hover:bg-red-50 active:bg-red-100'
           }`}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -150,8 +152,8 @@ const LoadOfferCard = ({ load, onAccept, onReject, onViewRoute, accepting, accep
         <button
           onClick={() => onAccept(load)}
           disabled={accepting}
-          className={`flex-1 py-4 font-semibold tracking-wider transition-colors flex items-center justify-center gap-2 disabled:opacity-40 text-green-600 ${
-            isDark ? 'hover:bg-green-600/10' : 'hover:bg-green-50'
+          className={`flex-1 py-4 font-semibold tracking-wider transition-colors flex items-center justify-center gap-2 disabled:opacity-40 text-green-600 active:scale-95 ${
+            isDark ? 'hover:bg-green-600/10 active:bg-green-600/20' : 'hover:bg-green-50 active:bg-green-100'
           }`}
         >
           {accepting ? (
@@ -227,28 +229,34 @@ const ActiveLoadCard = ({ load, onViewRoute, onViewDetails, theme }) => {
 };
 
 const MyLoadsScreen = ({ onNavigate, onSelectLoad, onViewMap, hideMenu }) => {
-  const { api, user, theme } = useDriverApp();
+  const { api, user, theme, locationPingFailing } = useDriverApp();
   const [availableLoads, setAvailableLoads] = useState([]);
   const [activeLoads, setActiveLoads] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [accepting, setAccepting] = useState(null); // load id being accepted
-  const [acceptError, setAcceptError] = useState(null); // { loadId, message }
+  const [fetchError, setFetchError] = useState(null); // M25
+  const [isOffline, setIsOffline] = useState(false); // M18
+  const [accepting, setAccepting] = useState(null);
+  const [acceptError, setAcceptError] = useState(null);
   const [tab, setTab] = useState('available');
   const isDark = theme === 'dark';
 
   const fetchLoads = async () => {
+    // M18: check connectivity before making the request
+    const net = await getNetworkStatus();
+    if (!net.connected) { setIsOffline(true); setLoading(false); return; }
+    setIsOffline(false);
+    setFetchError(null);
     try {
       const data = await api('/loads');
-      const available = data.filter(l =>
-        ['available', 'assigned', 'pending'].includes(l.status)
-      );
+      const available = data.filter(l => PENDING_STATUSES.includes(l.status));
       const active = data.filter(l =>
-        !['available', 'assigned', 'pending', 'delivered', 'rejected'].includes(l.status)
+        !PENDING_STATUSES.includes(l.status) && !TERMINAL_STATUSES.includes(l.status)
       );
       setAvailableLoads(available);
       setActiveLoads(active);
     } catch (err) {
       console.error('Failed to fetch loads:', err);
+      setFetchError(err.message || 'Failed to load. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -257,8 +265,23 @@ const MyLoadsScreen = ({ onNavigate, onSelectLoad, onViewMap, hideMenu }) => {
   useEffect(() => {
     fetchLoads();
     const interval = setInterval(fetchLoads, 30000);
-    return () => clearInterval(interval);
-  }, []);
+
+    // M22: pause polling when app is backgrounded to save battery
+    let pauseHandle;
+    let resumeHandle;
+    if (isNative()) {
+      import('@capacitor/app').then(({ App }) => {
+        App.addListener('pause', () => clearInterval(interval)).then(h => { pauseHandle = h; });
+        App.addListener('resume', fetchLoads).then(h => { resumeHandle = h; });
+      });
+    }
+
+    return () => {
+      clearInterval(interval);
+      pauseHandle?.remove();
+      resumeHandle?.remove();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAccept = async (load) => {
     setAccepting(load.id);
@@ -322,7 +345,8 @@ const MyLoadsScreen = ({ onNavigate, onSelectLoad, onViewMap, hideMenu }) => {
         {!hideMenu && (
           <button
             onClick={() => onNavigate('menu')}
-            className={`w-10 h-10 flex items-center justify-center ${isDark ? 'text-white' : 'text-black'}`}
+            aria-label="Open menu"
+            className={`w-12 h-12 flex items-center justify-center active:opacity-60 transition-opacity ${isDark ? 'text-white' : 'text-black'}`}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -352,6 +376,31 @@ const MyLoadsScreen = ({ onNavigate, onSelectLoad, onViewMap, hideMenu }) => {
           </button>
         ))}
       </div>
+
+      {/* Location ping failure warning — C1 */}
+      {locationPingFailing && (
+        <div className="px-4 py-2 bg-amber-600/20 border-b border-amber-600/30 flex items-center gap-2">
+          <svg className="w-4 h-4 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          </svg>
+          <p className="text-amber-400 text-xs tracking-wider">LOCATION UPDATES FAILING — Dispatch may not see your position</p>
+        </div>
+      )}
+
+      {/* Offline / error banner — M18, M25 */}
+      {(isOffline || fetchError) && (
+        <div className={`px-4 py-3 flex items-center justify-between ${isOffline ? 'bg-amber-600/20 border-b border-amber-600/30' : 'bg-[#CC2222]/20 border-b border-[#CC2222]/30'}`}>
+          <p className={`text-sm font-medium tracking-wider ${isOffline ? 'text-amber-400' : 'text-[#FF5555]'}`}>
+            {isOffline ? 'NO CONNECTION — Showing cached data' : fetchError}
+          </p>
+          <button
+            onClick={fetchLoads}
+            className={`text-sm font-bold tracking-wider ml-3 shrink-0 ${isOffline ? 'text-amber-400' : 'text-[#FF5555]'}`}
+          >
+            RETRY
+          </button>
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-4 py-4">

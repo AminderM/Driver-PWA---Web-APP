@@ -22,6 +22,16 @@ export const getPlatform = () =>
 export async function takePhoto({ source = 'camera' } = {}) {
   if (isNative()) {
     const { Camera, CameraSource, CameraResultType } = await import('@capacitor/camera');
+
+    // H6: check/request camera permission before attempting capture
+    let perms = await Camera.checkPermissions();
+    if (perms.camera === 'prompt' || perms.camera === 'prompt-with-rationale') {
+      perms = await Camera.requestPermissions({ permissions: ['camera'] });
+    }
+    if (perms.camera !== 'granted') {
+      throw new Error('Camera permission denied. Please enable camera access in your device Settings.');
+    }
+
     const image = await Camera.getPhoto({
       quality: 85,
       allowEditing: false,
@@ -61,22 +71,37 @@ export async function takePhoto({ source = 'camera' } = {}) {
 export async function getCurrentPosition() {
   if (isNative()) {
     const { Geolocation } = await import('@capacitor/geolocation');
-    const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000 });
-    return {
-      lat: pos.coords.latitude,
-      lng: pos.coords.longitude,
-      accuracy_m: pos.coords.accuracy,
-    };
+
+    // H12: check/request geolocation permission before using it
+    let perms = await Geolocation.checkPermissions();
+    if (perms.location === 'prompt' || perms.location === 'prompt-with-rationale') {
+      perms = await Geolocation.requestPermissions({ permissions: ['location'] });
+    }
+    if (perms.location !== 'granted') {
+      throw new Error('Location permission denied');
+    }
+
+    // H7: try high-accuracy with short timeout, fall back to network accuracy
+    try {
+      const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 });
+      return { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy_m: pos.coords.accuracy };
+    } catch {
+      const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: false, timeout: 10000 });
+      return { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy_m: pos.coords.accuracy };
+    }
   }
+  // Web fallback — H7: short high-accuracy timeout, then fall back
   return new Promise((resolve, reject) => {
     navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({
-        lat: pos.coords.latitude,
-        lng: pos.coords.longitude,
-        accuracy_m: pos.coords.accuracy,
-      }),
-      reject,
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy_m: pos.coords.accuracy }),
+      () => {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy_m: pos.coords.accuracy }),
+          reject,
+          { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+        );
+      },
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
     );
   });
 }
@@ -87,6 +112,17 @@ export async function getCurrentPosition() {
 export async function watchPosition(callback, errorCallback) {
   if (isNative()) {
     const { Geolocation } = await import('@capacitor/geolocation');
+
+    // H12: verify permission before watching (Android Q+ requires explicit request)
+    let perms = await Geolocation.checkPermissions();
+    if (perms.location === 'prompt' || perms.location === 'prompt-with-rationale') {
+      perms = await Geolocation.requestPermissions({ permissions: ['location'] });
+    }
+    if (perms.location !== 'granted') {
+      errorCallback?.(new Error('Location permission denied'));
+      return () => {};
+    }
+
     const watchId = await Geolocation.watchPosition(
       { enableHighAccuracy: true },
       (pos, err) => {

@@ -42,7 +42,10 @@ const DriverSignupScreen = ({ inviteToken }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!phone.trim())        { setFormError('Phone number is required.'); return; }
+    // L30: stronger password requirements
     if (password.length < 8)  { setFormError('Password must be at least 8 characters.'); return; }
+    if (!/[A-Z]/.test(password)) { setFormError('Password must contain at least one uppercase letter.'); return; }
+    if (!/[0-9]/.test(password)) { setFormError('Password must contain at least one number.'); return; }
     if (password !== confirm)  { setFormError('Passwords do not match.'); return; }
     setFormError('');
     setStep('submitting');

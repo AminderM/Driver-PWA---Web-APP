@@ -126,23 +126,40 @@ const ChatTab = ({ load }) => {
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef(null);
+  // H11: consecutive error counter for exponential backoff
+  const pollErrorCount = useRef(0);
 
   const fetchMessages = async () => {
     try {
       const data = await api(`/loads/${load.id}/messages`);
       setMessages(data);
+      pollErrorCount.current = 0; // reset on success
     } catch (err) {
       console.error('Failed to fetch messages:', err);
+      pollErrorCount.current += 1;
     } finally {
-      setLoading(false);
+      setLoading(false); // M21: always clear loading spinner
     }
   };
 
   useEffect(() => {
     fetchMessages();
-    const interval = setInterval(fetchMessages, 10000); // Poll every 10s
-    return () => clearInterval(interval);
-  }, [load.id]);
+
+    // H11: exponential backoff — 10s, 20s, 40s, capped at 60s; stop after 5 consecutive failures
+    let timeoutId;
+    const scheduleNext = () => {
+      const errors = pollErrorCount.current;
+      if (errors >= 5) return; // stop hammering if server is unreachable
+      const delay = errors > 0 ? Math.min(10000 * Math.pow(2, errors - 1), 60000) : 10000;
+      timeoutId = setTimeout(async () => {
+        await fetchMessages();
+        scheduleNext();
+      }, delay);
+    };
+    scheduleNext();
+
+    return () => clearTimeout(timeoutId);
+  }, [load.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -462,7 +479,8 @@ const StatusTab = ({ load, onStatusUpdate }) => {
         <button
           onClick={() => handleStatusUpdate(currentStatus.next)}
           disabled={updating}
-          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
+          aria-label={currentStatus.nextLabel}
+          className="w-full bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
         >
           {updating ? (
             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -576,7 +594,7 @@ const LoadDetail = ({ load: initialLoad, onBack }) => {
     <div className="flex flex-col h-full bg-slate-900">
       {/* Header */}
       <div className="bg-slate-800 px-4 py-3 flex items-center gap-3 sticky top-0 z-20">
-        <button onClick={onBack} className="w-10 h-10 flex items-center justify-center">
+        <button onClick={onBack} aria-label="Go back" className="w-12 h-12 flex items-center justify-center active:bg-white/10 rounded-full transition-colors">
           <ArrowLeft className="w-6 h-6 text-white" />
         </button>
         <div className="flex-1">
@@ -585,7 +603,7 @@ const LoadDetail = ({ load: initialLoad, onBack }) => {
             {status.label}
           </span>
         </div>
-        <button onClick={refreshLoad} className="w-10 h-10 flex items-center justify-center">
+        <button onClick={refreshLoad} aria-label="Refresh load" className="w-12 h-12 flex items-center justify-center active:bg-white/10 rounded-full transition-colors">
           <RefreshCw className="w-5 h-5 text-slate-400" />
         </button>
       </div>
@@ -598,7 +616,7 @@ const LoadDetail = ({ load: initialLoad, onBack }) => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 py-3 flex flex-col items-center gap-1 ${
+              className={`flex-1 py-3 flex flex-col items-center gap-1 active:bg-white/5 transition-colors ${
                 activeTab === tab.id ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-500'
               }`}
             >
