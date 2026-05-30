@@ -41,43 +41,43 @@ const monthLabel = (dateStr) =>
 const weekDayLabel = (dateStr) =>
   new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short' });
 
+// collected = paid_amount; invoiced = rate
+const getCollected = (l) => Number(l.paid_amount) || 0;
+const getInvoiced  = (l) => Number(l.rate)        || 0;
+
 // Group revenues + expenses into time buckets for the selected period
 const buildChartData = (loads, expenses, period) => {
   const now = new Date();
 
   if (period === 'week') {
-    // Last 7 days — one bar per day
     return Array.from({ length: 7 }).map((_, i) => {
       const d = new Date(now);
       d.setDate(now.getDate() - (6 - i));
       const key = d.toISOString().slice(0, 10);
-      const revenue = loads
-        .filter(l => (l.status === 'delivered' || l.status === 'invoiced') && l.delivery_date?.slice(0, 10) === key)
-        .reduce((s, l) => s + (Number(l.rate) || 0), 0);
-      const expenseAmt = expenses
-        .filter(e => e.date === key)
-        .reduce((s, e) => s + e.amount, 0);
-      return { label: weekDayLabel(key), revenue, expenses: expenseAmt, profit: revenue - expenseAmt };
+      const dayLoads = loads.filter(l =>
+        (l.status === 'delivered' || l.status === 'invoiced') && l.delivery_date?.slice(0, 10) === key
+      );
+      const collected   = dayLoads.reduce((s, l) => s + getCollected(l), 0);
+      const invoiced    = dayLoads.reduce((s, l) => s + getInvoiced(l),  0);
+      const expenseAmt  = expenses.filter(e => e.date === key).reduce((s, e) => s + e.amount, 0);
+      return { label: weekDayLabel(key), collected, invoiced, expenses: expenseAmt, profit: collected - expenseAmt };
     });
   }
 
   if (period === 'month') {
-    // Current month — group by week
-    const year  = now.getFullYear();
-    const month = now.getMonth();
+    const year = now.getFullYear(), month = now.getMonth();
     const weeks = {};
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     for (let day = 1; day <= daysInMonth; day++) {
-      const d = new Date(year, month, day);
-      const wk = isoWeek(d);
-      if (!weeks[wk]) weeks[wk] = { label: wk, revenue: 0, expenses: 0, profit: 0 };
+      const wk = isoWeek(new Date(year, month, day));
+      if (!weeks[wk]) weeks[wk] = { label: wk, collected: 0, invoiced: 0, expenses: 0, profit: 0 };
     }
     loads.forEach(l => {
       if ((l.status === 'delivered' || l.status === 'invoiced') && l.delivery_date) {
         const d = new Date(l.delivery_date);
         if (d.getFullYear() === year && d.getMonth() === month) {
           const wk = isoWeek(d);
-          if (weeks[wk]) { weeks[wk].revenue += Number(l.rate) || 0; }
+          if (weeks[wk]) { weeks[wk].collected += getCollected(l); weeks[wk].invoiced += getInvoiced(l); }
         }
       }
     });
@@ -85,30 +85,28 @@ const buildChartData = (loads, expenses, period) => {
       const d = new Date(e.date);
       if (d.getFullYear() === year && d.getMonth() === month) {
         const wk = isoWeek(d);
-        if (weeks[wk]) { weeks[wk].expenses += e.amount; }
+        if (weeks[wk]) weeks[wk].expenses += e.amount;
       }
     });
-    return Object.values(weeks).map(w => ({ ...w, profit: w.revenue - w.expenses }));
+    return Object.values(weeks).map(w => ({ ...w, profit: w.collected - w.expenses }));
   }
 
   // Year — group by month
   const year = now.getFullYear();
   return Array.from({ length: 12 }).map((_, m) => {
-    const label = new Date(year, m, 1).toLocaleDateString('en-US', { month: 'short' });
-    const revenue = loads
-      .filter(l => {
-        if (l.status !== 'delivered' && l.status !== 'invoiced') return false;
-        const d = l.delivery_date ? new Date(l.delivery_date) : null;
-        return d && d.getFullYear() === year && d.getMonth() === m;
-      })
-      .reduce((s, l) => s + (Number(l.rate) || 0), 0);
-    const expenseAmt = expenses
-      .filter(e => {
-        const d = new Date(e.date);
-        return d.getFullYear() === year && d.getMonth() === m;
-      })
-      .reduce((s, e) => s + e.amount, 0);
-    return { label, revenue, expenses: expenseAmt, profit: revenue - expenseAmt };
+    const label     = new Date(year, m, 1).toLocaleDateString('en-US', { month: 'short' });
+    const mLoads    = loads.filter(l => {
+      if (l.status !== 'delivered' && l.status !== 'invoiced') return false;
+      const d = l.delivery_date ? new Date(l.delivery_date) : null;
+      return d && d.getFullYear() === year && d.getMonth() === m;
+    });
+    const collected  = mLoads.reduce((s, l) => s + getCollected(l), 0);
+    const invoiced   = mLoads.reduce((s, l) => s + getInvoiced(l),  0);
+    const expenseAmt = expenses.filter(e => {
+      const d = new Date(e.date);
+      return d.getFullYear() === year && d.getMonth() === m;
+    }).reduce((s, e) => s + e.amount, 0);
+    return { label, collected, invoiced, expenses: expenseAmt, profit: collected - expenseAmt };
   });
 };
 
@@ -182,15 +180,17 @@ const PLScreen = ({ onBack }) => {
   );
   const periodExpenses = expenses.filter(e => inPeriod(e.date));
 
-  const totalRevenue  = periodLoads.reduce((s, l) => s + (Number(l.rate) || 0), 0);
-  const totalExpenses = periodExpenses.reduce((s, e) => s + e.amount, 0);
-  const netProfit     = totalRevenue - totalExpenses;
-  const margin        = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
-  const loadCount     = periodLoads.length;
-  const avgRate       = loadCount > 0 ? totalRevenue / loadCount : 0;
+  const totalCollected  = periodLoads.reduce((s, l) => s + getCollected(l), 0);
+  const totalInvoiced   = periodLoads.reduce((s, l) => s + getInvoiced(l),  0);
+  const totalOutstanding = totalInvoiced - totalCollected;
+  const totalExpenses   = periodExpenses.reduce((s, e) => s + e.amount, 0);
+  const netProfit       = totalCollected - totalExpenses;
+  const margin          = totalCollected > 0 ? (netProfit / totalCollected) * 100 : 0;
+  const loadCount       = periodLoads.length;
+  const avgRate         = loadCount > 0 ? totalInvoiced / loadCount : 0;
 
   const totalMiles = periodLoads.reduce((s, l) => s + (Number(l.estimated_miles) || 0), 0);
-  const avgRpm     = totalMiles > 0 ? totalRevenue / totalMiles : 0;
+  const avgRpm     = totalMiles > 0 ? totalCollected / totalMiles : 0;
 
   const chartData = buildChartData(loads, expenses, period);
 
@@ -256,8 +256,10 @@ const PLScreen = ({ onBack }) => {
 
         {/* KPI summary cards */}
         <div className="grid grid-cols-2 gap-3">
-          <KpiCard label="REVENUE"  value={fmt(totalRevenue)}  color="text-[#2DBB62]" surface={surface} border={border} subtext={subtext} />
-          <KpiCard label="EXPENSES" value={fmt(totalExpenses)} color="text-[#FF2020]"   surface={surface} border={border} subtext={subtext} />
+          <KpiCard label="COLLECTED"   value={fmt(totalCollected)}   color="text-[#2DBB62]" surface={surface} border={border} subtext={subtext} sub="cash received" />
+          <KpiCard label="EXPENSES"    value={fmt(totalExpenses)}    color="text-[#FF2020]" surface={surface} border={border} subtext={subtext} />
+          <KpiCard label="INVOICED"    value={fmt(totalInvoiced)}    color={text}           surface={surface} border={border} subtext={subtext} sub="total billed" />
+          <KpiCard label="OUTSTANDING" value={fmt(totalOutstanding)} color={totalOutstanding > 0 ? 'text-amber-400' : 'text-[#2DBB62]'} surface={surface} border={border} subtext={subtext} sub="not yet paid" />
 
           <div className={`col-span-2 ${surface} border ${border} p-4 flex items-center justify-between`}>
             <div>
@@ -300,7 +302,7 @@ const PLScreen = ({ onBack }) => {
             </div>
           </div>
 
-          {chartData.some(d => d.revenue > 0 || d.expenses > 0) ? (
+          {chartData.some(d => d.collected > 0 || d.expenses > 0) ? (
             <ResponsiveContainer width="100%" height={200}>
               {chartType === 'bar' ? (
                 <BarChart data={chartData} barGap={2} barSize={14}>
@@ -308,8 +310,8 @@ const PLScreen = ({ onBack }) => {
                   <XAxis dataKey="label" tick={{ fill: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif" }} axisLine={false} tickLine={false} />
                   <YAxis tickFormatter={fmtK} tick={{ fill: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif" }} axisLine={false} tickLine={false} width={40} />
                   <Tooltip content={<ChartTooltip isDark={isDark} />} />
-                  <Bar dataKey="revenue"  name="Revenue"  fill={chartColors.revenue}  radius={[2, 2, 0, 0]} />
-                  <Bar dataKey="expenses" name="Expenses" fill={chartColors.expenses} radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="collected" name="Collected" fill={chartColors.revenue}  radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="expenses"  name="Expenses" fill={chartColors.expenses} radius={[2, 2, 0, 0]} />
                 </BarChart>
               ) : (
                 <LineChart data={chartData}>
@@ -317,7 +319,7 @@ const PLScreen = ({ onBack }) => {
                   <XAxis dataKey="label" tick={{ fill: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif" }} axisLine={false} tickLine={false} />
                   <YAxis tickFormatter={fmtK} tick={{ fill: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif" }} axisLine={false} tickLine={false} width={40} />
                   <Tooltip content={<ChartTooltip isDark={isDark} />} />
-                  <Line type="monotone" dataKey="revenue"  name="Revenue"  stroke={chartColors.revenue}  strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="collected" name="Collected" stroke={chartColors.revenue}  strokeWidth={2} dot={false} />
                   <Line type="monotone" dataKey="expenses" name="Expenses" stroke="#f59e0b" strokeWidth={2} dot={false} strokeDasharray="4 2" />
                   <Line type="monotone" dataKey="profit"   name="Profit"   stroke={chartColors.profit}   strokeWidth={2} dot={false} />
                 </LineChart>
@@ -331,7 +333,7 @@ const PLScreen = ({ onBack }) => {
 
           {/* Legend */}
           <div className="flex gap-4 mt-3 justify-center">
-            <LegendDot color={chartColors.revenue}  label="Revenue" />
+            <LegendDot color={chartColors.revenue}  label="Collected" />
             <LegendDot color={chartColors.expenses} label="Expenses" />
             {chartType === 'line' && <LegendDot color={chartColors.profit} label="Profit" />}
           </div>
@@ -390,24 +392,45 @@ const PLScreen = ({ onBack }) => {
               LOADS THIS PERIOD ({loadCount})
             </p>
             <div className={`divide-y ${isDark ? 'divide-[#1a1a1a]' : 'divide-[#f0f0f0]'}`}>
-              {periodLoads.map(l => (
-                <div key={l.id} className="py-2.5 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className={`text-base font-bold truncate ${text}`}>
-                      {l.origin || '—'} → {l.destination || '—'}
-                    </p>
-                    {l.delivery_date && (
-                      <p className={`text-sm ${subtext}`}>
-                        {new Date(l.delivery_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        {l.estimated_miles ? ` · ${Number(l.estimated_miles).toLocaleString()} mi` : ''}
+              {periodLoads.map(l => {
+                const collected   = getCollected(l);
+                const invoiced    = getInvoiced(l);
+                const isFullyPaid = collected > 0 && collected >= invoiced;
+                const isPartial   = collected > 0 && collected < invoiced;
+                return (
+                  <div key={l.id} className="py-3 flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-base font-bold truncate ${text}`}>
+                        {l.origin || '—'} → {l.destination || '—'}
                       </p>
-                    )}
+                      {l.delivery_date && (
+                        <p className={`text-sm ${subtext}`}>
+                          {new Date(l.delivery_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          {l.estimated_miles ? ` · ${Number(l.estimated_miles).toLocaleString()} mi` : ''}
+                        </p>
+                      )}
+                      {/* Payment progress bar */}
+                      <div className={`h-1 w-full mt-1.5 ${isDark ? 'bg-[#1a1a1a]' : 'bg-[#e8e8e8]'}`}>
+                        <div className={`h-full ${isFullyPaid ? 'bg-green-500' : isPartial ? 'bg-amber-400' : 'bg-transparent'}`}
+                          style={{ width: invoiced > 0 ? `${Math.min((collected / invoiced) * 100, 100)}%` : '0%' }} />
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className={`text-base font-bold ${isFullyPaid ? 'text-[#2DBB62]' : isPartial ? 'text-amber-400' : subtext}`}>
+                        {fmt(collected)}
+                      </p>
+                      {!isFullyPaid && invoiced > 0 && (
+                        <p className={`text-xs ${subtext}`}>of {fmt(invoiced)}</p>
+                      )}
+                      <p className={`text-xs font-bold tracking-wider ${
+                        isFullyPaid ? 'text-green-400' : isPartial ? 'text-amber-400' : subtext
+                      }`}>
+                        {isFullyPaid ? '✓ PAID' : isPartial ? 'PARTIAL' : 'UNPAID'}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-base font-bold text-[#2DBB62] flex-shrink-0">
-                    {l.rate ? fmt(Number(l.rate)) : '—'}
-                  </p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
