@@ -108,9 +108,36 @@ const Shell = ({ children, activeTab, onTabChange }) => {
   );
 };
 
+// ── Route progress helpers ─────────────────────────────────────────────────────
+const haversine = (lat1, lng1, lat2, lng2) => {
+  const R = 3958.8, r = Math.PI / 180;
+  const dL = (lat2 - lat1) * r, dG = (lng2 - lng1) * r;
+  const a = Math.sin(dL/2)**2 + Math.cos(lat1*r) * Math.cos(lat2*r) * Math.sin(dG/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+};
+
+const STATUS_PROGRESS = {
+  en_route_pickup: 8, arrived_pickup: 20, loaded: 28,
+  in_transit_pickup: 12, in_transit: 50, in_transit_delivery: 65,
+  en_route_delivery: 55, arrived_delivery: 90, problem: 45,
+};
+
+const calcProgress = (load, loc) => {
+  const oLat = load.origin_lat   || load.pickup_lat;
+  const oLng = load.origin_lon   || load.pickup_lon   || load.origin_lng  || load.pickup_lng;
+  const dLat = load.destination_lat || load.delivery_lat;
+  const dLng = load.destination_lon || load.delivery_lon || load.destination_lng || load.delivery_lng;
+  if (oLat && oLng && dLat && dLng && loc) {
+    const total  = haversine(oLat, oLng, dLat, dLng);
+    const driven = haversine(oLat, oLng, loc.lat, loc.lng);
+    return Math.min(Math.max((driven / total) * 100, 0), 100);
+  }
+  return STATUS_PROGRESS[load.status] ?? 5;
+};
+
 // ── Main component ────────────────────────────────────────────────────────────
 const BusinessSuiteShell = () => {
-  const { user, userType, logout, api, toggleTheme, theme } = useDriverApp();
+  const { user, userType, logout, api, toggleTheme, theme, currentLocation } = useDriverApp();
   const M = theme === 'dark' ? MC : MCL;
 
   const [activeTab,    setActiveTab]    = useState('home');
@@ -310,27 +337,68 @@ const BusinessSuiteShell = () => {
         <div style={{ padding: '14px 16px 0' }}>
 
           {/* Active load route card */}
-          {activeLoad ? (
-            <button onClick={() => { setActiveTab('loads'); setLoadsSubTab('dispatched'); handleLoadSelect(activeLoad, 'route'); }}
-              style={{ display: 'block', width: '100%', background: M.plate, border: `1px solid ${M.rivet}`, borderLeft: `3px solid ${M.blue}`, padding: '14px', marginBottom: 8, textAlign: 'left', cursor: 'pointer', boxSizing: 'border-box' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                <div style={{ width: 7, height: 7, borderRadius: '50%', background: M.blue, boxShadow: `0 0 6px ${M.blue}` }} />
-                <span style={{ fontFamily: FM, fontSize: px(8), letterSpacing: '0.14em', color: M.blue }}>ACTIVE LOAD</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontFamily: FD, fontSize: px(28), fontWeight: 900, color: M.white, textTransform: 'uppercase', letterSpacing: '0.03em', lineHeight: 1 }}>
-                  {(activeLoad.pickup_city || activeLoad.origin_city || '').toUpperCase()}
-                </span>
-                <span style={{ fontFamily: FM, fontSize: px(11), color: M.red }}>→</span>
-                <span style={{ fontFamily: FD, fontSize: px(28), fontWeight: 900, color: M.red, textTransform: 'uppercase', letterSpacing: '0.03em', lineHeight: 1 }}>
-                  {(activeLoad.delivery_city || activeLoad.destination_city || '').toUpperCase()}
-                </span>
-              </div>
-              <p style={{ fontFamily: FM, fontSize: px(8), color: M.chromeDim, margin: '8px 0 0', letterSpacing: '0.1em' }}>
-                TAP TO UPDATE STATUS →
-              </p>
-            </button>
-          ) : (
+          {activeLoad ? (() => {
+            const progress = calcProgress(activeLoad, currentLocation);
+            const originCity = (activeLoad.pickup_city || activeLoad.origin_city || '').toUpperCase();
+            const destCity   = (activeLoad.delivery_city || activeLoad.destination_city || '').toUpperCase();
+            const estMiles   = Number(activeLoad.estimated_miles) || 0;
+            const miCovered  = estMiles > 0 ? Math.round(estMiles * progress / 100) : null;
+            return (
+              <button onClick={() => { setActiveTab('loads'); setLoadsSubTab('dispatched'); handleLoadSelect(activeLoad, 'route'); }}
+                style={{ display: 'block', width: '100%', background: M.plate, border: `1px solid ${M.rivet}`, borderLeft: `3px solid ${M.blue}`, padding: '14px', marginBottom: 8, textAlign: 'left', cursor: 'pointer', boxSizing: 'border-box' }}>
+
+                {/* Header row */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ width: 7, height: 7, borderRadius: '50%', background: M.blue, boxShadow: `0 0 6px ${M.blue}` }} />
+                    <span style={{ fontFamily: FM, fontSize: px(8), letterSpacing: '0.14em', color: M.blue }}>ACTIVE LOAD</span>
+                  </div>
+                  {/* Live location badge */}
+                  {currentLocation && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(45,187,98,0.08)', border: '1px solid rgba(45,187,98,0.2)', padding: '2px 7px' }}>
+                      <div style={{ width: 5, height: 5, borderRadius: '50%', background: M.green, boxShadow: `0 0 5px ${M.green}` }} />
+                      <span style={{ fontFamily: FM, fontSize: px(7), color: M.green, letterSpacing: '0.1em' }}>
+                        {currentLocation.lat.toFixed(3)}°, {currentLocation.lng.toFixed(3)}°
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* City names */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <span style={{ fontFamily: FD, fontSize: px(24), fontWeight: 900, color: M.white, textTransform: 'uppercase', letterSpacing: '0.03em', lineHeight: 1 }}>
+                    {originCity}
+                  </span>
+                  <span style={{ fontFamily: FM, fontSize: px(11), color: M.red }}>→</span>
+                  <span style={{ fontFamily: FD, fontSize: px(24), fontWeight: 900, color: M.red, textTransform: 'uppercase', letterSpacing: '0.03em', lineHeight: 1 }}>
+                    {destCity}
+                  </span>
+                </div>
+
+                {/* Progress bar */}
+                <div>
+                  <div style={{ position: 'relative', height: 4, background: M.rivet, marginBottom: 6 }}>
+                    <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${progress}%`, background: M.blue, transition: 'width 1.5s ease' }} />
+                    {/* Position dot */}
+                    <div style={{ position: 'absolute', top: '50%', left: `${Math.max(Math.min(progress, 97), 3)}%`, transform: 'translate(-50%, -50%)', width: 10, height: 10, borderRadius: '50%', background: M.blue, border: `2px solid ${M.plate}`, boxShadow: `0 0 6px ${M.blue}`, zIndex: 1 }} />
+                    {/* Origin dot */}
+                    <div style={{ position: 'absolute', top: '50%', left: 0, transform: 'translateY(-50%)', width: 6, height: 6, borderRadius: '50%', background: M.chromeMid }} />
+                    {/* Dest dot */}
+                    <div style={{ position: 'absolute', top: '50%', right: 0, transform: 'translateY(-50%)', width: 6, height: 6, borderRadius: '50%', background: M.red }} />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontFamily: FM, fontSize: px(7), color: M.chromeDim, letterSpacing: '0.08em' }}>
+                      {miCovered !== null ? `~${miCovered.toLocaleString()} mi covered` : originCity}
+                    </span>
+                    <span style={{ fontFamily: FM, fontSize: px(7), color: M.chromeDim, letterSpacing: '0.08em' }}>
+                      {estMiles > 0 ? `${estMiles.toLocaleString()} mi total` : 'TAP TO UPDATE →'}
+                    </span>
+                  </div>
+                </div>
+
+              </button>
+            );
+          })() : (
             <button onClick={() => setActiveTab('loads')}
               style={{ display: 'block', width: '100%', background: M.plate, border: `1px solid ${M.rivet}`, borderLeft: `3px solid ${M.rivet}`, padding: '14px', marginBottom: 8, textAlign: 'left', cursor: 'pointer', boxSizing: 'border-box' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
