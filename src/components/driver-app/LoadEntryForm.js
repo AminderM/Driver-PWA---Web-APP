@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useDriverApp } from './DriverAppProvider';
+import DateTimePicker from './DateTimePicker';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const toLocalDT = (isoStr) => {
@@ -353,14 +354,22 @@ const LoadEntryForm = ({ prefill = {}, existingLoad = null, onSave, onCancel }) 
           </div>
 
           {/* Dates */}
-          <div className={`${surface} border ${border} p-4 space-y-3`}>
+          <div className={`${surface} border ${border} p-4 space-y-4`}>
             <p className={`text-xs tracking-wider font-bold ${subtext}`}>DATES & TIMES</p>
-            <Field label="PICKUP DATE & TIME" optional isDark={isDark} subtext={subtext}>
-              <input type="datetime-local" value={pickupDate} onChange={e => setPickupDate(e.target.value)} className={inputCls} />
-            </Field>
-            <Field label="DELIVERY DATE & TIME" optional isDark={isDark} subtext={subtext}>
-              <input type="datetime-local" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} className={inputCls} />
-            </Field>
+            <DateTimePicker
+              label="PICKUP DATE & TIME"
+              optional
+              value={pickupDate}
+              onChange={setPickupDate}
+              isDark={isDark}
+            />
+            <DateTimePicker
+              label="DELIVERY DATE & TIME"
+              optional
+              value={deliveryDate}
+              onChange={setDeliveryDate}
+              isDark={isDark}
+            />
           </div>
 
           {/* Rate & Freight */}
