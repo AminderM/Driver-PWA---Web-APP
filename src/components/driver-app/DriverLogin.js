@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useDriverApp } from './DriverAppProvider';
 import OpenSignupScreen from './OpenSignupScreen';
 
-const DEV_MODE = process.env.NODE_ENV === 'development';
+// M16: gate dev bypass behind explicit env var — prevents auth bypass in dev APK builds
+const DEV_MODE = process.env.NODE_ENV === 'development' && process.env.REACT_APP_ALLOW_DEV_LOGIN === 'true';
 const BACKEND = process.env.REACT_APP_BACKEND_URL || '';
 const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
 
@@ -149,10 +150,35 @@ const DriverLogin = () => {
     finally { setEmailLoading(false); }
   };
 
+  // M23: persist OTP cooldown so it survives app minimise/restore
+  useEffect(() => {
+    const stored = sessionStorage.getItem('otp_cooldown_end');
+    if (stored) {
+      const remaining = Math.ceil((parseInt(stored, 10) - Date.now()) / 1000);
+      if (remaining > 0) {
+        setResendCooldown(remaining);
+        cooldownRef.current = setInterval(() => {
+          setResendCooldown(prev => {
+            if (prev <= 1) { clearInterval(cooldownRef.current); sessionStorage.removeItem('otp_cooldown_end'); return 0; }
+            return prev - 1;
+          });
+        }, 1000);
+      } else {
+        sessionStorage.removeItem('otp_cooldown_end');
+      }
+    }
+    return () => clearInterval(cooldownRef.current);
+  }, []);
+
   const startResendCooldown = () => {
-    setResendCooldown(60); clearInterval(cooldownRef.current);
+    sessionStorage.setItem('otp_cooldown_end', (Date.now() + 60000).toString());
+    setResendCooldown(60);
+    clearInterval(cooldownRef.current);
     cooldownRef.current = setInterval(() => {
-      setResendCooldown(prev => { if (prev <= 1) { clearInterval(cooldownRef.current); return 0; } return prev - 1; });
+      setResendCooldown(prev => {
+        if (prev <= 1) { clearInterval(cooldownRef.current); sessionStorage.removeItem('otp_cooldown_end'); return 0; }
+        return prev - 1;
+      });
     }, 1000);
   };
 

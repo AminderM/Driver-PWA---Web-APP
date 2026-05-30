@@ -99,9 +99,10 @@ const DocumentScanScreen = ({ onComplete, requiredDocs = [] }) => {
       if (result?.user) mergeUserData(result.user);
       hapticSuccess();
       setStep('success');
-    } catch {
-      setUploadError('Upload failed — your document will be synced later.');
-      setStep('success');
+    } catch (err) {
+      // C2: show real error with retry — no fake "will sync later" promise
+      setUploadError(err.message || 'Upload failed. Please check your connection and try again.');
+      setStep('preview'); // return to preview so driver can retry or retake
     }
   };
 
@@ -209,16 +210,21 @@ const DocumentScanScreen = ({ onComplete, requiredDocs = [] }) => {
               <img src={previewUrl} alt="Document preview" className="w-full h-full object-contain" />
             )}
           </div>
-          <div className="mt-6 space-y-3">
+          {uploadError && (
+            <div className="mt-4 bg-[#CC2222]/20 border border-[#CC2222]/50 px-4 py-3">
+              <p className="text-[#FF5555] text-sm">{uploadError}</p>
+            </div>
+          )}
+          <div className="mt-4 space-y-3">
             <button
               onClick={handleUpload}
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-4 tracking-wider transition-colors"
+              className="w-full bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-semibold py-4 tracking-wider transition-colors"
             >
-              CONFIRM & UPLOAD
+              {uploadError ? 'RETRY UPLOAD' : 'CONFIRM & UPLOAD'}
             </button>
             <button
               onClick={handleCapture}
-              className={`w-full border font-semibold py-4 tracking-wider ${isDark ? 'border-[#262626] text-white/60 hover:bg-white/5' : 'border-[#e5e5e5] text-black/60 hover:bg-black/5'}`}
+              className={`w-full border font-semibold py-4 tracking-wider active:opacity-70 ${isDark ? 'border-[#262626] text-white/60 hover:bg-white/5' : 'border-[#e5e5e5] text-black/60 hover:bg-black/5'}`}
             >
               RETAKE
             </button>
