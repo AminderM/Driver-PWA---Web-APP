@@ -24,6 +24,7 @@ const DOC_TYPES = [
   { value: 'ifta_license',      label: 'IFTA License',            icon: '⛽', hasExpiry: true,  folder: 'business'},
   { value: 'business_registration',label:'Business Registration', icon: '🏢', hasExpiry: false, folder: 'business'},
   { value: 'gst_hst_registration',label:'GST/HST Registration',  icon: '🏢', hasExpiry: false, folder: 'business'},
+  { value: 'expense_receipt',   label: 'Expense Receipt',         icon: '🧾', hasExpiry: false, folder: 'expenses'},
   { value: 'other',             label: 'Other',                   icon: '📄', hasExpiry: false, folder: 'other'   },
 ];
 
@@ -38,6 +39,7 @@ const FOLDERS = [
     docTypes: ['drivers_license','medical_card','hazmat_cert','twic_card','abstract','cvor_certificate','cargo_insurance','liability_insurance','operating_authority'] },
   { id: 'business', label: 'Business Docs',      icon: '🏢', desc: 'Registration, IFTA, banking',     color: '#8B5CF6',
     docTypes: ['void_cheque','sin_card','vehicle_registration','lease_agreement','ifta_license','business_registration','gst_hst_registration'] },
+  { id: 'expenses', label: 'Expense Receipts',   icon: '🧾', desc: 'Fuel, tolls, meals & other expenses', color: '#D4921A', docTypes: ['expense_receipt'] },
   { id: 'other',    label: 'Other',              icon: '📄', desc: 'Miscellaneous documents',         color: '#555250', docTypes: ['other'] },
 ];
 

@@ -49,7 +49,7 @@ const LoadCalculatorScreen = ({ onBack }) => {
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: FM, fontSize: 9, letterSpacing: '0.16em', color: MC.chromeDim, padding: 0, display: 'flex', alignItems: 'center', gap: 6 }}>← TOOLS</button>
-          <button onClick={toggleTheme} style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? '#D4921A' : MC.chromeDim, padding: 4, display: 'flex', alignItems: 'center' }}>
+          <button onClick={toggleTheme} style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? '#FACC15' : MC.chromeDim, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               {isDark
                 ? <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />

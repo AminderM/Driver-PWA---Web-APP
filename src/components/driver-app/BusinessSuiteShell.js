@@ -13,6 +13,7 @@ import InvoiceGeneratorScreen from './InvoiceGeneratorScreen';
 import ExpenseRecorderScreen from './ExpenseRecorderScreen';
 import PLScreen from './PLScreen';
 import DocumentVaultScreen from './DocumentVaultScreen';
+import UniversalScanScreen from './UniversalScanScreen';
 
 // ── Design tokens — dark ───────────────────────────────────────────────────────
 const MC = {
@@ -75,12 +76,39 @@ const NavIcon = ({ id, active }) => {
 };
 
 // ── Bottom nav ────────────────────────────────────────────────────────────────
-const BottomNav = ({ activeTab, onTabChange }) => {
+const BottomNav = ({ activeTab, onTabChange, onScan }) => {
   const { theme } = useDriverApp();
   const M = theme === 'dark' ? MC : MCL;
+  const leftTabs  = ['home', 'loads'];
+  const rightTabs = ['tools', 'profile'];
   return (
-    <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: M.steel, borderTop: `1px solid ${M.rivet}`, display: 'flex', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-      {['home','loads','tools','profile'].map(id => {
+    <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: M.steel, borderTop: `1px solid ${M.rivet}`, display: 'flex', alignItems: 'flex-end', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      {leftTabs.map(id => {
+        const active = activeTab === id;
+        return (
+          <button key={id} onClick={() => onTabChange(id)}
+            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px 0 8px', gap: '3px', background: 'none', border: 'none', cursor: 'pointer' }}>
+            <NavIcon id={id} active={active} />
+            <span style={{ fontFamily: FD, fontSize: px(9), fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: active ? M.red : M.chromeDim }}>
+              {id.toUpperCase()}
+            </span>
+          </button>
+        );
+      })}
+
+      {/* ── Centre scan button ── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingBottom: 8 }}>
+        <button onClick={onScan}
+          style={{ width: 52, height: 52, borderRadius: 26, background: M.red, border: `3px solid ${M.steel}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginTop: -18, boxShadow: '0 -2px 12px rgba(204,34,34,0.4)' }}>
+          <svg width="22" height="22" fill="none" stroke="#fff" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+            <circle cx="12" cy="13" r="3"/>
+          </svg>
+        </button>
+        <span style={{ fontFamily: FD, fontSize: px(9), fontWeight: 700, letterSpacing: '0.1em', color: M.chromeDim, marginTop: 2 }}>SCAN</span>
+      </div>
+
+      {rightTabs.map(id => {
         const active = activeTab === id;
         return (
           <button key={id} onClick={() => onTabChange(id)}
@@ -97,13 +125,13 @@ const BottomNav = ({ activeTab, onTabChange }) => {
 };
 
 // ── Screen wrapper ────────────────────────────────────────────────────────────
-const Shell = ({ children, activeTab, onTabChange }) => {
+const Shell = ({ children, activeTab, onTabChange, onScan }) => {
   const { theme } = useDriverApp();
   const M = theme === 'dark' ? MC : MCL;
   return (
-    <div style={{ background: M.void, minHeight: '100vh', paddingBottom: '64px' }}>
+    <div style={{ background: M.void, minHeight: '100vh', paddingBottom: '72px' }}>
       {children}
-      <BottomNav activeTab={activeTab} onTabChange={onTabChange} />
+      <BottomNav activeTab={activeTab} onTabChange={onTabChange} onScan={onScan} />
     </div>
   );
 };
@@ -146,6 +174,7 @@ const BusinessSuiteShell = () => {
   const [selectedLoad, setSelectedLoad] = useState(null);
   const [activeTool,   setActiveTool]   = useState(null);
   const [activeLoad,   setActiveLoad]   = useState(null);
+  const [showScan,     setShowScan]     = useState(false);
 
   useEffect(() => {
     api('/loads').then(data => {
@@ -242,15 +271,15 @@ const BusinessSuiteShell = () => {
   }
 
   // ── Tool screens ──────────────────────────────────────────────────────────
-  if (activeTool === 'calculator') return <Shell activeTab={activeTab} onTabChange={handleTabChange}><LoadCalculatorScreen onBack={() => setActiveTool(null)} /></Shell>;
-  if (activeTool === 'invoices')   return <Shell activeTab={activeTab} onTabChange={handleTabChange}><InvoiceGeneratorScreen onBack={() => setActiveTool(null)} /></Shell>;
-  if (activeTool === 'expenses')   return <Shell activeTab={activeTab} onTabChange={handleTabChange}><ExpenseRecorderScreen onBack={() => setActiveTool(null)} /></Shell>;
-  if (activeTool === 'pl')         return <Shell activeTab={activeTab} onTabChange={handleTabChange}><PLScreen onBack={() => setActiveTool(null)} /></Shell>;
-  if (activeTool === 'vault')      return <Shell activeTab={activeTab} onTabChange={handleTabChange}><DocumentVaultScreen onBack={() => setActiveTool(null)} /></Shell>;
+  if (activeTool === 'calculator') return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><LoadCalculatorScreen onBack={() => setActiveTool(null)} /></Shell>;
+  if (activeTool === 'invoices')   return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><InvoiceGeneratorScreen onBack={() => setActiveTool(null)} /></Shell>;
+  if (activeTool === 'expenses')   return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><ExpenseRecorderScreen onBack={() => setActiveTool(null)} /></Shell>;
+  if (activeTool === 'pl')         return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><PLScreen onBack={() => setActiveTool(null)} /></Shell>;
+  if (activeTool === 'vault')      return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><DocumentVaultScreen onBack={() => setActiveTool(null)} /></Shell>;
 
   // ── Profile tab ───────────────────────────────────────────────────────────
   if (activeTab === 'profile') return (
-    <Shell activeTab={activeTab} onTabChange={handleTabChange}>
+    <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}>
       <ProfileScreen onBack={() => setActiveTab('home')} />
       <div style={{ padding: '0 16px 32px' }}>
         <button onClick={logout}
@@ -264,15 +293,15 @@ const BusinessSuiteShell = () => {
     </Shell>
   );
 
-  if (activeTab === 'settings') return <Shell activeTab={activeTab} onTabChange={handleTabChange}><SettingsScreen onBack={() => setActiveTab('home')} /></Shell>;
+  if (activeTab === 'settings') return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><SettingsScreen onBack={() => setActiveTab('home')} /></Shell>;
 
   // ── Loads tab ─────────────────────────────────────────────────────────────
   if (activeTab === 'loads') {
     if (loadsSubTab === 'dispatched') {
-      if (loadScreen === 'route' && selectedLoad) return <Shell activeTab={activeTab} onTabChange={handleTabChange}><RouteScreen load={selectedLoad} onBack={goToLoadList} onViewMap={() => setLoadScreen('map')} onOpenChat={l => { setSelectedLoad(l); setLoadScreen('chat'); }} onViewDocs={() => setLoadScreen('docs')} /></Shell>;
-      if (loadScreen === 'map'   && selectedLoad) return <Shell activeTab={activeTab} onTabChange={handleTabChange}><MapScreen load={selectedLoad} onBack={() => setLoadScreen('route')} /></Shell>;
-      if (loadScreen === 'chat'  && selectedLoad) return <Shell activeTab={activeTab} onTabChange={handleTabChange}><ChatScreen load={selectedLoad} onBack={() => setLoadScreen('route')} /></Shell>;
-      if (loadScreen === 'docs'  && selectedLoad) return <Shell activeTab={activeTab} onTabChange={handleTabChange}><DocumentsScreen load={selectedLoad} onBack={goToLoadList} /></Shell>;
+      if (loadScreen === 'route' && selectedLoad) return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><RouteScreen load={selectedLoad} onBack={goToLoadList} onViewMap={() => setLoadScreen('map')} onOpenChat={l => { setSelectedLoad(l); setLoadScreen('chat'); }} onViewDocs={() => setLoadScreen('docs')} /></Shell>;
+      if (loadScreen === 'map'   && selectedLoad) return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><MapScreen load={selectedLoad} onBack={() => setLoadScreen('route')} /></Shell>;
+      if (loadScreen === 'chat'  && selectedLoad) return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><ChatScreen load={selectedLoad} onBack={() => setLoadScreen('route')} /></Shell>;
+      if (loadScreen === 'docs'  && selectedLoad) return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><DocumentsScreen load={selectedLoad} onBack={goToLoadList} /></Shell>;
     }
     return (
       <div style={{ background: M.void, minHeight: '100vh', display: 'flex', flexDirection: 'column', paddingBottom: '64px' }}>
@@ -289,14 +318,15 @@ const BusinessSuiteShell = () => {
             ? <MyLoadsScreen onNavigate={() => {}} onSelectLoad={handleLoadSelect} onViewMap={handleLoadViewMap} hideMenu={true} />
             : <ManualLoadsScreen onBack={() => setActiveTab('home')} />}
         </div>
-        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
+        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)} />
+        {showScan && <UniversalScanScreen onClose={() => setShowScan(false)} />}
       </div>
     );
   }
 
   // ── Home ──────────────────────────────────────────────────────────────────
   return (
-    <div style={{ background: M.void, minHeight: '100vh', paddingBottom: '64px', fontFamily: FB }}>
+    <div style={{ background: M.void, minHeight: '100vh', paddingBottom: '72px', fontFamily: FB }}>
 
       {/* ── Header ── */}
       <div style={{ background: M.deep, borderBottom: `1px solid ${M.rivet}`, padding: '44px 16px 14px', position: 'relative', overflow: 'hidden' }}>
@@ -458,7 +488,8 @@ const BusinessSuiteShell = () => {
         </div>
       )}
 
-      <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
+      <BottomNav activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)} />
+      {showScan && <UniversalScanScreen onClose={() => setShowScan(false)} />}
     </div>
   );
 };
