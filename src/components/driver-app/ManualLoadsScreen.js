@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useDriverApp } from './DriverAppProvider';
 import RateConScanner from './RateConScanner';
 import LoadEntryForm from './LoadEntryForm';
@@ -12,19 +12,40 @@ const STATUS_FILTERS = [
 ];
 
 const STATUS_CONFIG = {
-  upcoming:   { label: 'UPCOMING',    bg: 'bg-amber-600',  text: 'text-amber-400',  border: 'border-amber-600/30'  },
-  in_transit: { label: 'IN TRANSIT',  bg: 'bg-blue-600',   text: 'text-blue-400',   border: 'border-blue-600/30'   },
-  delivered:  { label: 'DELIVERED',   bg: 'bg-green-600',  text: 'text-green-400',  border: 'border-green-600/30'  },
-  invoiced:   { label: 'INVOICED',    bg: 'bg-purple-600', text: 'text-purple-400', border: 'border-purple-600/30' },
+  upcoming:   { label: 'UPCOMING',   bg: 'bg-[#1a1a1a]', text: 'text-amber-400' },
+  in_transit: { label: 'IN TRANSIT', bg: 'bg-[#1a1a1a]', text: 'text-sky-400'   },
+  delivered:  { label: 'DELIVERED',  bg: 'bg-[#1a1a1a]', text: 'text-green-400' },
+  invoiced:   { label: 'INVOICED',   bg: 'bg-[#1a1a1a]', text: 'text-white/70'  },
 };
 
 // ── Load card (module-level so React never remounts it) ────────────────────────
-const LoadCard = ({ load, onEdit, onPay, isDark, surface, border, text, subtext }) => {
-  const cfg = STATUS_CONFIG[load.status] || STATUS_CONFIG.upcoming;
+const LoadCard = ({ load, onEdit, onPay, onAttach, isDark, surface, border, text, subtext }) => {
+  const status = (load.status || '').toLowerCase();
+  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.upcoming;
+  const fileInputRef = useRef(null);
+  const [attachState, setAttachState] = useState(null); // null | 'uploading' | 'success' | 'error'
+  const [attachError, setAttachError] = useState('');
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAttachState('uploading');
+    setAttachError('');
+    try {
+      await onAttach(load.id, file);
+      setAttachState('success');
+      setTimeout(() => setAttachState(null), 3000);
+    } catch (err) {
+      setAttachError(err.message || 'Upload failed. Please try again.');
+      setAttachState('error');
+    }
+    e.target.value = '';
+  };
+
   const rpm = load.rate && load.estimated_miles
     ? `$${(load.rate / load.estimated_miles).toFixed(2)}/mi`
     : null;
-  const isPayable   = load.status === 'delivered' || load.status === 'invoiced';
+  const isPayable   = status === 'delivered' || status === 'invoiced';
   const rate        = Number(load.rate) || 0;
   const paid        = Number(load.paid_amount) || 0;
   const isFullyPaid = paid > 0 && paid >= rate;
@@ -37,7 +58,7 @@ const LoadCard = ({ load, onEdit, onPay, isDark, surface, border, text, subtext 
       <button onClick={() => onEdit(load)} className="w-full text-left">
         {/* Status bar */}
         <div className={`${cfg.bg} px-4 py-1.5 flex items-center justify-between`}>
-          <span className="text-white text-sm font-bold tracking-widest">{cfg.label}</span>
+          <span className={`${cfg.text} text-sm font-bold tracking-widest`}>{cfg.label}</span>
           <div className="flex items-center gap-2">
             {isPayable && (
               <span className={`text-xs font-bold tracking-widest px-2 py-0.5 ${
@@ -138,6 +159,48 @@ const LoadCard = ({ load, onEdit, onPay, isDark, surface, border, text, subtext 
           FULLY PAID
         </div>
       )}
+
+      {/* ── Attach paperwork row ── */}
+      <div className={`border-t ${border}`}>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,application/pdf"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+        <button
+          type="button"
+          onClick={() => { setAttachError(''); fileInputRef.current?.click(); }}
+          disabled={attachState === 'uploading'}
+          className={`w-full flex items-center justify-center gap-2 py-2.5 text-xs font-bold tracking-wider transition-colors ${
+            attachState === 'success' ? 'text-green-400' :
+            attachState === 'error'   ? 'text-red-400'   :
+            subtext
+          }`}
+        >
+          {attachState === 'uploading' ? (
+            <><div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" /><span>UPLOADING...</span></>
+          ) : attachState === 'success' ? (
+            <>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              <span>DOCUMENT ATTACHED</span>
+            </>
+          ) : (
+            <>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+              </svg>
+              <span>{attachState === 'error' ? 'RETRY ATTACH' : 'ATTACH PAPERWORK'}</span>
+            </>
+          )}
+        </button>
+        {attachState === 'error' && attachError && (
+          <p className="text-center text-red-400 text-xs pb-2 px-4">{attachError}</p>
+        )}
+      </div>
     </div>
   );
 };
@@ -235,6 +298,13 @@ const ManualLoadsScreen = ({ onBack }) => {
     setEditLoad(load);
     setPrefillData({});
     setScreen('form');
+  };
+
+  const handleAttach = async (loadId, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('document_type', 'load_paperwork');
+    await api(`/my-loads/${loadId}/documents`, { method: 'POST', body: formData });
   };
 
   // ── Sub-screens ───────────────────────────────────────────────────────────
@@ -370,6 +440,7 @@ const ManualLoadsScreen = ({ onBack }) => {
               load={load}
               onEdit={openEdit}
               onPay={openPaymentSheet}
+              onAttach={handleAttach}
               isDark={isDark}
               surface={surface}
               border={border}
