@@ -17,10 +17,200 @@ const loadStoredExpenses = () => {
 };
 
 const PERIODS = [
-  { value: 'week',  label: 'This Week'  },
-  { value: 'month', label: 'This Month' },
-  { value: 'year',  label: 'This Year'  },
+  { value: 'week',   label: 'This Week'  },
+  { value: 'month',  label: 'This Month' },
+  { value: 'year',   label: 'This Year'  },
+  { value: 'custom', label: 'Custom'     },
 ];
+
+// ── PDF generation ────────────────────────────────────────────────────────────
+
+const generatePLPdf = async ({
+  periodLabel, companyName, generatedDate,
+  totalCollected, totalInvoiced, totalOutstanding,
+  totalExpenses, netProfit, margin,
+  loadCount, avgRate, totalMiles, avgRpm,
+  expBreakdown, periodLoads,
+}) => {
+  const { jsPDF } = await import('jspdf');
+  const { default: autoTable } = await import('jspdf-autotable');
+
+  const doc  = new jsPDF({ unit: 'pt', format: 'letter' });
+  const W    = doc.internal.pageSize.getWidth();
+  const mg   = 48;
+  let y      = mg;
+
+  const dark    = [26, 26, 26];
+  const black   = [0, 0, 0];
+  const gray    = [100, 100, 100];
+  const ltGray  = [220, 220, 220];
+  const bgLight = [248, 248, 248];
+
+  const fmt = (n) => `$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const divider = () => {
+    doc.setDrawColor(...ltGray);
+    doc.setLineWidth(0.5);
+    doc.line(mg, y, W - mg, y);
+    y += 14;
+  };
+
+  // ── Header ────────────────────────────────────────────────────────────────
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(26);
+  doc.setTextColor(...black);
+  doc.text('PROFIT & LOSS REPORT', mg, y);
+  y += 18;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(...gray);
+  doc.text(`${companyName}   ·   Period: ${periodLabel}   ·   Generated: ${generatedDate}`, mg, y);
+  y += 20;
+
+  divider();
+
+  // ── Summary table ─────────────────────────────────────────────────────────
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...gray);
+  doc.text('SUMMARY', mg, y);
+  y += 10;
+
+  autoTable(doc, {
+    startY: y,
+    margin: { left: mg, right: mg },
+    body: [
+      ['Revenue Collected',  fmt(totalCollected),   ''],
+      ['Revenue Invoiced',   fmt(totalInvoiced),    ''],
+      ['Outstanding',        fmt(totalOutstanding),  totalOutstanding > 0 ? 'Not yet paid' : ''],
+      ['Total Expenses',     fmt(totalExpenses),    ''],
+      ['Net Profit',         (netProfit < 0 ? '-' : '') + fmt(netProfit), `${margin.toFixed(1)}% margin`],
+    ],
+    bodyStyles: { fontSize: 11, textColor: dark },
+    columnStyles: {
+      0: { fontStyle: 'normal', cellWidth: 200, textColor: gray },
+      1: { fontStyle: 'bold',   cellWidth: 120, halign: 'right' },
+      2: { fontStyle: 'normal', textColor: gray, fontSize: 9 },
+    },
+    alternateRowStyles: { fillColor: bgLight },
+    theme: 'plain',
+  });
+
+  y = doc.lastAutoTable.finalY + 18;
+  divider();
+
+  // ── Metrics ───────────────────────────────────────────────────────────────
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...gray);
+  doc.text('METRICS', mg, y);
+  y += 10;
+
+  const metricsRows = [
+    ['Loads (delivered / invoiced)', String(loadCount)],
+    ['Average Rate per Load',        fmt(avgRate)],
+  ];
+  if (totalMiles > 0) metricsRows.push(['Total Miles', `${totalMiles.toLocaleString()} mi`]);
+  if (avgRpm > 0)     metricsRows.push(['Average Revenue per Mile', `$${avgRpm.toFixed(2)}/mi`]);
+
+  autoTable(doc, {
+    startY: y,
+    margin: { left: mg, right: mg },
+    body: metricsRows,
+    bodyStyles: { fontSize: 11, textColor: dark },
+    columnStyles: {
+      0: { fontStyle: 'normal', cellWidth: 260, textColor: gray },
+      1: { fontStyle: 'bold', halign: 'right' },
+    },
+    alternateRowStyles: { fillColor: bgLight },
+    theme: 'plain',
+  });
+
+  y = doc.lastAutoTable.finalY + 18;
+
+  // ── Expense Breakdown ─────────────────────────────────────────────────────
+  if (expBreakdown.length > 0) {
+    divider();
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...gray);
+    doc.text('EXPENSE BREAKDOWN', mg, y);
+    y += 10;
+
+    autoTable(doc, {
+      startY: y,
+      margin: { left: mg, right: mg },
+      head: [['Category', 'Amount', '% of Expenses']],
+      body: expBreakdown.map(({ cat, total }) => [
+        cat.charAt(0).toUpperCase() + cat.slice(1),
+        fmt(total),
+        totalExpenses > 0 ? `${((total / totalExpenses) * 100).toFixed(1)}%` : '—',
+      ]),
+      headStyles: { fillColor: dark, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+      bodyStyles: { fontSize: 10, textColor: dark },
+      columnStyles: {
+        0: { cellWidth: 220 },
+        1: { halign: 'right', cellWidth: 120 },
+        2: { halign: 'right' },
+      },
+      alternateRowStyles: { fillColor: bgLight },
+      theme: 'striped',
+    });
+
+    y = doc.lastAutoTable.finalY + 18;
+  }
+
+  // ── Load List ─────────────────────────────────────────────────────────────
+  if (periodLoads.length > 0) {
+    divider();
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...gray);
+    doc.text('LOADS', mg, y);
+    y += 10;
+
+    autoTable(doc, {
+      startY: y,
+      margin: { left: mg, right: mg },
+      head: [['Route', 'Date', 'Rate', 'Collected', 'Status']],
+      body: periodLoads.map(l => {
+        const collected = Number(l.paid_amount) || 0;
+        const invoiced  = Number(l.rate)        || 0;
+        const status    = collected >= invoiced && invoiced > 0 ? 'PAID'
+                        : collected > 0 ? 'PARTIAL' : 'UNPAID';
+        return [
+          `${l.origin || '—'} → ${l.destination || '—'}`,
+          l.delivery_date ? new Date(l.delivery_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—',
+          fmt(invoiced),
+          fmt(collected),
+          status,
+        ];
+      }),
+      headStyles: { fillColor: dark, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+      bodyStyles: { fontSize: 9, textColor: dark },
+      columnStyles: {
+        0: { cellWidth: 'auto' },
+        1: { cellWidth: 60 },
+        2: { halign: 'right', cellWidth: 80 },
+        3: { halign: 'right', cellWidth: 80 },
+        4: { halign: 'center', cellWidth: 55 },
+      },
+      alternateRowStyles: { fillColor: bgLight },
+      theme: 'striped',
+    });
+
+    y = doc.lastAutoTable.finalY + 18;
+  }
+
+  // ── Footer ────────────────────────────────────────────────────────────────
+  const pageH = doc.internal.pageSize.getHeight();
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...ltGray);
+  doc.text('Generated by Integra AI · integratedtech.ca', W / 2, pageH - 20, { align: 'center' });
+
+  return doc;
+};
 
 const fmt  = (n) => `$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 const fmtK = (n) => Math.abs(n) >= 1000 ? `$${(Math.abs(n) / 1000).toFixed(1)}k` : fmt(n);
@@ -131,7 +321,7 @@ const ChartTooltip = ({ active, payload, label, isDark }) => {
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 const PLScreen = ({ onBack }) => {
-  const { api, theme, toggleTheme } = useDriverApp();
+  const { api, user, theme, toggleTheme } = useDriverApp();
   const isDark = theme === 'dark';
 
   const bg      = isDark ? 'bg-[#030303]'        : 'bg-[#f5f5f5]';
@@ -140,10 +330,17 @@ const PLScreen = ({ onBack }) => {
   const subtext = isDark ? 'text-white/60'    : 'text-black/60';
   const border  = isDark ? 'border-[#1F1F1F]' : 'border-[#e5e5e5]';
 
-  const [period, setPeriod]   = useState('month');
-  const [loads, setLoads]     = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [period, setPeriod]       = useState('month');
+  const [loads, setLoads]         = useState([]);
+  const [loading, setLoading]     = useState(true);
   const [chartType, setChartType] = useState('bar'); // 'bar' | 'line'
+  const [exporting, setExporting] = useState(false);
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const [customFrom, setCustomFrom] = useState(() => {
+    const d = new Date(); d.setDate(1); return d.toISOString().slice(0, 10);
+  });
+  const [customTo, setCustomTo] = useState(todayStr);
 
   const expenses = loadStoredExpenses();
 
@@ -172,7 +369,45 @@ const PLScreen = ({ onBack }) => {
       return d >= weekAgo;
     }
     if (period === 'month') return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    if (period === 'custom') {
+      const from = customFrom ? new Date(customFrom) : null;
+      const to   = customTo   ? new Date(customTo + 'T23:59:59') : null;
+      return (!from || d >= from) && (!to || d <= to);
+    }
     return d.getFullYear() === now.getFullYear();
+  };
+
+  const periodLabel = (() => {
+    if (period === 'week')  return 'This Week';
+    if (period === 'month') return `${now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
+    if (period === 'year')  return String(now.getFullYear());
+    return `${customFrom} to ${customTo}`;
+  })();
+
+  const handleExportPdf = async () => {
+    setExporting(true);
+    try {
+      const doc = await generatePLPdf({
+        periodLabel,
+        companyName: user?.company_name || 'Integra AI Driver',
+        generatedDate: now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+        totalCollected, totalInvoiced, totalOutstanding,
+        totalExpenses, netProfit, margin,
+        loadCount, avgRate, totalMiles, avgRpm,
+        expBreakdown, periodLoads,
+      });
+      const filename = `PL-Report-${period === 'custom' ? `${customFrom}-${customTo}` : period}-${now.toISOString().slice(0, 10)}.pdf`;
+      const blob = doc.output('blob');
+      const url  = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    } catch (err) {
+      console.error('P&L PDF error', err);
+    } finally {
+      setExporting(false);
+    }
   };
 
   const periodLoads = loads.filter(l =>
@@ -227,13 +462,26 @@ const PLScreen = ({ onBack }) => {
           </div>
           <div className="flex items-center gap-2">
             {loading && <div className="w-5 h-5 border-2 border-[#CC2222] border-t-transparent rounded-full animate-spin" />}
+            <button onClick={handleExportPdf} disabled={exporting || loading}
+              className={`h-9 px-3 flex items-center gap-1.5 text-xs font-bold tracking-wider border transition-colors ${
+                exporting ? 'border-[#CC2222]/40 text-[#CC2222]/40' : `border-[#CC2222] text-[#CC2222] hover:bg-[#CC2222] hover:text-white`
+              }`}>
+              {exporting ? (
+                <div className="w-3 h-3 border border-[#CC2222]/40 border-t-[#CC2222] rounded-full animate-spin" />
+              ) : (
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              )}
+              PDF
+            </button>
             <button onClick={toggleTheme} className={`w-9 h-9 flex items-center justify-center flex-shrink-0 ${isDark ? 'text-yellow-400' : 'text-black/50'}`}>
-            {isDark ? (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-            ) : (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
-            )}
-          </button>
+              {isDark ? (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+              )}
+            </button>
           </div>
         </div>
 
@@ -250,6 +498,26 @@ const PLScreen = ({ onBack }) => {
             </button>
           ))}
         </div>
+
+        {/* Custom date range */}
+        {period === 'custom' && (
+          <div className="flex gap-2 pt-1">
+            <div className="flex-1">
+              <p className={`text-xs tracking-wider mb-1 ${subtext}`}>FROM</p>
+              <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
+                className={`w-full border py-2 px-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#CC2222] ${
+                  isDark ? 'bg-[#080808] border-[#1F1F1F] text-white' : 'bg-white border-[#e5e5e5] text-black'
+                }`} />
+            </div>
+            <div className="flex-1">
+              <p className={`text-xs tracking-wider mb-1 ${subtext}`}>TO</p>
+              <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)}
+                className={`w-full border py-2 px-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#CC2222] ${
+                  isDark ? 'bg-[#080808] border-[#1F1F1F] text-white' : 'bg-white border-[#e5e5e5] text-black'
+                }`} />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
