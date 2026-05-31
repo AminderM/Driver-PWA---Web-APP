@@ -58,7 +58,21 @@ const SCAN_DOC_TYPES = [
 ];
 
 const ProfileScreen = ({ onBack }) => {
-  const { user, currentLocation, api, userType, updateProfile } = useDriverApp();
+  const { user, currentLocation, api, userType, updateProfile, theme, toggleTheme, logout } = useDriverApp();
+  const isDark = theme === 'dark';
+
+  const bg      = isDark ? 'bg-[#030303]'        : 'bg-[#f5f5f5]';
+  const surface = isDark ? 'bg-[#080808]'        : 'bg-white';
+  const text    = isDark ? 'text-white'           : 'text-black';
+  const subtext = isDark ? 'text-white/50'        : 'text-black/50';
+  const border  = isDark ? 'border-[#1F1F1F]'    : 'border-[#e5e5e5]';
+  const inputCls = `w-full border py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#CC2222] ${
+    isDark
+      ? 'bg-[#161616] border-[#1F1F1F] text-white placeholder-white/30'
+      : 'bg-[#f5f5f5] border-[#e5e5e5] text-black placeholder-black/30'
+  }`;
+
+  const [showLogout, setShowLogout] = useState(false);
   const [documents, setDocuments]     = useState([]);
   const [docsLoading, setDocsLoading] = useState(true);
 
@@ -179,15 +193,21 @@ const ProfileScreen = ({ onBack }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 flex flex-col font-['Barlow_Condensed'] relative">
+    <div className={`min-h-screen ${bg} flex flex-col font-['Barlow_Condensed'] relative`}>
+
       {/* Header */}
-      <div className="bg-gradient-to-r from-gray-800 to-gray-950 px-4 py-4 flex items-center gap-3">
-        <button onClick={onBack} className="w-10 h-10 flex items-center justify-center">
-          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <h1 className="text-xl font-bold text-white tracking-wider">PROFILE</h1>
+      <div className={`${surface} border-b ${border} px-5 pt-10 pb-4`}>
+        <div className="flex items-center justify-between mb-1">
+          <button onClick={onBack} className={`text-sm tracking-wider ${subtext}`}>← BACK</button>
+          <button onClick={toggleTheme} className={`w-9 h-9 flex items-center justify-center flex-shrink-0 ${isDark ? 'text-yellow-400' : 'text-black/50'}`}>
+            {isDark ? (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+            )}
+          </button>
+        </div>
+        <h1 className={`text-xl font-bold tracking-wider ${text}`}>PROFILE</h1>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
@@ -196,7 +216,7 @@ const ProfileScreen = ({ onBack }) => {
         <div className="text-center mb-2">
           {isBusinessUser && user?.logo_url ? (
             <img src={user.logo_url} alt="Company logo"
-              className="w-24 h-24 object-cover mx-auto mb-3 border border-[#1F1F1F]" />
+              className={`w-24 h-24 object-cover mx-auto mb-3 border ${border}`} />
           ) : (
             <div className="w-24 h-24 bg-[#CC2222] flex items-center justify-center mx-auto mb-3">
               <span className="text-3xl text-white font-bold">
@@ -204,43 +224,43 @@ const ProfileScreen = ({ onBack }) => {
               </span>
             </div>
           )}
-          <h2 className="text-xl font-bold text-white">{user?.full_name}</h2>
+          <h2 className={`text-xl font-bold ${text}`}>{user?.full_name}</h2>
           {isBusinessUser && user?.company_name && (
-            <p className="text-white/70 text-sm mt-0.5">{user.company_name}</p>
+            <p className={`text-sm mt-0.5 ${subtext}`}>{user.company_name}</p>
           )}
-          <p className="text-white/50 text-sm">{ROLE_LABELS[userType] || 'Driver'}</p>
+          <p className={`text-sm ${subtext}`}>{ROLE_LABELS[userType] || 'Driver'}</p>
           {user?.home_terminal && (
-            <p className="text-white/40 text-xs mt-1">{user.home_terminal}</p>
+            <p className={`text-xs mt-1 ${subtext}`}>{user.home_terminal}</p>
           )}
           {user?.carrier_name && userType === 'driver' && (
-            <p className="text-white/40 text-xs mt-1">{user.carrier_name}</p>
+            <p className={`text-xs mt-1 ${subtext}`}>{user.carrier_name}</p>
           )}
         </div>
 
         {/* Contact Info */}
-        <div className="bg-[#080808] border border-[#1F1F1F] p-4 space-y-3">
-          <p className="text-white/40 text-xs tracking-wider">CONTACT</p>
+        <div className={`${surface} border ${border} p-4 space-y-3`}>
+          <p className={`text-xs tracking-wider ${subtext}`}>CONTACT</p>
           <div>
-            <p className="text-white/50 text-xs mb-0.5">Email</p>
-            <p className="text-white text-sm">{user?.email}</p>
+            <p className={`text-xs mb-0.5 ${subtext}`}>Email</p>
+            <p className={`text-sm ${text}`}>{user?.email}</p>
           </div>
           <div>
-            <p className="text-white/50 text-xs mb-0.5">Phone</p>
-            <p className="text-white text-sm">{user?.phone || '—'}</p>
+            <p className={`text-xs mb-0.5 ${subtext}`}>Phone</p>
+            <p className={`text-sm ${text}`}>{user?.phone || '—'}</p>
           </div>
           {user?.hire_date && (
             <div>
-              <p className="text-white/50 text-xs mb-0.5">Hire Date</p>
-              <p className="text-white text-sm">{new Date(user.hire_date).toLocaleDateString()}</p>
+              <p className={`text-xs mb-0.5 ${subtext}`}>Hire Date</p>
+              <p className={`text-sm ${text}`}>{new Date(user.hire_date).toLocaleDateString()}</p>
             </div>
           )}
         </div>
 
         {/* Business Info — Owner Operator + Carrier (editable) */}
         {isBusinessUser && (
-          <div className="bg-[#080808] border border-[#1F1F1F] p-4 space-y-3">
+          <div className={`${surface} border ${border} p-4 space-y-3`}>
             <div className="flex items-center justify-between">
-              <p className="text-white/40 text-xs tracking-wider">BUSINESS INFO</p>
+              <p className={`text-xs tracking-wider ${subtext}`}>BUSINESS INFO</p>
               {!editingBiz && (
                 <button onClick={openBizEdit} className="text-[#CC2222] text-xs tracking-wider hover:text-[#FF2020]">
                   EDIT
@@ -256,36 +276,35 @@ const ProfileScreen = ({ onBack }) => {
                   </div>
                 )}
                 <div>
-                  <p className="text-white/50 text-xs mb-1">Company Name</p>
+                  <p className={`text-xs mb-1 ${subtext}`}>Company Name</p>
                   <input type="text" value={bizCompany} onChange={e => setBizCompany(e.target.value)}
-                    placeholder="Smith Trucking Inc."
-                    className="w-full bg-[#161616] border border-[#1F1F1F] text-white text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#CC2222] placeholder-white/30" />
+                    placeholder="Smith Trucking Inc." className={inputCls} />
                 </div>
                 <div>
-                  <p className="text-white/50 text-xs mb-1">MC / DOT Number</p>
+                  <p className={`text-xs mb-1 ${subtext}`}>MC / DOT Number</p>
                   <input type="text" value={bizMcDot} onChange={e => setBizMcDot(e.target.value)}
                     placeholder="MC-123456 or USDOT 1234567"
-                    className="w-full bg-[#161616] border border-[#1F1F1F] text-white text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#CC2222] placeholder-white/30 font-mono" />
+                    className={`${inputCls} font-mono`} />
                 </div>
                 <div>
-                  <p className="text-white/50 text-xs mb-1">Company Logo</p>
+                  <p className={`text-xs mb-1 ${subtext}`}>Company Logo</p>
                   <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoSelect} className="hidden" />
                   {logoPreview ? (
                     <div className="flex items-center gap-3">
-                      <img src={logoPreview} alt="Logo preview" className="w-12 h-12 object-cover border border-[#1F1F1F]" />
+                      <img src={logoPreview} alt="Logo preview" className={`w-12 h-12 object-cover border ${border}`} />
                       <button type="button" onClick={() => { setLogoFile(null); setLogoPreview(null); }}
-                        className="text-white/40 text-xs hover:text-white/60">Remove</button>
+                        className={`text-xs ${subtext} hover:text-[#FF2020]`}>Remove</button>
                     </div>
                   ) : (
                     <button type="button" onClick={() => logoInputRef.current?.click()}
-                      className="w-full border border-dashed border-[#1F1F1F] text-white/40 text-xs py-3 tracking-wider hover:border-[#CC2222]/40 hover:text-white/60 transition-colors">
+                      className={`w-full border border-dashed ${border} ${subtext} text-xs py-3 tracking-wider hover:border-[#CC2222]/40 transition-colors`}>
                       {user?.logo_url ? 'CHANGE LOGO' : 'UPLOAD LOGO'}
                     </button>
                   )}
                 </div>
                 <div className="flex gap-2 pt-1">
                   <button onClick={() => setEditingBiz(false)} disabled={bizSaving}
-                    className="flex-1 border border-[#1F1F1F] text-white/50 text-sm py-2.5 tracking-wider hover:bg-white/5">
+                    className={`flex-1 border ${border} ${subtext} text-sm py-2.5 tracking-wider`}>
                     CANCEL
                   </button>
                   <button onClick={handleBizSave} disabled={bizSaving}
@@ -302,32 +321,31 @@ const ProfileScreen = ({ onBack }) => {
             ) : (
               <>
                 <div>
-                  <p className="text-white/50 text-xs mb-0.5">Company Name</p>
-                  <p className="text-white text-sm">{user?.company_name || <span className="text-white/30 italic">Not set — tap Edit</span>}</p>
+                  <p className={`text-xs mb-0.5 ${subtext}`}>Company Name</p>
+                  <p className={`text-sm ${text}`}>{user?.company_name || <span className={`italic ${subtext}`}>Not set — tap Edit</span>}</p>
                 </div>
                 <div>
-                  <p className="text-white/50 text-xs mb-0.5">MC / DOT Number</p>
-                  <p className="text-white text-sm font-mono">
-                    {user?.mc_dot_number || <span className="text-white/30 italic text-sm font-normal">Not set — required for invoicing</span>}
+                  <p className={`text-xs mb-0.5 ${subtext}`}>MC / DOT Number</p>
+                  <p className={`text-sm font-mono ${text}`}>
+                    {user?.mc_dot_number || <span className={`italic text-sm font-normal ${subtext}`}>Not set — required for invoicing</span>}
                   </p>
                 </div>
                 {user?.logo_url && (
                   <div>
-                    <p className="text-white/50 text-xs mb-1">Logo</p>
-                    <img src={user.logo_url} alt="Company logo" className="w-14 h-14 object-cover border border-[#1F1F1F]" />
+                    <p className={`text-xs mb-1 ${subtext}`}>Logo</p>
+                    <img src={user.logo_url} alt="Company logo" className={`w-14 h-14 object-cover border ${border}`} />
                   </div>
                 )}
-                {/* Legacy fields kept for existing carrier accounts */}
                 {user?.company_address && (
                   <div>
-                    <p className="text-white/50 text-xs mb-0.5">Address</p>
-                    <p className="text-white text-sm">{user.company_address}</p>
+                    <p className={`text-xs mb-0.5 ${subtext}`}>Address</p>
+                    <p className={`text-sm ${text}`}>{user.company_address}</p>
                   </div>
                 )}
                 {(user?.mc_number || user?.dot_number) && !user?.mc_dot_number && (
                   <div>
-                    <p className="text-white/50 text-xs mb-0.5">MC / DOT</p>
-                    <p className="text-white text-sm font-mono">
+                    <p className={`text-xs mb-0.5 ${subtext}`}>MC / DOT</p>
+                    <p className={`text-sm font-mono ${text}`}>
                       {[user.mc_number, user.dot_number].filter(Boolean).join(' · ')}
                     </p>
                   </div>
@@ -337,15 +355,15 @@ const ProfileScreen = ({ onBack }) => {
           </div>
         )}
 
-        {/* Subscription status — OO + Carrier only */}
+        {/* Subscription status */}
         {isBusinessUser && (
-          <div className="bg-[#080808] border border-[#1F1F1F] p-4 space-y-3">
-            <p className="text-white/40 text-xs tracking-wider">SUBSCRIPTION</p>
+          <div className={`${surface} border ${border} p-4 space-y-3`}>
+            <p className={`text-xs tracking-wider ${subtext}`}>SUBSCRIPTION</p>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-white/50 text-xs mb-0.5">Integra AI Vault</p>
+                <p className={`text-xs mb-0.5 ${subtext}`}>Integra AI Vault</p>
                 {user?.trial_ends_at && user?.subscription_status !== 'active' && (
-                  <p className="text-white/30 text-xs mt-0.5">
+                  <p className={`text-xs mt-0.5 ${subtext}`}>
                     Trial ends {new Date(user.trial_ends_at).toLocaleDateString()}
                   </p>
                 )}
@@ -357,51 +375,51 @@ const ProfileScreen = ({ onBack }) => {
           </div>
         )}
 
-        {/* License & Certifications — driver and owner_operator only */}
+        {/* License & Certifications */}
         {userType !== 'carrier' && (
-          <div className="bg-[#080808] border border-[#1F1F1F] p-4 space-y-3">
-            <p className="text-white/40 text-xs tracking-wider">LICENSE & CERTIFICATIONS</p>
+          <div className={`${surface} border ${border} p-4 space-y-3`}>
+            <p className={`text-xs tracking-wider ${subtext}`}>LICENSE & CERTIFICATIONS</p>
             {hasLicenseData ? (
               <>
                 {user.license_number && (
                   <div>
-                    <p className="text-white/50 text-xs mb-0.5">License Number</p>
-                    <p className="text-white text-sm font-mono">{user.license_number}</p>
+                    <p className={`text-xs mb-0.5 ${subtext}`}>License Number</p>
+                    <p className={`text-sm font-mono ${text}`}>{user.license_number}</p>
                   </div>
                 )}
                 {user.license_type && (
                   <div>
-                    <p className="text-white/50 text-xs mb-0.5">License Type</p>
-                    <p className="text-white text-sm">{LICENSE_TYPE_LABELS[user.license_type] || user.license_type}</p>
+                    <p className={`text-xs mb-0.5 ${subtext}`}>License Type</p>
+                    <p className={`text-sm ${text}`}>{LICENSE_TYPE_LABELS[user.license_type] || user.license_type}</p>
                   </div>
                 )}
                 {user.license_state && (
                   <div>
-                    <p className="text-white/50 text-xs mb-0.5">License State</p>
-                    <p className="text-white text-sm">{user.license_state}</p>
+                    <p className={`text-xs mb-0.5 ${subtext}`}>License State</p>
+                    <p className={`text-sm ${text}`}>{user.license_state}</p>
                   </div>
                 )}
                 {user.license_expiry && (
                   <div>
-                    <p className="text-white/50 text-xs mb-0.5">License Expiry</p>
+                    <p className={`text-xs mb-0.5 ${subtext}`}>License Expiry</p>
                     <div className="flex items-center">
-                      <p className="text-white text-sm">{new Date(user.license_expiry).toLocaleDateString()}</p>
+                      <p className={`text-sm ${text}`}>{new Date(user.license_expiry).toLocaleDateString()}</p>
                       <ExpiryBadge date={user.license_expiry} />
                     </div>
                   </div>
                 )}
                 {user.medical_card_expiry && (
                   <div>
-                    <p className="text-white/50 text-xs mb-0.5">Medical Card Expiry</p>
+                    <p className={`text-xs mb-0.5 ${subtext}`}>Medical Card Expiry</p>
                     <div className="flex items-center">
-                      <p className="text-white text-sm">{new Date(user.medical_card_expiry).toLocaleDateString()}</p>
+                      <p className={`text-sm ${text}`}>{new Date(user.medical_card_expiry).toLocaleDateString()}</p>
                       <ExpiryBadge date={user.medical_card_expiry} />
                     </div>
                   </div>
                 )}
                 {user.endorsements?.length > 0 && (
                   <div>
-                    <p className="text-white/50 text-xs mb-1">Endorsements</p>
+                    <p className={`text-xs mb-1 ${subtext}`}>Endorsements</p>
                     <div className="flex flex-wrap gap-2">
                       {user.endorsements.map(e => (
                         <span key={e} className="bg-[#CC2222]/20 border border-[#CC2222]/40 text-[#FF2020] text-xs px-2 py-1 tracking-wider">
@@ -413,19 +431,16 @@ const ProfileScreen = ({ onBack }) => {
                 )}
               </>
             ) : (
-              <p className="text-white/30 text-sm">No license details on file.</p>
+              <p className={`text-sm ${subtext}`}>No license details on file.</p>
             )}
           </div>
         )}
 
         {/* Scanned Documents */}
-        <div className="bg-[#080808] border border-[#1F1F1F] p-4 space-y-3">
+        <div className={`${surface} border ${border} p-4 space-y-3`}>
           <div className="flex items-center justify-between">
-            <p className="text-white/40 text-xs tracking-wider">SCANNED DOCUMENTS</p>
-            <button
-              onClick={handleScanClick}
-              className="text-[#CC2222] text-xs tracking-wider hover:text-[#FF2020]"
-            >
+            <p className={`text-xs tracking-wider ${subtext}`}>SCANNED DOCUMENTS</p>
+            <button onClick={handleScanClick} className="text-[#CC2222] text-xs tracking-wider hover:text-[#FF2020]">
               + SCAN
             </button>
           </div>
@@ -433,32 +448,27 @@ const ProfileScreen = ({ onBack }) => {
           {docsLoading ? (
             <div className="flex items-center gap-2 py-2">
               <div className="w-4 h-4 border-2 border-[#CC2222] border-t-transparent rounded-full animate-spin" />
-              <p className="text-white/30 text-sm">Loading...</p>
+              <p className={`text-sm ${subtext}`}>Loading...</p>
             </div>
           ) : documents.length === 0 ? (
             <div className="py-4 text-center">
-              <p className="text-white/30 text-sm mb-3">No documents scanned yet</p>
-              <button
-                onClick={handleScanClick}
-                className="border border-[#1F1F1F] text-white/50 text-sm px-6 py-3 hover:bg-white/5 tracking-wider"
-              >
+              <p className={`text-sm mb-3 ${subtext}`}>No documents scanned yet</p>
+              <button onClick={handleScanClick}
+                className={`border ${border} ${subtext} text-sm px-6 py-3 tracking-wider hover:border-[#CC2222]/40 transition-colors`}>
                 SCAN A DOCUMENT
               </button>
             </div>
           ) : (
             <div className="space-y-3">
               {documents.map(doc => (
-                <div key={doc.id} className="flex gap-3 border border-[#1a1a1a] p-3">
-                  <img
-                    src={doc.document_url}
-                    alt={DOC_TYPE_LABELS[doc.document_type] || 'Document'}
-                    className="w-16 h-16 object-cover flex-shrink-0 bg-[#161616]"
-                  />
+                <div key={doc.id} className={`flex gap-3 border ${border} p-3`}>
+                  <img src={doc.document_url} alt={DOC_TYPE_LABELS[doc.document_type] || 'Document'}
+                    className={`w-16 h-16 object-cover flex-shrink-0 ${isDark ? 'bg-[#161616]' : 'bg-[#f0f0f0]'}`} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-white text-sm font-semibold tracking-wider">
+                    <p className={`text-sm font-semibold tracking-wider ${text}`}>
                       {DOC_TYPE_LABELS[doc.document_type] || 'Document'}
                     </p>
-                    <p className="text-white/40 text-xs mt-1">
+                    <p className={`text-xs mt-1 ${subtext}`}>
                       {new Date(doc.uploaded_at).toLocaleDateString()}
                     </p>
                   </div>
@@ -468,47 +478,76 @@ const ProfileScreen = ({ onBack }) => {
           )}
         </div>
 
-        {/* Location & Status — driver and owner_operator only */}
+        {/* Location & Status */}
         {userType !== 'carrier' && (
-          <div className="bg-[#080808] border border-[#1F1F1F] p-4 space-y-3">
-            <p className="text-white/40 text-xs tracking-wider">STATUS</p>
+          <div className={`${surface} border ${border} p-4 space-y-3`}>
+            <p className={`text-xs tracking-wider ${subtext}`}>STATUS</p>
             <div>
-              <p className="text-white/50 text-xs mb-0.5">Location Tracking</p>
+              <p className={`text-xs mb-0.5 ${subtext}`}>Location Tracking</p>
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                 <span className="text-[#2DBB62] text-sm">Active</span>
               </div>
               {currentLocation && (
-                <p className="text-white/30 text-xs mt-1">Accuracy: ±{Math.round(currentLocation.accuracy_m || 0)}m</p>
+                <p className={`text-xs mt-1 ${subtext}`}>Accuracy: ±{Math.round(currentLocation.accuracy_m || 0)}m</p>
               )}
             </div>
             <div>
-              <p className="text-white/50 text-xs mb-0.5">Driver ID</p>
-              <p className="text-white font-mono text-xs">{user?.id}</p>
+              <p className={`text-xs mb-0.5 ${subtext}`}>Driver ID</p>
+              <p className={`font-mono text-xs ${text}`}>{user?.id}</p>
             </div>
           </div>
         )}
 
         {/* Account ID — carrier only */}
         {userType === 'carrier' && (
-          <div className="bg-[#080808] border border-[#1F1F1F] p-4 space-y-3">
-            <p className="text-white/40 text-xs tracking-wider">ACCOUNT</p>
+          <div className={`${surface} border ${border} p-4 space-y-3`}>
+            <p className={`text-xs tracking-wider ${subtext}`}>ACCOUNT</p>
             <div>
-              <p className="text-white/50 text-xs mb-0.5">Account ID</p>
-              <p className="text-white font-mono text-xs">{user?.id}</p>
+              <p className={`text-xs mb-0.5 ${subtext}`}>Account ID</p>
+              <p className={`font-mono text-xs ${text}`}>{user?.id}</p>
             </div>
           </div>
         )}
+
+        {/* Sign Out */}
+        <div className={`${surface} border-l-2 border-l-[#CC2222] border-t border-r border-b ${border} p-4`}>
+          <button onClick={() => setShowLogout(true)}
+            className="flex items-center gap-3 text-[#CC2222] text-sm font-bold tracking-wider w-full">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            SIGN OUT
+          </button>
+        </div>
+
+        <div className="h-6" />
       </div>
 
-      {/* Hidden file input for document scan */}
-      <input
-        ref={scanFileInputRef}
-        type="file"
-        accept="image/*,application/pdf"
-        onChange={handleScanFileSelected}
-        className="hidden"
-      />
+      {/* Hidden file input */}
+      <input ref={scanFileInputRef} type="file" accept="image/*,application/pdf"
+        onChange={handleScanFileSelected} className="hidden" />
+
+      {/* Logout confirm */}
+      {showLogout && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+          <div className="absolute inset-0 bg-black/70" onClick={() => setShowLogout(false)} />
+          <div className={`relative ${surface} border ${border} p-6 w-full max-w-sm`}>
+            <h3 className={`text-lg font-bold tracking-wider mb-2 ${text}`}>SIGN OUT?</h3>
+            <p className={`text-sm mb-6 ${subtext}`}>Location tracking will stop.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowLogout(false)}
+                className={`flex-1 border ${border} ${subtext} py-3 text-sm tracking-wider`}>
+                CANCEL
+              </button>
+              <button onClick={() => { logout(); setShowLogout(false); }}
+                className="flex-1 bg-[#CC2222] text-white py-3 text-sm tracking-wider">
+                SIGN OUT
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Document scan bottom sheet */}
       {scanSheet && (
@@ -521,34 +560,23 @@ const ProfileScreen = ({ onBack }) => {
                 <button onClick={() => setScanSheet(false)} className="text-white/40 text-xl">✕</button>
               )}
             </div>
-
             <p className="text-white/50 text-sm truncate">📎 {scanFileName}</p>
-
             {scanError && (
               <div className="bg-[#CC2222]/20 border border-[#CC2222]/50 p-3">
                 <p className="text-[#FF2020] text-sm">{scanError}</p>
               </div>
             )}
-
             <div>
               <label className="block text-white/60 text-xs tracking-wider mb-2">DOCUMENT TYPE</label>
-              <select
-                value={scanDocType}
-                onChange={e => setScanDocType(e.target.value)}
-                disabled={scanSaving}
-                className="w-full bg-[#161616] border border-[#1F1F1F] text-white text-sm py-3 px-3 focus:outline-none focus:border-[#CC2222]"
-              >
+              <select value={scanDocType} onChange={e => setScanDocType(e.target.value)} disabled={scanSaving}
+                className="w-full bg-[#161616] border border-[#1F1F1F] text-white text-sm py-3 px-3 focus:outline-none focus:border-[#CC2222]">
                 {SCAN_DOC_TYPES.map(dt => (
                   <option key={dt.value} value={dt.value}>{dt.label}</option>
                 ))}
               </select>
             </div>
-
-            <button
-              onClick={submitScan}
-              disabled={scanSaving}
-              className="w-full bg-[#CC2222] hover:bg-[#7A1010] disabled:bg-[#CC2222]/50 text-white font-bold py-4 tracking-wider transition-colors"
-            >
+            <button onClick={submitScan} disabled={scanSaving}
+              className="w-full bg-[#CC2222] hover:bg-[#7A1010] disabled:bg-[#CC2222]/50 text-white font-bold py-4 tracking-wider transition-colors">
               {scanSaving ? (
                 <span className="flex items-center justify-center gap-2">
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

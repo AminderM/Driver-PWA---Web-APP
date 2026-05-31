@@ -18,41 +18,41 @@ const generateInvoicePdf = async (invoice, user) => {
   const ltGray  = [238, 238, 238];
   const bgLight = [250, 250, 250];
 
-  // ── LEFT: logo / IA icon + company ───────────────────────────────────────
-  // Fix: never fall back to personal name — only show company name
+  // ── LEFT: logo / IA icon + company name + address ────────────────────────
   const companyName = user?.company_name || 'Your Company Name';
   let leftBottomY = y;
+
+  const LOGO_H = 72;  // compact header logo height
 
   if (user?.logo_url) {
     try {
       const img = await loadImage(user.logo_url);
       const ratio = img.width / img.height;
-      const lh = 126; const lw = Math.min(lh * ratio, 200); // 3× original size
-      doc.addImage(img, 'PNG', margin, y, lw, lh);
-      leftBottomY = y + lh + 10;
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(13);
-      doc.setTextColor(...dark);
-      doc.text(companyName, margin, leftBottomY);
-      leftBottomY += 14;
-    } catch (_) {}
+      const lw = Math.min(LOGO_H * ratio, 160);
+      doc.addImage(img, 'PNG', margin, y, lw, LOGO_H);
+      leftBottomY = y + LOGO_H + 8;
+    } catch (_) {
+      leftBottomY = y;
+    }
   } else {
-    // IA icon box — 3× size
+    // IA icon box
     doc.setFillColor(...dark);
-    doc.roundedRect(margin, y, 126, 126, 8, 8, 'F');
+    doc.roundedRect(margin, y, LOGO_H, LOGO_H, 6, 6, 'F');
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(52);
+    doc.setFontSize(28);
     doc.setTextColor(...red);
-    doc.text('IA', margin + 63, y + 80, { align: 'center' });
-    // Company name below the icon
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.setTextColor(...dark);
-    doc.text(companyName, margin, y + 126 + 14);
-    leftBottomY = y + 126 + 14;
+    doc.text('IA', margin + LOGO_H / 2, y + LOGO_H / 2 + 10, { align: 'center' });
+    leftBottomY = y + LOGO_H + 8;
   }
 
-  // Address + website
+  // Company name directly below logo
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...dark);
+  doc.text(companyName, margin, leftBottomY);
+  leftBottomY += 14;
+
+  // Address + MC/DOT or website
   const addrLines = [
     user?.address || 'Toronto, ON, Canada',
     user?.mc_dot_number ? `MC/DOT: ${user.mc_dot_number}` : 'integratedtech.ca',
@@ -62,7 +62,7 @@ const generateInvoicePdf = async (invoice, user) => {
   doc.setTextColor(...medGray);
   addrLines.forEach(line => {
     doc.text(line, margin, leftBottomY);
-    leftBottomY += 13;
+    leftBottomY += 12;
   });
 
   // ── RIGHT: INVOICE + meta ─────────────────────────────────────────────────
@@ -279,6 +279,7 @@ const InvoiceGeneratorScreen = ({ onBack }) => {
   const [billToContact, setBillToContact] = useState('');
   const [billToMc, setBillToMc]           = useState('');
   const [lineItems, setLineItems]         = useState([]);
+  const [taxRate, setTaxRate]             = useState('0');
   const [terms, setTerms]                 = useState('Net 30');
   const [paymentInstructions, setPaymentInstructions] = useState('');
   const [notes, setNotes]                 = useState('');
@@ -309,6 +310,7 @@ const InvoiceGeneratorScreen = ({ onBack }) => {
     setLineItems([
       { id: 1, description: `Freight Services — ${load.origin || ''} to ${load.destination || ''}`, amount: String(load.rate || '') },
     ]);
+    setTaxRate('0');
     setTerms('Net 30');
     setPaymentInstructions('');
     setNotes(load.notes || '');
@@ -325,7 +327,9 @@ const InvoiceGeneratorScreen = ({ onBack }) => {
   const removeLineItem = (id) =>
     setLineItems(prev => prev.filter(li => li.id !== id));
 
-  const total = lineItems.reduce((s, li) => s + (parseFloat(li.amount) || 0), 0);
+  const subtotalAmt = lineItems.reduce((s, li) => s + (parseFloat(li.amount) || 0), 0);
+  const taxAmount   = subtotalAmt * (parseFloat(taxRate) || 0) / 100;
+  const total       = subtotalAmt + taxAmount;
 
   const handleGenerate = async () => {
     if (!billToName.trim()) { setGenError('Bill To name is required.'); return; }
@@ -341,7 +345,7 @@ const InvoiceGeneratorScreen = ({ onBack }) => {
       const invoice = {
         invoiceNumber, invoiceDate, dueDate,
         terms: terms.trim() || 'Net 30',
-        taxAmount: 0,
+        taxAmount,
         billToName: billToName.trim(),
         billToContact: billToContact.trim(),
         billToMc: billToMc.trim(),
@@ -545,12 +549,7 @@ const InvoiceGeneratorScreen = ({ onBack }) => {
 
         {/* Line items */}
         <div className={`${surface} border ${border} p-4 space-y-3`}>
-          <div className="flex items-center justify-between">
-            <p className={`text-xs tracking-wider font-bold ${subtext}`}>LINE ITEMS</p>
-            <span className={`text-sm font-bold text-[#2DBB62]`}>
-              ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-          </div>
+          <p className={`text-xs tracking-wider font-bold ${subtext}`}>LINE ITEMS</p>
 
           {lineItems.map((li, idx) => (
             <div key={li.id} className={`border ${border} p-3 space-y-2`}>
@@ -578,6 +577,37 @@ const InvoiceGeneratorScreen = ({ onBack }) => {
             className={`w-full border ${border} py-2.5 text-xs tracking-wider ${subtext} hover:border-[#CC2222]/50 transition-colors`}>
             + ADD LINE ITEM
           </button>
+
+          {/* Tax % + totals summary */}
+          <div className={`border-t ${border} pt-3 space-y-2`}>
+            <div className="flex items-center justify-between gap-3">
+              <label className={`text-xs tracking-wider font-bold ${subtext} flex-shrink-0`}>TAX %</label>
+              <div className="relative w-32">
+                <input
+                  type="number" value={taxRate} min="0" max="100" step="0.01"
+                  onChange={e => setTaxRate(e.target.value)}
+                  placeholder="0"
+                  className={`${inputCls} pr-7 text-right`}
+                />
+                <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-sm ${subtext}`}>%</span>
+              </div>
+            </div>
+
+            <div className={`flex justify-between text-sm ${subtext}`}>
+              <span>Subtotal</span>
+              <span>${subtotalAmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+            {taxAmount > 0 && (
+              <div className={`flex justify-between text-sm ${subtext}`}>
+                <span>Tax ({taxRate}%)</span>
+                <span>${taxAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+            )}
+            <div className={`flex justify-between text-base font-bold pt-1 border-t ${border} ${text}`}>
+              <span>TOTAL</span>
+              <span className="text-[#2DBB62]">${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+          </div>
         </div>
 
         {/* Payment instructions + notes */}
