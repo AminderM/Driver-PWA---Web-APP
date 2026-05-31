@@ -244,9 +244,10 @@ const buildChartData = (loads, expenses, period) => {
       const d = new Date(now);
       d.setDate(now.getDate() - (6 - i));
       const key = d.toISOString().slice(0, 10);
-      const dayLoads = loads.filter(l =>
-        (l.status === 'delivered' || l.status === 'invoiced') && l.delivery_date?.slice(0, 10) === key
-      );
+      const dayLoads = loads.filter(l => {
+        const st = (l.status || '').toLowerCase();
+        return (st === 'delivered' || st === 'invoiced') && l.delivery_date?.slice(0, 10) === key;
+      });
       const collected   = dayLoads.reduce((s, l) => s + getCollected(l), 0);
       const invoiced    = dayLoads.reduce((s, l) => s + getInvoiced(l),  0);
       const expenseAmt  = expenses.filter(e => e.date === key).reduce((s, e) => s + e.amount, 0);
@@ -263,7 +264,8 @@ const buildChartData = (loads, expenses, period) => {
       if (!weeks[wk]) weeks[wk] = { label: wk, collected: 0, invoiced: 0, expenses: 0, profit: 0 };
     }
     loads.forEach(l => {
-      if ((l.status === 'delivered' || l.status === 'invoiced') && l.delivery_date) {
+      const st = (l.status || '').toLowerCase();
+      if ((st === 'delivered' || st === 'invoiced') && l.delivery_date) {
         const d = new Date(l.delivery_date);
         if (d.getFullYear() === year && d.getMonth() === month) {
           const wk = isoWeek(d);
@@ -286,7 +288,8 @@ const buildChartData = (loads, expenses, period) => {
   return Array.from({ length: 12 }).map((_, m) => {
     const label     = new Date(year, m, 1).toLocaleDateString('en-US', { month: 'short' });
     const mLoads    = loads.filter(l => {
-      if (l.status !== 'delivered' && l.status !== 'invoiced') return false;
+      const st = (l.status || '').toLowerCase();
+      if (st !== 'delivered' && st !== 'invoiced') return false;
       const d = l.delivery_date ? new Date(l.delivery_date) : null;
       return d && d.getFullYear() === year && d.getMonth() === m;
     });
@@ -355,6 +358,13 @@ const PLScreen = ({ onBack }) => {
 
   useEffect(() => { fetchLoads(); }, [fetchLoads]);
 
+  // Refresh whenever the tab becomes visible again (returning from ManualLoadsScreen)
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchLoads(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [fetchLoads]);
+
   // ── Derived metrics ───────────────────────────────────────────────────────
 
   const now = new Date();
@@ -410,9 +420,10 @@ const PLScreen = ({ onBack }) => {
     }
   };
 
-  const periodLoads = loads.filter(l =>
-    (l.status === 'delivered' || l.status === 'invoiced') && inPeriod(l.delivery_date)
-  );
+  const periodLoads = loads.filter(l => {
+    const st = (l.status || '').toLowerCase();
+    return (st === 'delivered' || st === 'invoiced') && inPeriod(l.delivery_date);
+  });
   const periodExpenses = expenses.filter(e => inPeriod(e.date));
 
   const totalCollected  = periodLoads.reduce((s, l) => s + getCollected(l), 0);
@@ -462,19 +473,6 @@ const PLScreen = ({ onBack }) => {
           </div>
           <div className="flex items-center gap-2">
             {loading && <div className="w-5 h-5 border-2 border-[#CC2222] border-t-transparent rounded-full animate-spin" />}
-            <button onClick={handleExportPdf} disabled={exporting || loading}
-              className={`h-9 px-3 flex items-center gap-1.5 text-xs font-bold tracking-wider border transition-colors ${
-                exporting ? 'border-[#CC2222]/40 text-[#CC2222]/40' : `border-[#CC2222] text-[#CC2222] hover:bg-[#CC2222] hover:text-white`
-              }`}>
-              {exporting ? (
-                <div className="w-3 h-3 border border-[#CC2222]/40 border-t-[#CC2222] rounded-full animate-spin" />
-              ) : (
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              )}
-              PDF
-            </button>
             <button onClick={toggleTheme} className={`w-9 h-9 flex items-center justify-center flex-shrink-0 ${isDark ? 'text-yellow-400' : 'text-black/50'}`}>
               {isDark ? (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
@@ -486,10 +484,10 @@ const PLScreen = ({ onBack }) => {
         </div>
 
         {/* Period tabs */}
-        <div className="flex gap-2">
+        <div className="flex gap-1.5 mb-3">
           {PERIODS.map(p => (
             <button key={p.value} onClick={() => setPeriod(p.value)}
-              className={`flex-1 py-2 text-sm font-bold tracking-widest border transition-colors ${
+              className={`flex-1 py-2 text-xs font-bold tracking-wider border transition-colors ${
                 period === p.value
                   ? 'bg-[#CC2222] border-[#CC2222] text-white'
                   : `${border} ${subtext}`
@@ -499,9 +497,9 @@ const PLScreen = ({ onBack }) => {
           ))}
         </div>
 
-        {/* Custom date range */}
+        {/* Custom date range — shown when CUSTOM is selected */}
         {period === 'custom' && (
-          <div className="flex gap-2 pt-1">
+          <div className="flex gap-2 mb-3">
             <div className="flex-1">
               <p className={`text-xs tracking-wider mb-1 ${subtext}`}>FROM</p>
               <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
@@ -518,6 +516,23 @@ const PLScreen = ({ onBack }) => {
             </div>
           </div>
         )}
+
+        {/* Download PDF — full-width, always visible */}
+        <button onClick={handleExportPdf} disabled={exporting || loading}
+          className={`w-full flex items-center justify-center gap-2 py-3 border font-bold tracking-wider text-sm transition-colors ${
+            exporting || loading
+              ? `${border} ${subtext} cursor-not-allowed`
+              : 'border-[#CC2222] text-[#CC2222] hover:bg-[#CC2222] hover:text-white'
+          }`}>
+          {exporting ? (
+            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          )}
+          {exporting ? 'GENERATING PDF...' : `DOWNLOAD P&L REPORT — ${periodLabel.toUpperCase()}`}
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
