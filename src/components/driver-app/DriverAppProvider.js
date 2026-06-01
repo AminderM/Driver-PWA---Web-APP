@@ -469,6 +469,13 @@ export const DriverAppProvider = ({ children }) => {
 
   // Update profile (company name, MC/DOT, logo)
   const updateProfile = async (data) => {
+    // Optimistic local save first — text fields persist to localStorage immediately
+    // so data survives tab/page changes even if the backend call fails.
+    const localUpdate = {};
+    if (data.company_name  !== undefined) localUpdate.company_name  = data.company_name;
+    if (data.mc_dot_number !== undefined) localUpdate.mc_dot_number = data.mc_dot_number;
+    if (Object.keys(localUpdate).length) mergeUserData(localUpdate);
+
     const isLogoUpload = data.logo instanceof File;
     let body, headers;
     if (isLogoUpload) {
@@ -480,10 +487,15 @@ export const DriverAppProvider = ({ children }) => {
       body = JSON.stringify(data);
       headers = { 'Content-Type': 'application/json' };
     }
-    const result = await api('/profile', { method: 'PATCH', headers, body });
-    if (result?.user) mergeUserData(result.user);
-    else if (result) mergeUserData(result);
-    return result;
+    try {
+      const result = await api('/profile', { method: 'PATCH', headers, body });
+      if (result?.user) mergeUserData(result.user);
+      else if (result && typeof result === 'object') mergeUserData(result);
+      return result;
+    } catch (err) {
+      // Local save already applied above — rethrow so UI can show a warning
+      throw err;
+    }
   };
 
   // Phone OTP — send to the driver's registered phone

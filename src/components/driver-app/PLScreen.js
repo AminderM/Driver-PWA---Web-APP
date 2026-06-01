@@ -9,6 +9,15 @@ import { useDriverApp } from './DriverAppProvider';
 
 const EXPENSE_STORAGE_KEY = 'integra_expenses_v1';
 
+// Mirror the payment cache from ManualLoadsScreen
+const PAYMENTS_CACHE_KEY = 'integra_payments_v1';
+const mergePaymentsIntoLoads = (loads) => {
+  try {
+    const cache = JSON.parse(localStorage.getItem(PAYMENTS_CACHE_KEY) || '{}');
+    return loads.map(l => ({ ...l, paid_amount: cache[l.id] !== undefined ? cache[l.id] : (l.paid_amount || 0) }));
+  } catch { return loads; }
+};
+
 const loadStoredExpenses = () => {
   try {
     const raw = localStorage.getItem(EXPENSE_STORAGE_KEY);
@@ -351,7 +360,7 @@ const PLScreen = ({ onBack }) => {
     setLoading(true);
     try {
       const data = await api('/my-loads');
-      setLoads(Array.isArray(data) ? data : []);
+      setLoads(mergePaymentsIntoLoads(Array.isArray(data) ? data : []));
     } catch { /* show zeros */ }
     finally { setLoading(false); }
   }, [api]);

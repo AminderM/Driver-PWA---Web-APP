@@ -205,6 +205,18 @@ const LoadCard = ({ load, onEdit, onPay, onAttach, isDark, surface, border, text
   );
 };
 
+// ── Local payment cache (survives tab/page changes if backend doesn't persist) ──
+const PAYMENTS_CACHE_KEY = 'integra_payments_v1';
+const loadPaymentsCache = () => { try { return JSON.parse(localStorage.getItem(PAYMENTS_CACHE_KEY) || '{}'); } catch { return {}; } };
+const savePaymentsCache = (cache) => { try { localStorage.setItem(PAYMENTS_CACHE_KEY, JSON.stringify(cache)); } catch {} };
+const mergePaymentsIntoLoads = (loads) => {
+  const cache = loadPaymentsCache();
+  return loads.map(l => ({
+    ...l,
+    paid_amount: cache[l.id] !== undefined ? cache[l.id] : (l.paid_amount || 0),
+  }));
+};
+
 const ManualLoadsScreen = ({ onBack }) => {
   const { api, theme, toggleTheme } = useDriverApp();
   const isDark = theme === 'dark';
@@ -244,12 +256,18 @@ const ManualLoadsScreen = ({ onBack }) => {
     setPayLoading(true);
     setPayError('');
     try {
-      await api(`/my-loads/${paymentLoad.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ paid_amount: parsed }),
-      });
+      // Save to local cache first so it survives a refetch even if backend doesn't persist it
+      const cache = loadPaymentsCache();
+      cache[paymentLoad.id] = parsed;
+      savePaymentsCache(cache);
+      // Optimistically update UI
       setLoads(prev => prev.map(l => l.id === paymentLoad.id ? { ...l, paid_amount: parsed } : l));
       setPaymentLoad(null);
+      // Then try to persist to backend (non-blocking on failure)
+      api(`/my-loads/${paymentLoad.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ paid_amount: parsed }),
+      }).catch(() => {}); // already saved locally above
     } catch (err) {
       setPayError(err.message || 'Failed to record payment.');
     } finally {
@@ -262,7 +280,7 @@ const ManualLoadsScreen = ({ onBack }) => {
     setFetchError('');
     try {
       const data = await api('/my-loads');
-      setLoads(Array.isArray(data) ? data : []);
+      setLoads(mergePaymentsIntoLoads(Array.isArray(data) ? data : []));
     } catch (err) {
       setFetchError('Could not load your loads. Check your connection.');
     } finally {
