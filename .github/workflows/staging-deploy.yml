@@ -55,7 +55,7 @@ jobs:
 
       - name: Build application
         run: npm run build
-        timeout-minutes: 35
+        timeout-minutes: 60
         env:
           CI: false
           GENERATE_SOURCEMAP: false
