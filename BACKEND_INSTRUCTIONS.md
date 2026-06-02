@@ -1,6 +1,122 @@
 # Backend Developer Instructions
 ## Integra Driver PWA — Full API Specification
 
+---
+
+## ⚠️ CRITICAL BUGS IN PRODUCTION (Fix First — June 2026)
+
+The following backend issues are causing visible failures in the live staging app.
+Fix these before anything else.
+
+### BUG 1 — `paid_amount` not persisting on `PATCH /my-loads/{id}` [CRITICAL]
+
+**Symptom:** Driver records a payment → it shows immediately → switch tabs or refresh →
+payment resets to $0. The P&L "COLLECTED" card always shows $0.
+
+**Root cause:** `PATCH /my-loads/{id}` does not save `paid_amount` to the database,
+or `GET /my-loads` does not return the saved `paid_amount` in the response.
+
+**Required fix:**
+```
+PATCH /api/driver-mobile/my-loads/{id}
+Body: { "paid_amount": 2500 }
+→ Must persist to DB and return the updated load with paid_amount in GET /my-loads
+```
+
+The frontend sends `{ paid_amount: <number> }` and expects every subsequent
+`GET /my-loads` response to include that `paid_amount` value on the load object.
+As a temporary workaround the frontend caches payments in localStorage, but the
+backend MUST persist this — localStorage is not reliable across devices/reinstalls.
+
+---
+
+### BUG 2 — `status` field returned with wrong casing [CRITICAL]
+
+**Symptom:** P&L shows 0 loads, 0 collected, 0 invoiced — even when loads exist.
+
+**Root cause:** Backend returns `"Invoiced"` or `"Delivered"` (capital first letter)
+but the frontend filter compares against lowercase `"invoiced"` / `"delivered"`.
+
+**Required fix:** All `status` values in API responses must be **lowercase**:
+```json
+{ "status": "invoiced" }   ✅
+{ "status": "Invoiced" }   ❌  breaks P&L, load filters, and Record Payment button
+```
+
+Affected statuses: `upcoming`, `in_transit`, `delivered`, `invoiced`
+
+---
+
+### BUG 3 — `PATCH /profile` endpoint missing or not saving `company_name` / `mc_dot_number` [HIGH]
+
+**Symptom:** Driver enters company name and MC/DOT on profile page, taps Save —
+data disappears after the app restarts (only survives the current session via localStorage).
+
+**Required fix:**
+```
+PATCH /api/driver-mobile/profile
+Content-Type: application/json
+Body: { "company_name": "Smith Trucking Inc.", "mc_dot_number": "MC-123456" }
+→ Must persist to DB
+→ Response must be one of:
+   { "user": { ...full user object... } }   ← preferred
+   { "company_name": "Smith Trucking Inc.", "mc_dot_number": "MC-123456" }
+```
+
+The frontend calls this immediately when the driver saves Business Info. If it returns
+a non-200, the UI shows an error. If `company_name` is not in the response, the
+invoice generator will show "Your Company Name" instead of the real company.
+
+---
+
+### BUG 4 — `POST /scan/identify` endpoint not implemented [HIGH]
+
+**Symptom:** Tapping the camera (SCAN) button and uploading any document shows a spinner
+then "Could not identify document" error.
+
+**Required fix:** Implement `POST /api/driver-mobile/scan/identify`
+See **Section 8.1** below for the full spec. This is a DeepSeek AI endpoint.
+
+The frontend sends the file as `multipart/form-data` with field name `file`.
+The AI must identify the document type and extract relevant fields.
+Return shape:
+```json
+{
+  "document_type": "expense_receipt",
+  "label": "Shell Gas Station",
+  "confidence": 0.95,
+  "extracted": {
+    "amount": 124.50,
+    "vendor": "Shell",
+    "date": "2026-05-31",
+    "category": "fuel"
+  }
+}
+```
+
+For `rate_confirmation`, the frontend will automatically call `POST /my-loads` to
+create a load using `extracted.origin`, `extracted.destination`, `extracted.rate`, etc.
+
+---
+
+### BUG 5 — `GET /profile` not returning `company_name` / `mc_dot_number` on login [MEDIUM]
+
+**Symptom:** After logging out and back in, `company_name` and `mc_dot_number` are blank
+even though they were saved.
+
+**Required fix:** The login response at `POST /signup` or `POST /auth/...` must include:
+```json
+{
+  "user": {
+    "company_name": "Smith Trucking Inc.",
+    "mc_dot_number": "MC-123456",
+    ...
+  }
+}
+```
+
+---
+
 This document is the authoritative reference for every backend endpoint, response format, and
 behaviour required to support the Integra Driver PWA (Android + iOS + Web).
 
@@ -796,6 +912,6 @@ add a polling endpoint. Do not hold the connection open.
 
 ---
 
-*Updated: May 30, 2026*
+*Updated: June 1, 2026*
 *Frontend repo: Driver-PWA---Web-APP, branch: staging*
 *Contact: refer to GitHub commits on this branch for exact request/response shapes used in code*

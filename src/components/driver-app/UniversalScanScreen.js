@@ -103,7 +103,7 @@ const UniversalScanScreen = ({ onClose }) => {
       fd.append('file', file);
       await api('/vault/documents', { method: 'POST', body: fd });
 
-      // 2. If expense — also save to expenses localStorage for P&L
+      // 2. If expense — save to localStorage for P&L
       if (isExpense) {
         const parsed = parseFloat(amount);
         if (!isNaN(parsed) && parsed > 0) {
@@ -117,6 +117,32 @@ const UniversalScanScreen = ({ onClose }) => {
             notes:    docLabel.trim(),
           });
           saveExpenses(expenses);
+        }
+      }
+
+      // 3. If rate confirmation — also create a load automatically
+      if (docType === 'rate_confirmation' && result?.extracted) {
+        const ex = result.extracted;
+        try {
+          await api('/my-loads', {
+            method: 'POST',
+            body: JSON.stringify({
+              origin:          ex.origin        || '',
+              destination:     ex.destination   || '',
+              pickup_date:     ex.pickup_date   || null,
+              delivery_date:   ex.delivery_date || null,
+              rate:            ex.rate          || null,
+              broker_name:     ex.broker_name   || ex.shipper || '',
+              broker_mc:       ex.broker_mc     || '',
+              commodity:       ex.commodity     || '',
+              estimated_miles: ex.miles         || null,
+              weight:          ex.weight        || null,
+              status:          'upcoming',
+              notes:           'Auto-created from scanned rate confirmation',
+            }),
+          });
+        } catch (_) {
+          // Load creation failure is non-fatal — vault doc was already saved
         }
       }
 
