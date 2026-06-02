@@ -2,13 +2,14 @@
 import { useDriverApp } from './DriverAppProvider';
 import RateConScanner from './RateConScanner';
 import LoadEntryForm from './LoadEntryForm';
+import { play } from '../../lib/sounds';
 
 const STATUS_FILTERS = [
   { value: 'all',        label: 'All'        },
   { value: 'upcoming',   label: 'Upcoming'   },
   { value: 'in_transit', label: 'In Transit' },
   { value: 'delivered',  label: 'Delivered'  },
-  { value: 'invoiced',   label: 'Invoiced'   },
+  { value: 'history',    label: 'History'    },
 ];
 
 const STATUS_CONFIG = {
@@ -58,7 +59,12 @@ const LoadCard = ({ load, onEdit, onPay, onAttach, isDark, surface, border, text
       <button onClick={() => onEdit(load)} className="w-full text-left">
         {/* Status bar */}
         <div className={`${cfg.bg} px-4 py-1.5 flex items-center justify-between`}>
-          <span className={`${cfg.text} text-sm font-bold tracking-widest`}>{cfg.label}</span>
+          <div className="flex items-center gap-2">
+            <span className={`${cfg.text} text-sm font-bold tracking-widest`}>{cfg.label}</span>
+            {load.source === 'tms' && (
+              <span className="text-[10px] font-bold tracking-wider px-1.5 py-0.5 bg-sky-500/15 text-sky-400 border border-sky-500/30">TMS</span>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             {isPayable && (
               <span className={`text-xs font-bold tracking-widest px-2 py-0.5 ${
@@ -227,14 +233,17 @@ const ManualLoadsScreen = ({ onBack }) => {
   const subtext = isDark ? 'text-white/60'     : 'text-black/60';
   const border  = isDark ? 'border-[#262626]'  : 'border-[#e5e5e5]';
 
-  const [loads,        setLoads]        = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [filter,       setFilter]       = useState('all');
-  const [screen,       setScreen]       = useState('list');  // 'list' | 'scanner' | 'form'
-  const [editLoad,     setEditLoad]     = useState(null);
-  const [prefillData,  setPrefillData]  = useState({});
-  const [showAddSheet, setShowAddSheet] = useState(false);
-  const [fetchError,   setFetchError]   = useState('');
+  const [loads,          setLoads]          = useState([]);
+  const [loading,        setLoading]        = useState(true);
+  const [historyLoads,   setHistoryLoads]   = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError,   setHistoryError]   = useState('');
+  const [filter,         setFilter]         = useState('all');
+  const [screen,         setScreen]         = useState('list');  // 'list' | 'scanner' | 'form'
+  const [editLoad,       setEditLoad]       = useState(null);
+  const [prefillData,    setPrefillData]    = useState({});
+  const [showAddSheet,   setShowAddSheet]   = useState(false);
+  const [fetchError,     setFetchError]     = useState('');
 
   // ── Payment sheet state ───────────────────────────────────────────────────
   const [paymentLoad,  setPaymentLoad]  = useState(null);
@@ -260,8 +269,11 @@ const ManualLoadsScreen = ({ onBack }) => {
       const cache = loadPaymentsCache();
       cache[paymentLoad.id] = parsed;
       savePaymentsCache(cache);
-      // Optimistically update UI
-      setLoads(prev => prev.map(l => l.id === paymentLoad.id ? { ...l, paid_amount: parsed } : l));
+      play('success');
+      // Optimistically update UI (covers both active and history loads)
+      const updater = prev => prev.map(l => l.id === paymentLoad.id ? { ...l, paid_amount: parsed } : l);
+      setLoads(updater);
+      setHistoryLoads(updater);
       setPaymentLoad(null);
       // Then try to persist to backend (non-blocking on failure)
       api(`/my-loads/${paymentLoad.id}`, {
@@ -288,9 +300,33 @@ const ManualLoadsScreen = ({ onBack }) => {
     }
   }, [api]);
 
+  const fetchHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    setHistoryError('');
+    try {
+      const data = await api('/my-loads/history');
+      setHistoryLoads(mergePaymentsIntoLoads(Array.isArray(data) ? data : []));
+    } catch (err) {
+      setHistoryError('Could not load history. Check your connection.');
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [api]);
+
   useEffect(() => { fetchLoads(); }, [fetchLoads]);
 
-  const filtered = filter === 'all' ? loads : loads.filter(l => l.status === filter);
+  // Fetch history when tab is first selected
+  useEffect(() => {
+    if (filter === 'history' && historyLoads.length === 0 && !historyLoading) {
+      fetchHistory();
+    }
+  }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const filtered = filter === 'history'
+    ? historyLoads
+    : filter === 'all'
+      ? loads
+      : loads.filter(l => (l.status || '').toLowerCase() === filter);
 
   const handleSave = (result) => {
     if (result === null) {
@@ -349,12 +385,13 @@ const ManualLoadsScreen = ({ onBack }) => {
 
   // ── Summary counts ────────────────────────────────────────────────────────
   const counts = loads.reduce((acc, l) => {
-    acc[l.status] = (acc[l.status] || 0) + 1;
+    const st = (l.status || '').toLowerCase();
+    acc[st] = (acc[st] || 0) + 1;
     return acc;
   }, {});
 
   const totalRevenue = loads
-    .filter(l => l.status === 'delivered' || l.status === 'invoiced')
+    .filter(l => { const st = (l.status || '').toLowerCase(); return st === 'delivered' || st === 'invoiced'; })
     .reduce((sum, l) => sum + (Number(l.rate) || 0), 0);
 
   // ── Main list ─────────────────────────────────────────────────────────────
@@ -393,11 +430,15 @@ const ManualLoadsScreen = ({ onBack }) => {
         {/* Status filter tabs */}
         <div className={`flex gap-2 mt-4 overflow-x-auto pb-1 -mx-1 px-1`} style={{ scrollbarWidth: 'none' }}>
           {STATUS_FILTERS.map(f => {
-            const count = f.value === 'all' ? loads.length : (counts[f.value] || 0);
+            const count = f.value === 'all'
+              ? loads.length
+              : f.value === 'history'
+                ? historyLoads.length
+                : (counts[f.value] || 0);
             return (
               <button
                 key={f.value}
-                onClick={() => setFilter(f.value)}
+                onClick={() => { play('tap'); setFilter(f.value); }}
                 className={`flex-shrink-0 px-3 py-1.5 text-sm font-semibold tracking-wider border transition-colors ${
                   filter === f.value
                     ? 'bg-red-600 border-red-600 text-white'
@@ -418,17 +459,23 @@ const ManualLoadsScreen = ({ onBack }) => {
 
       {/* List */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
-        {fetchError && (
+        {filter !== 'history' && fetchError && (
           <div className="bg-red-600/20 border border-red-600/50 p-4 mb-4">
             <p className="text-red-400 text-base">{fetchError}</p>
             <button onClick={fetchLoads} className="text-red-400 text-sm mt-2 underline">Retry</button>
           </div>
         )}
+        {filter === 'history' && historyError && (
+          <div className="bg-red-600/20 border border-red-600/50 p-4 mb-4">
+            <p className="text-red-400 text-base">{historyError}</p>
+            <button onClick={fetchHistory} className="text-red-400 text-sm mt-2 underline">Retry</button>
+          </div>
+        )}
 
-        {loading ? (
+        {(filter === 'history' ? historyLoading : loading) ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <div className="w-8 h-8 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
-            <p className={`text-base ${subtext}`}>Loading loads...</p>
+            <p className={`text-base ${subtext}`}>{filter === 'history' ? 'Loading history...' : 'Loading loads...'}</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-6">
@@ -439,12 +486,14 @@ const ManualLoadsScreen = ({ onBack }) => {
               </svg>
             </div>
             <p className={`text-lg font-bold tracking-wider mb-2 ${text}`}>
-              {filter === 'all' ? 'NO LOADS YET' : `NO ${filter.toUpperCase().replace('_', ' ')} LOADS`}
+              {filter === 'all' ? 'NO LOADS YET' : filter === 'history' ? 'NO HISTORY YET' : `NO ${filter.toUpperCase().replace('_', ' ')} LOADS`}
             </p>
             <p className={`text-base mb-6 ${subtext}`}>
               {filter === 'all'
                 ? 'Add your first load manually or scan a rate confirmation.'
-                : 'No loads with this status.'}
+                : filter === 'history'
+                  ? 'Invoiced loads will appear here.'
+                  : 'No loads with this status.'}
             </p>
             {filter === 'all' && (
               <button onClick={() => setShowAddSheet(true)}
