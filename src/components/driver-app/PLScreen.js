@@ -359,8 +359,14 @@ const PLScreen = ({ onBack }) => {
   const fetchLoads = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api('/my-loads');
-      setLoads(mergePaymentsIntoLoads(Array.isArray(data) ? data : []));
+      // Fetch active loads + history (invoiced) in parallel
+      const [activeData, historyData] = await Promise.allSettled([
+        api('/my-loads'),
+        api('/my-loads/history'),
+      ]);
+      const active  = activeData.status  === 'fulfilled' && Array.isArray(activeData.value)  ? activeData.value  : [];
+      const history = historyData.status === 'fulfilled' && Array.isArray(historyData.value) ? historyData.value : [];
+      setLoads(mergePaymentsIntoLoads([...active, ...history]));
     } catch { /* show zeros */ }
     finally { setLoading(false); }
   }, [api]);
