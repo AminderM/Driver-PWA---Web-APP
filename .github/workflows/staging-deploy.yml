@@ -7,8 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  NODE_VERSION: '18.x'
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  NODE_VERSION: '20.x'
 
 jobs:
   deploy:
@@ -85,7 +84,7 @@ jobs:
           tar -czf deploy.tar.gz build.tar.gz ecosystem.config.js deploy.sh deployment-info.txt
 
       - name: Deploy to EC2
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
@@ -95,7 +94,7 @@ jobs:
           target: "/tmp/"
 
       - name: Extract and deploy on server
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
@@ -108,7 +107,7 @@ jobs:
             ./deploy.sh
 
       - name: Cleanup
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
