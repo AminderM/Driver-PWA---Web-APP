@@ -74,7 +74,7 @@ const Label = ({ children }) => (
 
 // Screen wrapper — must live at module scope so React never remounts on state change
 const Screen = ({ children }) => (
-  <div style={{ minHeight: '100vh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FD, overflowX: 'hidden' }}>
+  <div style={{ minHeight: '100dvh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FD, overflowX: 'hidden' }}>
     {children}
   </div>
 );
@@ -265,24 +265,24 @@ const DriverLogin = () => {
       </div>
 
       {/* Logo area */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 72, gap: 0, position: 'relative' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 44, gap: 0, position: 'relative' }}>
         <HexLogo />
-        <p style={{ fontFamily: FD, fontWeight: 800, fontSize: 22, letterSpacing: '0.22em', color: WHT, margin: '14px 0 4px', textTransform: 'uppercase' }}>INTEGRA AI</p>
+        <p style={{ fontFamily: FD, fontWeight: 800, fontSize: 22, letterSpacing: '0.22em', color: WHT, margin: '12px 0 3px', textTransform: 'uppercase' }}>INTEGRA AI</p>
         <p style={{ fontFamily: FM, fontSize: 11, color: RED, letterSpacing: '0.2em', margin: 0 }}>// BUILT FOR THE ROAD</p>
       </div>
 
       {/* Hero */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', padding: '32px 0' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', padding: '16px 0' }}>
         {/* Diagonal red slash */}
         <div style={{ position: 'absolute', top: '48%', left: 0, right: 0, height: 2, background: `linear-gradient(90deg, transparent 5%, ${RED} 35%, ${RED} 65%, transparent 95%)`, transform: 'rotate(-2.5deg)', transformOrigin: 'center', pointerEvents: 'none' }} />
-        <p style={{ fontFamily: FD, fontWeight: 900, fontSize: 72, textTransform: 'uppercase', color: WHT, lineHeight: 0.95, margin: 0, letterSpacing: '-0.01em' }}>DRIVE.</p>
-        <p style={{ fontFamily: FD, fontWeight: 900, fontSize: 72, textTransform: 'uppercase', color: RED,  lineHeight: 0.95, margin: 0, letterSpacing: '-0.01em' }}>GET PAID.</p>
-        <p style={{ fontFamily: FD, fontWeight: 900, fontSize: 72, textTransform: 'uppercase', color: WHT, lineHeight: 0.95, margin: 0, letterSpacing: '-0.01em' }}>REPEAT.</p>
-        <p style={{ fontFamily: FB, fontSize: 11, color: DIM, letterSpacing: '0.18em', textTransform: 'uppercase', margin: '24px 0 0', textAlign: 'center' }}>TOOLS BUILT FOR DRIVERS, NOT SUITS</p>
+        <p style={{ fontFamily: FD, fontWeight: 900, fontSize: 66, textTransform: 'uppercase', color: WHT, lineHeight: 0.95, margin: 0, letterSpacing: '-0.01em' }}>DRIVE.</p>
+        <p style={{ fontFamily: FD, fontWeight: 900, fontSize: 66, textTransform: 'uppercase', color: RED,  lineHeight: 0.95, margin: 0, letterSpacing: '-0.01em' }}>GET PAID.</p>
+        <p style={{ fontFamily: FD, fontWeight: 900, fontSize: 66, textTransform: 'uppercase', color: WHT, lineHeight: 0.95, margin: 0, letterSpacing: '-0.01em' }}>REPEAT.</p>
+        <p style={{ fontFamily: FB, fontSize: 11, color: DIM, letterSpacing: '0.18em', textTransform: 'uppercase', margin: '18px 0 0', textAlign: 'center' }}>TOOLS BUILT FOR DRIVERS, NOT SUITS</p>
       </div>
 
       {/* Buttons */}
-      <div style={{ padding: '0 24px 52px', display: 'flex', flexDirection: 'column', gap: 12, position: 'relative' }}>
+      <div style={{ padding: '0 24px', paddingBottom: 'max(32px, env(safe-area-inset-bottom, 32px))', display: 'flex', flexDirection: 'column', gap: 12, position: 'relative' }}>
         <PrimaryBtn onClick={() => setShowRegister(true)}>GET STARTED</PrimaryBtn>
         <SecondaryBtn onClick={() => setStep('login')}>SIGN IN</SecondaryBtn>
       </div>

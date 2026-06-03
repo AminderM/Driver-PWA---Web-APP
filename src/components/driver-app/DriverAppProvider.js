@@ -13,7 +13,7 @@ const storage = {
   async getItem(key) {
     try {
       if (isNative()) {
-        const { Preferences } = await import('@capacitor/preferences');
+        const { Preferences } = await import(/* webpackIgnore: true */ '@capacitor/preferences');
         const { value } = await Preferences.get({ key });
         return value;
       }
@@ -23,7 +23,7 @@ const storage = {
   async setItem(key, value) {
     try {
       if (isNative()) {
-        const { Preferences } = await import('@capacitor/preferences');
+        const { Preferences } = await import(/* webpackIgnore: true */ '@capacitor/preferences');
         await Preferences.set({ key, value });
         return;
       }
@@ -33,7 +33,7 @@ const storage = {
   async removeItem(key) {
     try {
       if (isNative()) {
-        const { Preferences } = await import('@capacitor/preferences');
+        const { Preferences } = await import(/* webpackIgnore: true */ '@capacitor/preferences');
         await Preferences.remove({ key });
         return;
       }

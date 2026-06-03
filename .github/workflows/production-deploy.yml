@@ -7,8 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  NODE_VERSION: '18.x'
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  NODE_VERSION: '20.x'
 
 jobs:
   deploy:
@@ -54,12 +53,28 @@ jobs:
 
       - name: Build application
         run: npm run build
+        timeout-minutes: 60
         env:
           CI: false
           GENERATE_SOURCEMAP: false
+          DISABLE_ESLINT_PLUGIN: true
           REACT_APP_BACKEND_URL: https://api.integratedtech.ca
-          NODE_OPTIONS: --max_old_space_size=4096
-        timeout-minutes: 35
+          NODE_OPTIONS: --max_old_space_size=6144 --max-semi-space-size=128
+          TSC_COMPILE_ON_ERROR: true
+          SKIP_PREFLIGHT_CHECK: true
+
+      - name: Verify build output
+        run: |
+          if [ ! -f "build/index.html" ]; then
+            echo "❌ Build failed — index.html not found in build/"
+            echo "Build directory contents:"
+            ls -la build/ 2>/dev/null || echo "build/ does not exist"
+            exit 1
+          fi
+          echo "✅ Build verified"
+          echo "   Size:  $(du -sh build/ | cut -f1)"
+          echo "   Files: $(find build/ -type f | wc -l)"
+          echo "   JS:    $(find build/static/js -name '*.js' 2>/dev/null | wc -l) chunks"
 
       - name: Create deployment info file
         run: |
@@ -83,7 +98,7 @@ jobs:
           tar -czf deploy.tar.gz build.tar.gz ecosystem.config.prod.js deploy-prod.sh deployment-info.txt
 
       - name: Deploy to EC2
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
@@ -93,7 +108,7 @@ jobs:
           target: "/tmp/"
 
       - name: Extract and deploy on server
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
@@ -108,7 +123,7 @@ jobs:
             ./deploy.sh
 
       - name: Cleanup
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}

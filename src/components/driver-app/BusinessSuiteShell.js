@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { play } from '../../lib/sounds';
 import { useDriverApp } from './DriverAppProvider';
 import MyLoadsScreen from './MyLoadsScreen';
 import ManualLoadsScreen from './ManualLoadsScreen';
@@ -86,7 +87,7 @@ const BottomNav = ({ activeTab, onTabChange, onScan }) => {
       {leftTabs.map(id => {
         const active = activeTab === id;
         return (
-          <button key={id} onClick={() => onTabChange(id)}
+          <button key={id} onClick={() => { play('tap'); onTabChange(id); }}
             style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px 0 8px', gap: '3px', background: 'none', border: 'none', cursor: 'pointer' }}>
             <NavIcon id={id} active={active} />
             <span style={{ fontFamily: FD, fontSize: px(9), fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: active ? M.red : M.chromeDim }}>
@@ -98,7 +99,7 @@ const BottomNav = ({ activeTab, onTabChange, onScan }) => {
 
       {/* ── Centre scan button ── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingBottom: 8 }}>
-        <button onClick={onScan}
+        <button onClick={() => { play('scan'); onScan(); }}
           style={{ width: 52, height: 52, borderRadius: 26, background: M.red, border: `3px solid ${M.steel}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginTop: -18, boxShadow: '0 -2px 12px rgba(204,34,34,0.4)' }}>
           <svg width="22" height="22" fill="none" stroke="#fff" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
@@ -111,7 +112,7 @@ const BottomNav = ({ activeTab, onTabChange, onScan }) => {
       {rightTabs.map(id => {
         const active = activeTab === id;
         return (
-          <button key={id} onClick={() => onTabChange(id)}
+          <button key={id} onClick={() => { play('tap'); onTabChange(id); }}
             style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px 0 8px', gap: '3px', background: 'none', border: 'none', cursor: 'pointer' }}>
             <NavIcon id={id} active={active} />
             <span style={{ fontFamily: FD, fontSize: px(9), fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: active ? M.red : M.chromeDim }}>
@@ -175,6 +176,10 @@ const BusinessSuiteShell = () => {
   const [activeTool,   setActiveTool]   = useState(null);
   const [activeLoad,   setActiveLoad]   = useState(null);
   const [showScan,     setShowScan]     = useState(false);
+
+  // Sound-wrapped navigation helpers
+  const goBack    = (fn) => () => { play('back'); fn(); };
+  const goForward = (fn) => () => { play('tap');  fn(); };
 
   useEffect(() => {
     api('/loads').then(data => {
@@ -271,28 +276,28 @@ const BusinessSuiteShell = () => {
   }
 
   // ── Tool screens ──────────────────────────────────────────────────────────
-  if (activeTool === 'calculator') return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><LoadCalculatorScreen onBack={() => setActiveTool(null)} /></Shell>;
-  if (activeTool === 'invoices')   return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><InvoiceGeneratorScreen onBack={() => setActiveTool(null)} /></Shell>;
-  if (activeTool === 'expenses')   return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><ExpenseRecorderScreen onBack={() => setActiveTool(null)} /></Shell>;
-  if (activeTool === 'pl')         return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><PLScreen onBack={() => setActiveTool(null)} /></Shell>;
-  if (activeTool === 'vault')      return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><DocumentVaultScreen onBack={() => setActiveTool(null)} /></Shell>;
+  if (activeTool === 'calculator') return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><LoadCalculatorScreen onBack={goBack(() => setActiveTool(null))} /></Shell>;
+  if (activeTool === 'invoices')   return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><InvoiceGeneratorScreen onBack={goBack(() => setActiveTool(null))} /></Shell>;
+  if (activeTool === 'expenses')   return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><ExpenseRecorderScreen onBack={goBack(() => setActiveTool(null))} /></Shell>;
+  if (activeTool === 'pl')         return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><PLScreen onBack={goBack(() => setActiveTool(null))} /></Shell>;
+  if (activeTool === 'vault')      return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><DocumentVaultScreen onBack={goBack(() => setActiveTool(null))} /></Shell>;
 
   // ── Profile tab ───────────────────────────────────────────────────────────
   if (activeTab === 'profile') return (
     <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}>
-      <ProfileScreen onBack={() => setActiveTab('home')} />
+      <ProfileScreen onBack={goBack(() => setActiveTab('home'))} />
     </Shell>
   );
 
-  if (activeTab === 'settings') return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><SettingsScreen onBack={() => setActiveTab('home')} /></Shell>;
+  if (activeTab === 'settings') return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><SettingsScreen onBack={goBack(() => setActiveTab('home'))} /></Shell>;
 
   // ── Loads tab ─────────────────────────────────────────────────────────────
   if (activeTab === 'loads') {
     if (loadsSubTab === 'dispatched') {
-      if (loadScreen === 'route' && selectedLoad) return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><RouteScreen load={selectedLoad} onBack={goToLoadList} onViewMap={() => setLoadScreen('map')} onOpenChat={l => { setSelectedLoad(l); setLoadScreen('chat'); }} onViewDocs={() => setLoadScreen('docs')} /></Shell>;
-      if (loadScreen === 'map'   && selectedLoad) return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><MapScreen load={selectedLoad} onBack={() => setLoadScreen('route')} /></Shell>;
-      if (loadScreen === 'chat'  && selectedLoad) return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><ChatScreen load={selectedLoad} onBack={() => setLoadScreen('route')} /></Shell>;
-      if (loadScreen === 'docs'  && selectedLoad) return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><DocumentsScreen load={selectedLoad} onBack={goToLoadList} /></Shell>;
+      if (loadScreen === 'route' && selectedLoad) return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><RouteScreen load={selectedLoad} onBack={goBack(goToLoadList)} onViewMap={() => setLoadScreen('map')} onOpenChat={l => { setSelectedLoad(l); setLoadScreen('chat'); }} onViewDocs={() => setLoadScreen('docs')} /></Shell>;
+      if (loadScreen === 'map'   && selectedLoad) return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><MapScreen load={selectedLoad} onBack={goBack(() => setLoadScreen('route'))} /></Shell>;
+      if (loadScreen === 'chat'  && selectedLoad) return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><ChatScreen load={selectedLoad} onBack={goBack(() => setLoadScreen('route'))} /></Shell>;
+      if (loadScreen === 'docs'  && selectedLoad) return <Shell activeTab={activeTab} onTabChange={handleTabChange} onScan={() => setShowScan(true)}><DocumentsScreen load={selectedLoad} onBack={goBack(goToLoadList)} /></Shell>;
     }
     return (
       <div style={{ background: M.void, minHeight: '100vh', display: 'flex', flexDirection: 'column', paddingBottom: '64px' }}>
