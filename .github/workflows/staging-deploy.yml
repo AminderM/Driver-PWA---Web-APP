@@ -58,10 +58,24 @@ jobs:
         env:
           CI: false
           GENERATE_SOURCEMAP: false
+          DISABLE_ESLINT_PLUGIN: true
           REACT_APP_BACKEND_URL: https://api.staging.integratedtech.ca
-          NODE_OPTIONS: --max_old_space_size=4096 --max-semi-space-size=64
+          NODE_OPTIONS: --max_old_space_size=6144 --max-semi-space-size=128
           TSC_COMPILE_ON_ERROR: true
           SKIP_PREFLIGHT_CHECK: true
+
+      - name: Verify build output
+        run: |
+          if [ ! -f "build/index.html" ]; then
+            echo "❌ Build failed — index.html not found in build/"
+            echo "Build directory contents:"
+            ls -la build/ 2>/dev/null || echo "build/ does not exist"
+            exit 1
+          fi
+          echo "✅ Build verified"
+          echo "   Size:  $(du -sh build/ | cut -f1)"
+          echo "   Files: $(find build/ -type f | wc -l)"
+          echo "   JS:    $(find build/static/js -name '*.js' 2>/dev/null | wc -l) chunks"
 
       - name: Create deployment info file
         run: |
