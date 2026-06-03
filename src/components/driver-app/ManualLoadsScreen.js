@@ -320,7 +320,7 @@ const ManualLoadsScreen = ({ onBack }) => {
     if (filter === 'history' && historyLoads.length === 0 && !historyLoading) {
       fetchHistory();
     }
-  }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [filter]); // eslint-disable-line
 
   const filtered = filter === 'history'
     ? historyLoads
