@@ -47,7 +47,7 @@ const RateConScanner = ({ onParsed, onCancel }) => {
     setStep('parsing');
     setParseError('');
     try {
-      const result = await scanRateCon(file);
+      const result = await scanRateCon(file, api);
       setParsed(result);
       setStep('result');
     } catch (err) {

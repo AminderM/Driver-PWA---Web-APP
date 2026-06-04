@@ -188,7 +188,7 @@ const ExpenseRecorderScreen = ({ onBack }) => {
     setScreen('scan-parsing');
     setScanError('');
     try {
-      const result = await scanReceipt(scanFile);
+      const result = await scanReceipt(scanFile, api);
       openAdd({
         date:     result.date     || todayStr(),
         amount:   result.amount   || '',
