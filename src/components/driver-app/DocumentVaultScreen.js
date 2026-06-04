@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useDriverApp } from './DriverAppProvider';
+import { scheduleExpiryReminders, cancelExpiryReminders } from '../../lib/expiryNotifications';
 
 // ── Document type catalogue ───────────────────────────────────────────────────
 const DOC_TYPES = [
@@ -176,6 +177,15 @@ const DocumentVaultScreen = ({ onBack }) => {
       if (formFile)         fd.append('file', formFile);
       const result = await api('/vault/documents', { method: 'POST', body: fd });
       setDocs(prev => [result, ...prev]);
+      // Schedule expiry reminders for documents with an expiry date
+      if (formExpiry && result?.id) {
+        scheduleExpiryReminders(
+          result.id,
+          formLabel.trim() || docTypeCfg?.label || 'Document',
+          formDocType,
+          formExpiry
+        );
+      }
       activeFolder ? setScreen('folder-detail') : setScreen('folders');
     } catch (err) { setFormError(err.message || 'Failed to save document.'); }
     finally       { setFormSaving(false); }
@@ -186,6 +196,7 @@ const DocumentVaultScreen = ({ onBack }) => {
     setDeleting(true);
     try {
       await api(`/vault/documents/${selectedDoc.id}`, { method: 'DELETE' });
+      cancelExpiryReminders(selectedDoc.id);
       setDocs(prev => prev.filter(d => d.id !== selectedDoc.id));
       activeFolder ? setScreen('folder-detail') : setScreen('folders');
     } catch (err) { setFormError(err.message || 'Failed to delete.'); setDeleting(false); }

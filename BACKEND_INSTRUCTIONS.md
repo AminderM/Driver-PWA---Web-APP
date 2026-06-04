@@ -912,6 +912,497 @@ add a polling endpoint. Do not hold the connection open.
 
 ---
 
-*Updated: June 1, 2026*
+## 14. DeepSeek AI — Document Scanning Configuration
+
+**Updated: June 4, 2026 — DeepSeek API key has been generated and must be wired to all three scan endpoints below.**
+
+---
+
+### 14.0 — Environment Setup
+
+Add the following environment variable to your staging and production server:
+
+```
+DEEPSEEK_API_KEY=<your_key_here>
+```
+
+All three scan endpoints (`/rate-con/parse`, `/receipt/parse`, `/scan/identify`) must read this
+variable. Never hard-code the key.
+
+**DeepSeek API details:**
+
+| Parameter | Value |
+|---|---|
+| Base URL | `https://api.deepseek.com/v1` |
+| Vision model | `deepseek-chat` (supports image input) |
+| Auth header | `Authorization: Bearer $DEEPSEEK_API_KEY` |
+| Content-Type | `application/json` |
+| Max response time | 15 seconds (return `202` + poll if slower — see Section 11) |
+
+**How to send an image to DeepSeek** (OpenAI-compatible format):
+
+```python
+import anthropic, base64, httpx
+
+def call_deepseek_vision(image_bytes: bytes, mime_type: str, prompt: str) -> str:
+    b64 = base64.b64encode(image_bytes).decode()
+    payload = {
+        "model": "deepseek-chat",
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{mime_type};base64,{b64}"
+                        }
+                    },
+                    {
+                        "type": "text",
+                        "text": prompt
+                    }
+                ]
+            }
+        ],
+        "response_format": {"type": "json_object"},
+        "max_tokens": 1024,
+        "temperature": 0
+    }
+    resp = httpx.post(
+        "https://api.deepseek.com/v1/chat/completions",
+        headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
+        json=payload,
+        timeout=14
+    )
+    resp.raise_for_status()
+    return resp.json()["choices"][0]["message"]["content"]
+```
+
+For **PDF files**, convert the first page to a JPEG image (using `pdf2image` or `pypdfium2`)
+before sending to DeepSeek. DeepSeek vision does not accept raw PDF bytes.
+
+```python
+from pdf2image import convert_from_bytes
+def pdf_to_image_bytes(pdf_bytes: bytes) -> tuple[bytes, str]:
+    images = convert_from_bytes(pdf_bytes, dpi=200, first_page=1, last_page=1)
+    buf = io.BytesIO()
+    images[0].save(buf, format="JPEG", quality=85)
+    return buf.getvalue(), "image/jpeg"
+```
+
+---
+
+### 14.1 — Rate Confirmation Scanner
+
+**Endpoint:** `POST /api/driver-mobile/rate-con/parse`
+**Frontend trigger:** My Loads → Add Load → Scan Rate Confirmation
+
+**System prompt to send to DeepSeek:**
+
+```
+You are an expert at reading trucking rate confirmations and load tenders.
+Analyze this document and extract the following fields exactly.
+
+Return ONLY a valid JSON object with these keys (use null for any field not found):
+{
+  "shipper":        string | null,   // shipper / pickup company name
+  "consignee":      string | null,   // consignee / delivery company name
+  "origin":         string | null,   // pickup city and state/province (e.g. "Toronto, ON")
+  "destination":    string | null,   // delivery city and state/province
+  "pickup_date":    string | null,   // ISO format YYYY-MM-DD
+  "delivery_date":  string | null,   // ISO format YYYY-MM-DD
+  "commodity":      string | null,   // freight description
+  "weight":         number | null,   // weight in lbs as a number only
+  "rate":           number | null,   // total load rate as a number only (no $ symbol)
+  "broker_name":    string | null,   // brokerage company name
+  "broker_mc":      string | null,   // broker MC or DOT number
+  "broker_contact": string | null    // broker contact name, phone, or email
+}
+
+Rules:
+- Return ONLY the JSON object. No explanation, no markdown, no code fences.
+- Dates must be YYYY-MM-DD. If only month/day given, infer the year from context.
+- Weight and rate must be numbers only (strip "$", "lbs", ",").
+- If a field appears multiple times, prefer the most prominent value.
+```
+
+**Success response (HTTP 200):**
+```json
+{
+  "shipper": "Magna International",
+  "consignee": "Toyota Assembly Plant",
+  "origin": "Toronto, ON",
+  "destination": "Calgary, AB",
+  "pickup_date": "2026-06-10",
+  "delivery_date": "2026-06-12",
+  "commodity": "Auto parts",
+  "weight": 42000,
+  "rate": 2500,
+  "broker_name": "Echo Global Logistics",
+  "broker_mc": "MC-123456",
+  "broker_contact": "John Broker — 416-555-0199"
+}
+```
+
+**Error response (HTTP 422):**
+```json
+{ "detail": "Could not extract data from this document. Please check the image quality and try again." }
+```
+
+---
+
+### 14.2 — Expense Receipt Scanner
+
+**Endpoint:** `POST /api/driver-mobile/receipt/parse`
+**Frontend trigger:** Expenses → Scan Receipt
+
+**System prompt to send to DeepSeek:**
+
+```
+You are an expert at reading expense receipts for truck drivers.
+Analyze this receipt image and extract the following fields.
+
+Return ONLY a valid JSON object with these keys (use null for any field not found):
+{
+  "amount":      number | null,   // total amount paid as a number only (no $ symbol)
+  "vendor":      string | null,   // business/store name
+  "date":        string | null,   // receipt date in YYYY-MM-DD format
+  "category":    string | null,   // MUST be one of: fuel, tolls, maintenance, lumper,
+                                  // detention, meals, lodging, scales, permits, insurance, other
+  "description": string | null    // brief description of what was purchased
+}
+
+Category selection rules:
+- "fuel"        → gas stations, diesel, DEF fluid
+- "tolls"       → highway tolls, bridge tolls, e-ZPass
+- "maintenance" → truck repairs, oil changes, tires, parts
+- "lumper"      → loading/unloading labor fees
+- "detention"   → detention fees charged to broker
+- "meals"       → restaurants, fast food, truck stop food
+- "lodging"     → hotels, motels, rest stop fees
+- "scales"      → weigh station fees
+- "permits"     → oversize/overweight permits
+- "insurance"   → any insurance premium payments
+- "other"       → anything that does not fit above
+
+Rules:
+- Return ONLY the JSON object. No explanation, no markdown, no code fences.
+- Amount must be a number (strip "$", ",").
+- Date must be YYYY-MM-DD. If the year is missing, use the current year.
+```
+
+**Success response (HTTP 200):**
+```json
+{
+  "amount": 145.50,
+  "vendor": "Pilot Flying J",
+  "date": "2026-06-04",
+  "category": "fuel",
+  "description": "Diesel fill-up — 85 gallons"
+}
+```
+
+---
+
+### 14.3 — Universal Smart Scan (Document Identifier)
+
+**Endpoint:** `POST /api/driver-mobile/scan/identify`
+**Frontend trigger:** Smart Scan button (camera icon in nav bar)
+
+This endpoint does TWO things in one call:
+1. **Identifies** the document type
+2. **Extracts** all relevant fields including expiry dates
+
+**System prompt to send to DeepSeek:**
+
+```
+You are an expert document classification and data extraction assistant for truck drivers.
+Analyze this document image and perform two tasks:
+
+TASK 1 — Classify the document type. Choose EXACTLY ONE from this list:
+  expense_receipt, rate_confirmation, bol, drivers_license, medical_card,
+  hazmat_cert, twic_card, cargo_insurance, liability_insurance,
+  vehicle_registration, ifta_license, cvor_certificate, abstract,
+  lease_agreement, business_registration, void_cheque, other
+
+TASK 2 — Extract all relevant fields based on the document type.
+
+Return ONLY a valid JSON object in this exact shape:
+{
+  "document_type": string,       // one of the types listed above
+  "label":         string,       // short human-readable label, e.g. "CDL Class A — John Smith"
+  "confidence":    number,       // 0.0 to 1.0, how confident you are in the classification
+  "extracted": {
+    "expiry_date":    string | null,   // YYYY-MM-DD — critical for licence/insurance/registration
+    "amount":         number | null,   // for expense_receipt
+    "vendor":         string | null,   // for expense_receipt
+    "date":           string | null,   // document date or receipt date, YYYY-MM-DD
+    "category":       string | null,   // for expense_receipt: fuel/tolls/maintenance/lumper/detention/meals/lodging/scales/permits/insurance/other
+    "description":    string | null,   // brief description
+    "origin":         string | null,   // for rate_confirmation / bol
+    "destination":    string | null,   // for rate_confirmation / bol
+    "rate":           number | null,   // for rate_confirmation
+    "pickup_date":    string | null,   // for rate_confirmation, YYYY-MM-DD
+    "delivery_date":  string | null,   // for rate_confirmation, YYYY-MM-DD
+    "shipper":        string | null,
+    "consignee":      string | null,
+    "broker_name":    string | null,
+    "commodity":      string | null,
+    "weight":         number | null,
+    "holder_name":    string | null    // name on licence/card
+  }
+}
+
+Critical rules:
+- Return ONLY the JSON object. No explanation, no markdown, no code fences.
+- expiry_date is the MOST IMPORTANT field — look for "EXP", "EXPIRES", "EXPIRY DATE",
+  "VALID UNTIL", "RENEWAL DATE" on every document. Always return YYYY-MM-DD.
+- For drivers_license: expiry_date is typically on the front of the card.
+- For medical_card: expiry_date is the certification expiry, not the exam date.
+- For insurance certificates: expiry_date is the policy end date.
+- For vehicle_registration: expiry_date is the renewal/sticker date.
+- All dates must be YYYY-MM-DD. Never return ambiguous formats like "05/06/27".
+- Confidence below 0.6 should return document_type as "other".
+```
+
+**Success response (HTTP 200):**
+```json
+{
+  "document_type": "drivers_license",
+  "label": "Driver's Licence — John Smith",
+  "confidence": 0.97,
+  "extracted": {
+    "expiry_date": "2028-03-14",
+    "holder_name": "John Smith",
+    "date": null,
+    "amount": null,
+    "vendor": null,
+    "category": null,
+    "description": null,
+    "origin": null,
+    "destination": null,
+    "rate": null,
+    "pickup_date": null,
+    "delivery_date": null,
+    "shipper": null,
+    "consignee": null,
+    "broker_name": null,
+    "commodity": null,
+    "weight": null
+  }
+}
+```
+
+**Post-scan server logic:**
+
+After a successful scan, if `extracted.expiry_date` is non-null:
+1. Automatically save the document to the vault (`vault/documents`) with the extracted fields
+2. Schedule expiry reminder notifications (Section 14.4)
+3. Return the `scan/identify` response as-is — the frontend will handle vault display
+
+If `document_type` is `rate_confirmation`, the frontend will call `POST /my-loads` automatically
+using the extracted fields. The backend does NOT need to create the load from this endpoint.
+
+---
+
+### 14.4 — Document Expiry Notification System
+
+All documents with an `expiry_date` — whether uploaded through Smart Scan, the Document Vault,
+or the first-login scan flow — must trigger the following scheduled push notifications.
+
+**Notification schedule (relative to `expiry_date`):**
+
+| Days before expiry | Notification title | Body |
+|---|---|---|
+| 60 days | "Document Expiring Soon" | "Your [document label] expires in 60 days. Start your renewal process." |
+| 30 days | "Document Expiring Soon" | "Your [document label] expires in 30 days. Schedule your renewal now." |
+| 15 days | "⚠️ Action Required" | "Your [document label] expires in 15 days. Renew immediately to avoid disruption." |
+| 7 days | "⚠️ Urgent: Document Expiring" | "Your [document label] expires in 7 days. You may be unable to accept loads after expiry." |
+| 1 day | "🚨 Expires Tomorrow" | "Your [document label] expires TOMORROW. Renew today or you risk being taken off the road." |
+| Expiry day + overdue | "🚨 Document EXPIRED" | "Your [document label] has expired. Renew immediately — you cannot legally operate with an expired [document type]." |
+
+**Overdue repeat schedule:**
+Send the "EXPIRED" notification again at: +7 days, +14 days, +30 days after expiry date —
+until the document is replaced or deleted from the vault.
+
+**Implementation requirements:**
+
+```
+1. Database: Add a `notification_jobs` table (or use your existing job queue):
+   - document_id (FK → vault_documents)
+   - driver_id   (FK → users)
+   - scheduled_for (datetime, UTC)
+   - type (enum: expiry_60d | expiry_30d | expiry_15d | expiry_7d | expiry_1d | expired | overdue_7d | overdue_14d | overdue_30d)
+   - sent (boolean, default false)
+   - created_at
+
+2. On every document upsert (create OR update expiry_date):
+   - Delete all pending (unsent) notification_jobs for this document_id
+   - If expiry_date is non-null, insert new jobs for all thresholds that are still in the future
+
+3. Cron job — runs daily at 08:00 driver local time (or 12:00 UTC as fallback):
+   SELECT * FROM notification_jobs
+   WHERE sent = false AND scheduled_for <= NOW()
+
+   For each job:
+   a. Look up driver push tokens (from device_tokens table, Section 1.3)
+   b. Send push notification via FCM (Android) and/or APNs (iOS)
+   c. Mark job as sent = true
+
+4. Push notification payload:
+
+   FCM (Android):
+   {
+     "to": "<fcm_token>",
+     "notification": {
+       "title": "<title from table above>",
+       "body":  "<body from table above>"
+     },
+     "data": {
+       "type": "document_expiry",
+       "document_id": "<uuid>",
+       "document_type": "<doc_type>",
+       "expiry_date": "<YYYY-MM-DD>",
+       "screen": "vault"
+     },
+     "android": {
+       "priority": "high",
+       "notification": { "channel_id": "document_alerts" }
+     }
+   }
+
+   APNs (iOS):
+   {
+     "aps": {
+       "alert": { "title": "<title>", "body": "<body>" },
+       "sound": "default",
+       "badge": 1,
+       "content-available": 1
+     },
+     "type": "document_expiry",
+     "document_id": "<uuid>",
+     "screen": "vault"
+   }
+
+5. Deep-link: When the driver taps the notification, the app should open to the
+   Document Vault → specific folder containing the expiring document.
+   The "screen": "vault" data field signals this to the frontend.
+
+6. Do NOT send notifications for documents that have been deleted.
+   Delete all pending jobs when a document is deleted.
+
+7. Respect user notification preferences — add a
+   PUT /api/driver-mobile/notification-preferences endpoint:
+   {
+     "document_expiry": true | false   // default true
+   }
+```
+
+**Document type → human-readable label mapping for notifications:**
+
+| `doc_type` | Label in notification |
+|---|---|
+| `drivers_license` | Driver's Licence |
+| `medical_card` | Medical Card |
+| `hazmat_cert` | HazMat Certification |
+| `twic_card` | TWIC Card |
+| `cargo_insurance` | Cargo Insurance |
+| `liability_insurance` | Liability Insurance |
+| `vehicle_registration` | Vehicle Registration |
+| `ifta_license` | IFTA Licence |
+| `cvor_certificate` | CVOR/NSC Certificate |
+
+---
+
+### 14.5 — Error Handling for All Scan Endpoints
+
+All three scan endpoints must handle these failure cases:
+
+| Scenario | HTTP | Response body |
+|---|---|---|
+| DeepSeek API key missing / invalid | 503 | `{ "detail": "AI service is not configured. Contact support." }` |
+| DeepSeek API rate limit / quota exceeded | 503 | `{ "detail": "AI service is temporarily unavailable. Please try again in a moment." }` |
+| File too large (> 10 MB) | 413 | `{ "detail": "File is too large. Maximum 10 MB." }` |
+| Unsupported file type | 415 | `{ "detail": "Unsupported file type. Please upload a JPEG, PNG, or PDF." }` |
+| Image too blurry / unreadable (confidence < 0.4) | 422 | `{ "detail": "Could not read this document clearly. Please retake the photo with better lighting and focus." }` |
+| DeepSeek returns invalid JSON | 422 | `{ "detail": "AI could not extract data from this document. Please try again or enter details manually." }` |
+| DeepSeek timeout > 14s | 202 | Return job_id for polling (Section 11) |
+
+---
+
+### 14.6 — Testing the DeepSeek Integration
+
+Use these test cases to verify the integration before release:
+
+```bash
+# 1. Rate con parse — should return all fields
+curl -X POST https://api.staging.integratedtech.ca/api/driver-mobile/rate-con/parse \
+  -H "Authorization: Bearer <test_jwt>" \
+  -F "file=@test_rate_con.jpg"
+
+# 2. Receipt parse — should return category: "fuel"
+curl -X POST https://api.staging.integratedtech.ca/api/driver-mobile/receipt/parse \
+  -H "Authorization: Bearer <test_jwt>" \
+  -F "file=@test_gas_receipt.jpg"
+
+# 3. Smart scan — drivers licence should return expiry_date
+curl -X POST https://api.staging.integratedtech.ca/api/driver-mobile/scan/identify \
+  -H "Authorization: Bearer <test_jwt>" \
+  -F "file=@test_drivers_licence.jpg"
+# Expected: document_type = "drivers_license", extracted.expiry_date = "YYYY-MM-DD"
+
+# 4. Smart scan — insurance cert should return expiry_date
+curl -X POST https://api.staging.integratedtech.ca/api/driver-mobile/scan/identify \
+  -H "Authorization: Bearer <test_jwt>" \
+  -F "file=@test_insurance.pdf"
+# Expected: document_type = "cargo_insurance" or "liability_insurance", extracted.expiry_date non-null
+```
+
+All three endpoints must be live and tested on **staging** before the next production release.
+
+---
+
+## 13. Endpoint Index *(updated)*
+
+| Method | Endpoint | Section |
+|---|---|---|
+| POST | `/signup` | 1.2 |
+| POST | `/signup/open` | 1.2 |
+| GET | `/signup/validate-invite` | 1.5 |
+| POST | `/reset-password` | 1.4 |
+| POST | `/device-token` | 1.3 |
+| POST | `/auth/phone/request-otp` | 2.1 |
+| POST | `/auth/phone/verify-otp` | 2.2 |
+| POST | `/location/ping` | 3.1 |
+| GET | `/loads` | 4.1 |
+| POST | `/loads/{id}/accept` | 4.2 |
+| POST | `/loads/{id}/reject` | 4.2 |
+| PATCH | `/loads/{id}/status` | 4.3 |
+| GET | `/loads/{id}/documents` | 4.4 |
+| POST | `/loads/{id}/documents` | 4.4 |
+| GET | `/loads/{id}/messages` | 6.1 |
+| POST | `/loads/{id}/messages` | 6.2 |
+| GET | `/my-loads` | 5.1 |
+| POST | `/my-loads` | 5.1 |
+| PATCH | `/my-loads/{id}` | 5.1 |
+| DELETE | `/my-loads/{id}` | 5.1 |
+| POST | `/my-loads/{id}/documents` | 5.3 |
+| POST | `/rate-con/parse` *(DeepSeek)* | 14.1 |
+| GET | `/vault/documents` | 7.1 |
+| POST | `/vault/documents` | 7.1 |
+| DELETE | `/vault/documents/{id}` | 7.1 |
+| GET | `/invoices` | 7.2 |
+| POST | `/scan/identify` *(DeepSeek)* | 14.3 |
+| GET | `/scan/result/{jobId}` | 11 |
+| POST | `/receipt/parse` *(DeepSeek)* | 14.2 |
+| POST | `/documents/scan` | 9.1 |
+| PUT | `/notification-preferences` | 14.4 |
+| GET | `/ai/history` | — |
+| POST | `/ai/chat` | — |
+
+---
+
+*Updated: June 4, 2026*
 *Frontend repo: Driver-PWA---Web-APP, branch: staging*
 *Contact: refer to GitHub commits on this branch for exact request/response shapes used in code*

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useDriverApp } from './DriverAppProvider';
 import { takePhoto, isNative } from '../../lib/native';
+import { scanReceipt } from '../../lib/deepseek';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -187,16 +188,13 @@ const ExpenseRecorderScreen = ({ onBack }) => {
     setScreen('scan-parsing');
     setScanError('');
     try {
-      const formData = new FormData();
-      formData.append('file', scanFile);
-      const result = await api('/receipt/parse', { method: 'POST', body: formData });
-      // Pre-fill form from parsed result
+      const result = await scanReceipt(scanFile);
       openAdd({
         date:     result.date     || todayStr(),
         amount:   result.amount   || '',
         category: result.category || 'other',
         vendor:   result.vendor   || '',
-        notes:    result.notes    || '',
+        notes:    result.description || '',
       });
     } catch (err) {
       setScanError(err.message || 'Could not parse receipt. Enter manually.');
