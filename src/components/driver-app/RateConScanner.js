@@ -113,7 +113,7 @@ const RateConScanner = ({ onParsed, onCancel }) => {
         <div className={`${surface} border ${border} p-4 flex gap-3`}>
           <span className="text-xl">✨</span>
           <div>
-            <p className={`text-sm font-bold tracking-wider ${text}`}>POWERED BY CLAUDE AI</p>
+            <p className={`text-sm font-bold tracking-wider ${text}`}>POWERED BY DEEPSEEK</p>
             <p className={`text-sm mt-1 ${subtext}`}>
               Extracts shipper, consignee, origin, destination, dates, rate, broker info and more — instantly.
             </p>
@@ -175,7 +175,7 @@ const RateConScanner = ({ onParsed, onCancel }) => {
         <span className="text-3xl">✨</span>
       </div>
       <h2 className={`text-xl font-bold tracking-wider mb-2 ${text}`}>PARSING RATE CON</h2>
-      <p className={`text-base ${subtext}`}>Claude AI is extracting load details...</p>
+      <p className={`text-base ${subtext}`}>DeepSeek is extracting load details...</p>
       <div className="mt-8 flex gap-1">
         {[0, 1, 2].map(i => (
           <div key={i} className="w-2 h-2 bg-red-600 rounded-full animate-bounce"
