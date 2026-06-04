@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
 import { getCurrentPosition, watchPosition as nativeWatchPosition, registerForPushNotifications, isNative } from '../../lib/native';
+import { checkDueNotifications, requestNotificationPermission } from '../../lib/expiryNotifications';
 
 // ── Env guard (C4) ─────────────────────────────────────────────────────────────
 const BASE_URL = process.env.REACT_APP_BACKEND_URL || '';
@@ -249,8 +250,11 @@ export const DriverAppProvider = ({ children }) => {
     await storage.setItem('driver_app_user', JSON.stringify(data.user));
     const localComplete = await storage.getItem(`driver_profile_complete_${data.user.id}`) === 'true';
     setProfileComplete(localComplete || data.user.first_login === false);
-    // H13: register for push notifications after login
+    // Register for push notifications
     registerForPushNotifications().catch(e => console.warn('Push registration failed:', e));
+    // Request web notification permission and run expiry checks
+    requestNotificationPermission().catch(() => {});
+    checkDueNotifications(); // fires in-app banners / web notifications for due alerts
   };
 
   // Login
