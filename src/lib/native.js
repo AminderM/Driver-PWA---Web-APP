@@ -267,13 +267,14 @@ export async function registerForPushNotifications() {
 // ── Network ───────────────────────────────────────────────────────────────────
 
 export async function getNetworkStatus() {
-  if (isNative()) {
-    try {
-      const Network = await import('expo-network');
-      return await Network.getNetworkStateAsync();
-    } catch {
-      return { isConnected: true, isInternetReachable: true };
-    }
+  if (!isNative()) {
+    return { isConnected: navigator.onLine, isInternetReachable: navigator.onLine };
   }
-  return { isConnected: navigator.onLine, isInternetReachable: navigator.onLine };
+
+  try {
+    const Network = await import('expo-network');
+    return await Network.default.getNetworkStateAsync();
+  } catch {
+    return { isConnected: true, isInternetReachable: true };
+  }
 }
