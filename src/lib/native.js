@@ -3,14 +3,23 @@
  * All functions gracefully fall back to web APIs when running in a browser.
  */
 
-import * as Device from 'expo-device';
-
-// True when the app is running on a physical device (iOS / Android)
-export const isNative = () => Device.isDevice;
+// Detect native at runtime without importing Expo modules
+export const isNative = () => {
+  try {
+    return typeof global !== 'undefined' && !!global.__ExpoPrivate;
+  } catch {
+    return false;
+  }
+};
 
 export const getPlatform = () => {
   if (!isNative()) return 'web';
-  return Device.osName === 'Android' ? 'android' : 'ios';
+  try {
+    const Device = require('expo-device');
+    return Device.osName === 'Android' ? 'android' : 'ios';
+  } catch {
+    return 'web';
+  }
 };
 
 // ── Camera ────────────────────────────────────────────────────────────────────
@@ -24,46 +33,52 @@ export const getPlatform = () => {
  */
 export async function takePhoto({ source = 'camera' } = {}) {
   if (isNative()) {
-    const ImagePicker = await import('expo-image-picker');
+    try {
+      const ImagePicker = await import('expo-image-picker');
 
-    let result;
-    if (source === 'gallery') {
-      result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: false,
-        aspect: [4, 3],
-        quality: 0.85,
-      });
-    } else {
-      result = await ImagePicker.launchCameraAsync({
-        allowsEditing: false,
-        aspect: [4, 3],
-        quality: 0.85,
-      });
+      let result;
+      if (source === 'gallery') {
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: false,
+          aspect: [4, 3],
+          quality: 0.85,
+        });
+      } else {
+        result = await ImagePicker.launchCameraAsync({
+          allowsEditing: false,
+          aspect: [4, 3],
+          quality: 0.85,
+        });
+      }
+
+      if (result.canceled) {
+        throw new Error('Cancelled');
+      }
+
+      const imageAsset = result.assets[0];
+      if (!imageAsset.uri) {
+        throw new Error('No image URI');
+      }
+
+      const response = await fetch(imageAsset.uri);
+      const blob = await response.blob();
+      const file = new File([blob], `scan_${Date.now()}.jpeg`, { type: 'image/jpeg' });
+
+      return {
+        dataUrl: imageAsset.uri,
+        blob,
+        file,
+      };
+    } catch (err) {
+      if (err.message === 'Cancelled' || err.message === 'User cancelled image selection') {
+        throw new Error('Cancelled');
+      }
+      throw err;
     }
-
-    if (result.canceled) {
-      throw new Error('Cancelled');
-    }
-
-    const imageAsset = result.assets[0];
-    if (!imageAsset.uri) {
-      throw new Error('No image URI');
-    }
-
-    // Fetch the image and convert to File
-    const response = await fetch(imageAsset.uri);
-    const blob = await response.blob();
-    const file = new File([blob], `scan_${Date.now()}.jpeg`, { type: 'image/jpeg' });
-
-    return {
-      dataUrl: imageAsset.uri,
-      blob,
-      file,
-    };
   }
 
-  // Web fallback — resolve/reject via a temporary <input>
+  // Web fallback
   return new Promise((resolve, reject) => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -86,31 +101,35 @@ export async function takePhoto({ source = 'camera' } = {}) {
 // ── Geolocation ───────────────────────────────────────────────────────────────
 
 /**
- * Get current position — uses Expo Location on native for better accuracy/speed.
+ * Get current position — uses Expo Location on native.
  */
 export async function getCurrentPosition() {
   if (isNative()) {
-    const Location = await import('expo-location');
-
-    let { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      throw new Error('Location permission denied');
-    }
-
     try {
-      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      return {
-        lat: position.coords.latitude,
-        lng: position.coords.longitude,
-        accuracy_m: position.coords.accuracy,
-      };
-    } catch {
-      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
-      return {
-        lat: position.coords.latitude,
-        lng: position.coords.longitude,
-        accuracy_m: position.coords.accuracy,
-      };
+      const Location = await import('expo-location');
+
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        throw new Error('Location permission denied');
+      }
+
+      try {
+        const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        return {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy_m: position.coords.accuracy,
+        };
+      } catch {
+        const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
+        return {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy_m: position.coords.accuracy,
+        };
+      }
+    } catch (err) {
+      throw err;
     }
   }
 
@@ -145,26 +164,31 @@ export async function getCurrentPosition() {
  */
 export async function watchPosition(callback, errorCallback) {
   if (isNative()) {
-    const Location = await import('expo-location');
+    try {
+      const Location = await import('expo-location');
 
-    let { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      errorCallback?.(new Error('Location permission denied'));
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        errorCallback?.(new Error('Location permission denied'));
+        return () => {};
+      }
+
+      const subscription = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 10 },
+        (position) => {
+          callback({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            accuracy_m: position.coords.accuracy,
+          });
+        }
+      );
+
+      return () => subscription.remove();
+    } catch (err) {
+      errorCallback?.(err);
       return () => {};
     }
-
-    const subscription = await Location.watchPositionAsync(
-      { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 10 },
-      (position) => {
-        callback({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-          accuracy_m: position.coords.accuracy,
-        });
-      }
-    );
-
-    return () => subscription.remove();
   }
 
   // Web fallback
@@ -186,14 +210,22 @@ export async function watchPosition(callback, errorCallback) {
 
 export async function hapticSuccess() {
   if (!isNative()) return;
-  const Haptics = await import('expo-haptics');
-  await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  try {
+    const Haptics = await import('expo-haptics');
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  } catch {
+    // Haptics not available
+  }
 }
 
 export async function hapticError() {
   if (!isNative()) return;
-  const Haptics = await import('expo-haptics');
-  await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+  try {
+    const Haptics = await import('expo-haptics');
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+  } catch {
+    // Haptics not available
+  }
 }
 
 // ── Push Notifications ────────────────────────────────────────────────────────
@@ -206,16 +238,17 @@ export async function registerForPushNotifications() {
   if (!isNative()) return null;
   try {
     const Notifications = await import('expo-notifications');
+    const Device = await import('expo-device');
 
-    if (!Device.isDevice) {
+    if (!Device.default.isDevice) {
       return null;
     }
 
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    const { status: existingStatus } = await Notifications.default.getPermissionsAsync();
     let finalStatus = existingStatus;
 
     if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
+      const { status } = await Notifications.default.requestPermissionsAsync();
       finalStatus = status;
     }
 
@@ -223,7 +256,7 @@ export async function registerForPushNotifications() {
       return null;
     }
 
-    const token = (await Notifications.getExpoPushTokenAsync()).data;
+    const token = (await Notifications.default.getExpoPushTokenAsync()).data;
     return token;
   } catch {
     return null;
@@ -233,9 +266,14 @@ export async function registerForPushNotifications() {
 // ── Network ───────────────────────────────────────────────────────────────────
 
 export async function getNetworkStatus() {
-  if (isNative()) {
-    const Network = await import('expo-network');
-    return Network.getNetworkStateAsync();
+  if (!isNative()) {
+    return { isConnected: navigator.onLine, isInternetReachable: navigator.onLine };
   }
-  return { isConnected: navigator.onLine, isInternetReachable: navigator.onLine };
+
+  try {
+    const Network = await import('expo-network');
+    return await Network.default.getNetworkStateAsync();
+  } catch {
+    return { isConnected: true, isInternetReachable: true };
+  }
 }
