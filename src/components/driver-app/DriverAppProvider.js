@@ -9,23 +9,22 @@ if (!process.env.REACT_APP_BACKEND_URL && process.env.NODE_ENV === 'production')
 }
 
 // ── Secure storage abstraction (C5) ───────────────────────────────────────────
-// Uses @capacitor/preferences on native (encrypted), falls back to localStorage on web
+// Uses expo-secure-store on native (encrypted), falls back to localStorage on web
 const storage = {
   async getItem(key) {
     try {
       if (isNative()) {
-        const { Preferences } = await import(/* webpackIgnore: true */ '@capacitor/preferences');
-        const { value } = await Preferences.get({ key });
-        return value;
+        const SecureStore = await import('expo-secure-store');
+        return await SecureStore.getItemAsync(key);
       }
-    } catch { /* plugin not available, fall through */ }
+    } catch { /* fall through */ }
     return localStorage.getItem(key);
   },
   async setItem(key, value) {
     try {
       if (isNative()) {
-        const { Preferences } = await import(/* webpackIgnore: true */ '@capacitor/preferences');
-        await Preferences.set({ key, value });
+        const SecureStore = await import('expo-secure-store');
+        await SecureStore.setItemAsync(key, value);
         return;
       }
     } catch { /* fall through */ }
@@ -34,8 +33,8 @@ const storage = {
   async removeItem(key) {
     try {
       if (isNative()) {
-        const { Preferences } = await import(/* webpackIgnore: true */ '@capacitor/preferences');
-        await Preferences.remove({ key });
+        const SecureStore = await import('expo-secure-store');
+        await SecureStore.deleteItemAsync(key);
         return;
       }
     } catch { /* fall through */ }
