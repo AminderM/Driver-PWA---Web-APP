@@ -3,14 +3,24 @@
  * All functions gracefully fall back to web APIs when running in a browser.
  */
 
-import * as Device from 'expo-device';
-
-// True when the app is running on a physical device (iOS / Android)
-export const isNative = () => Device.isDevice;
+// Detect native at runtime (Expo modules only available on native)
+export const isNative = () => {
+  try {
+    // On native Expo, globalThis has Expo-specific properties
+    return typeof global !== 'undefined' && !!global.__ExpoPrivate;
+  } catch {
+    return false;
+  }
+};
 
 export const getPlatform = () => {
   if (!isNative()) return 'web';
-  return Device.osName === 'Android' ? 'android' : 'ios';
+  try {
+    const Device = require('expo-device');
+    return Device.osName === 'Android' ? 'android' : 'ios';
+  } catch {
+    return 'web';
+  }
 };
 
 // ── Camera ────────────────────────────────────────────────────────────────────
@@ -229,16 +239,17 @@ export async function registerForPushNotifications() {
   if (!isNative()) return null;
   try {
     const Notifications = await import('expo-notifications');
+    const Device = await import('expo-device');
 
-    if (!Device.isDevice) {
+    if (!Device.default.isDevice) {
       return null;
     }
 
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    const { status: existingStatus } = await Notifications.default.getPermissionsAsync();
     let finalStatus = existingStatus;
 
     if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
+      const { status } = await Notifications.default.requestPermissionsAsync();
       finalStatus = status;
     }
 
@@ -246,7 +257,7 @@ export async function registerForPushNotifications() {
       return null;
     }
 
-    const token = (await Notifications.getExpoPushTokenAsync()).data;
+    const token = (await Notifications.default.getExpoPushTokenAsync()).data;
     return token;
   } catch {
     return null;
