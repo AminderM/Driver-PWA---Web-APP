@@ -1,23 +1,23 @@
 /**
  * Document scanning API — calls backend endpoints which use DeepSeek.
  * Backend has DEEPSEEK_DOC_SCANNER_API_KEY configured.
+ *
+ * Components must pass their `api` function from useDriverApp() to use these.
  */
 
-import { api } from '../api';
-
 // ── Core API call (multipart file upload) ────────────────────────────────────
-async function uploadScan(endpoint, file) {
+async function uploadScan(apiFunc, endpoint, file) {
   const form = new FormData();
   form.append('file', file);
 
   try {
-    const response = await api.post(endpoint, form, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+    return await apiFunc(endpoint, {
+      method: 'POST',
+      body: form,
     });
-    return response.data;
   } catch (error) {
-    const status = error.response?.status;
-    const message = error.response?.data?.message || error.message;
+    const status = error.status;
+    const message = error.message;
 
     if (status === 415) {
       throw new Error('Unsupported file type. Upload JPEG, PNG, or PDF.');
@@ -36,16 +36,16 @@ async function uploadScan(endpoint, file) {
   }
 }
 
-// ── Public scan functions ─────────────────────────────────────────────────────
+// ── Public scan functions (components call with their api from useDriverApp) ──
 
-export async function scanRateCon(file) {
-  return uploadScan('/api/driver-mobile/rate-con/parse', file);
+export async function scanRateCon(file, api) {
+  return uploadScan(api, '/rate-con/parse', file);
 }
 
-export async function scanReceipt(file) {
-  return uploadScan('/api/driver-mobile/receipt/parse', file);
+export async function scanReceipt(file, api) {
+  return uploadScan(api, '/receipt/parse', file);
 }
 
-export async function scanIdentify(file) {
-  return uploadScan('/api/driver-mobile/scan/identify', file);
+export async function scanIdentify(file, api) {
+  return uploadScan(api, '/scan/identify', file);
 }

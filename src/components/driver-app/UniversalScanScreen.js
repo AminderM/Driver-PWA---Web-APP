@@ -71,7 +71,7 @@ const UniversalScanScreen = ({ onClose }) => {
     setStep('identifying');
     setErrMsg('');
     try {
-      const res = await scanIdentify(file);
+      const res = await scanIdentify(file, api);
       setResult(res);
       // Pre-fill editable fields from AI result
       setDocType(res.document_type || 'other');
