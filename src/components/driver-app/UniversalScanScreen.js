@@ -1,5 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useDriverApp } from './DriverAppProvider';
+import { scanIdentify } from '../../lib/deepseek';
+import { scheduleExpiryReminders } from '../../lib/expiryNotifications';
 
 // ── Expense localStorage (shared with ExpenseRecorderScreen) ──────────────────
 const EXPENSE_KEY = 'integra_expenses_v1';
@@ -69,9 +71,7 @@ const UniversalScanScreen = ({ onClose }) => {
     setStep('identifying');
     setErrMsg('');
     try {
-      const fd = new FormData();
-      fd.append('file', file);
-      const res = await api('/scan/identify', { method: 'POST', body: fd });
+      const res = await scanIdentify(file);
       setResult(res);
       // Pre-fill editable fields from AI result
       setDocType(res.document_type || 'other');
@@ -101,7 +101,17 @@ const UniversalScanScreen = ({ onClose }) => {
       if (expiry)  fd.append('expiry_date', expiry);
       if (vendor)  fd.append('notes', vendor);
       fd.append('file', file);
-      await api('/vault/documents', { method: 'POST', body: fd });
+      const vaultDoc = await api('/vault/documents', { method: 'POST', body: fd });
+
+      // Schedule expiry reminders if an expiry date was detected
+      if (expiry && vaultDoc?.id) {
+        scheduleExpiryReminders(
+          vaultDoc.id,
+          docLabel.trim() || DOC_LABELS[docType]?.label || 'Document',
+          docType,
+          expiry
+        );
+      }
 
       // 2. If expense — save to localStorage for P&L
       if (isExpense) {

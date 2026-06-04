@@ -1,6 +1,7 @@
 ﻿import React, { useState, useRef } from 'react';
 import { useDriverApp } from './DriverAppProvider';
 import { takePhoto, isNative } from '../../lib/native';
+import { scanRateCon } from '../../lib/deepseek';
 
 const RateConScanner = ({ onParsed, onCancel }) => {
   const { api, theme, toggleTheme } = useDriverApp();
@@ -46,12 +47,7 @@ const RateConScanner = ({ onParsed, onCancel }) => {
     setStep('parsing');
     setParseError('');
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const result = await api('/rate-con/parse', {
-        method: 'POST',
-        body: formData,
-      });
+      const result = await scanRateCon(file);
       setParsed(result);
       setStep('result');
     } catch (err) {
