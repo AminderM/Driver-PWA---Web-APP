@@ -311,7 +311,7 @@ const ExpenseRecorderScreen = ({ onBack }) => {
         <span className="text-2xl">✨</span>
       </div>
       <h2 className={`text-lg font-bold tracking-wider mb-2 ${text}`}>READING RECEIPT</h2>
-      <p className={`text-sm ${subtext}`}>Claude AI is extracting expense details...</p>
+      <p className={`text-sm ${subtext}`}>DeepSeek is extracting expense details...</p>
       <div className="mt-8 flex gap-1">
         {[0, 1, 2].map(i => (
           <div key={i} className="w-2 h-2 bg-[#CC2222] rounded-full animate-bounce"
