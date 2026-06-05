@@ -88,7 +88,8 @@
     "use-websocket": "^0.2.0",
     "vaul": "^1.1.2",
     "xlsx": "^0.18.5",
-    "zod": "^3.24.4"
+    "zod": "^3.24.4",
+    "react-native": "0.85.3"
   },
   "scripts": {
     "start": "craco start",
