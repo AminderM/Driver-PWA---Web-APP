@@ -8,36 +8,16 @@ if (!process.env.REACT_APP_BACKEND_URL && process.env.NODE_ENV === 'production')
   console.error('[DriverApp] CRITICAL: REACT_APP_BACKEND_URL is not set. All API calls will fail.');
 }
 
-// ── Secure storage abstraction (C5) ───────────────────────────────────────────
-// Uses expo-secure-store on native (encrypted), falls back to localStorage on web
+// ── Storage abstraction (C5) ──────────────────────────────────────────────────
+// Uses localStorage (synchronous for simplicity on web)
 const storage = {
   async getItem(key) {
-    try {
-      if (isNative()) {
-        const SecureStore = await import('expo-secure-store');
-        return await SecureStore.getItemAsync(key);
-      }
-    } catch { /* fall through */ }
     return localStorage.getItem(key);
   },
   async setItem(key, value) {
-    try {
-      if (isNative()) {
-        const SecureStore = await import('expo-secure-store');
-        await SecureStore.setItemAsync(key, value);
-        return;
-      }
-    } catch { /* fall through */ }
     localStorage.setItem(key, value);
   },
   async removeItem(key) {
-    try {
-      if (isNative()) {
-        const SecureStore = await import('expo-secure-store');
-        await SecureStore.deleteItemAsync(key);
-        return;
-      }
-    } catch { /* fall through */ }
     localStorage.removeItem(key);
   },
 };
