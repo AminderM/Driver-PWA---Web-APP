@@ -8,37 +8,16 @@ if (!process.env.REACT_APP_BACKEND_URL && process.env.NODE_ENV === 'production')
   console.error('[DriverApp] CRITICAL: REACT_APP_BACKEND_URL is not set. All API calls will fail.');
 }
 
-// ── Secure storage abstraction (C5) ───────────────────────────────────────────
-// Uses @capacitor/preferences on native (encrypted), falls back to localStorage on web
+// ── Storage abstraction (C5) ──────────────────────────────────────────────────
+// Uses localStorage (synchronous for simplicity on web)
 const storage = {
   async getItem(key) {
-    try {
-      if (isNative()) {
-        const { Preferences } = await import(/* webpackIgnore: true */ '@capacitor/preferences');
-        const { value } = await Preferences.get({ key });
-        return value;
-      }
-    } catch { /* plugin not available, fall through */ }
     return localStorage.getItem(key);
   },
   async setItem(key, value) {
-    try {
-      if (isNative()) {
-        const { Preferences } = await import(/* webpackIgnore: true */ '@capacitor/preferences');
-        await Preferences.set({ key, value });
-        return;
-      }
-    } catch { /* fall through */ }
     localStorage.setItem(key, value);
   },
   async removeItem(key) {
-    try {
-      if (isNative()) {
-        const { Preferences } = await import(/* webpackIgnore: true */ '@capacitor/preferences');
-        await Preferences.remove({ key });
-        return;
-      }
-    } catch { /* fall through */ }
     localStorage.removeItem(key);
   },
 };
