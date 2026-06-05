@@ -1,52 +1,20 @@
 /**
- * Native platform utilities — thin wrapper around Capacitor plugins.
- * All functions gracefully fall back to web APIs when running in a browser.
+ * Native platform utilities — thin wrapper around browser APIs.
+ * Graceful fallbacks for use in web browsers.
  */
 
-// True when the app is running inside a Capacitor native shell (iOS / Android)
-export const isNative = () =>
-  typeof window !== 'undefined' && !!(window.Capacitor?.isNativePlatform?.());
+// Always false on web (no native layer)
+export const isNative = () => false;
 
-export const getPlatform = () =>
-  window.Capacitor?.getPlatform?.() || 'web'; // 'ios' | 'android' | 'web'
+export const getPlatform = () => 'web';
 
 // ── Camera ────────────────────────────────────────────────────────────────────
 
 /**
  * Take a photo or pick from the gallery.
- * Returns a { dataUrl, blob, file } on success, throws on cancel/error.
- *
- * On native: uses @capacitor/camera for a full-screen camera UI.
  * On web: falls back to a hidden <input type="file"> click.
  */
 export async function takePhoto({ source = 'camera' } = {}) {
-  if (isNative()) {
-    const { Camera, CameraSource, CameraResultType } = await import('@capacitor/camera');
-
-    // H6: check/request camera permission before attempting capture
-    let perms = await Camera.checkPermissions();
-    if (perms.camera === 'prompt' || perms.camera === 'prompt-with-rationale') {
-      perms = await Camera.requestPermissions({ permissions: ['camera'] });
-    }
-    if (perms.camera !== 'granted') {
-      throw new Error('Camera permission denied. Please enable camera access in your device Settings.');
-    }
-
-    const image = await Camera.getPhoto({
-      quality: 85,
-      allowEditing: false,
-      resultType: CameraResultType.DataUrl,
-      source: source === 'gallery' ? CameraSource.Photos : CameraSource.Camera,
-      saveToGallery: false,
-    });
-    // Convert dataUrl to a Blob/File so it can be sent as FormData
-    const res = await fetch(image.dataUrl);
-    const blob = await res.blob();
-    const file = new File([blob], `scan_${Date.now()}.jpeg`, { type: 'image/jpeg' });
-    return { dataUrl: image.dataUrl, blob, file };
-  }
-
-  // Web fallback — resolve/reject via a temporary <input>
   return new Promise((resolve, reject) => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -54,7 +22,10 @@ export async function takePhoto({ source = 'camera' } = {}) {
     input.capture = source === 'camera' ? 'environment' : undefined;
     input.onchange = () => {
       const f = input.files?.[0];
-      if (!f) { reject(new Error('No file selected')); return; }
+      if (!f) {
+        reject(new Error('No file selected'));
+        return;
+      }
       const dataUrl = URL.createObjectURL(f);
       resolve({ dataUrl, blob: f, file: f });
     };
@@ -66,37 +37,25 @@ export async function takePhoto({ source = 'camera' } = {}) {
 // ── Geolocation ───────────────────────────────────────────────────────────────
 
 /**
- * Get current position — uses Capacitor on native for better accuracy/speed.
+ * Get current position using browser Geolocation API.
  */
 export async function getCurrentPosition() {
-  if (isNative()) {
-    const { Geolocation } = await import('@capacitor/geolocation');
-
-    // H12: check/request geolocation permission before using it
-    let perms = await Geolocation.checkPermissions();
-    if (perms.location === 'prompt' || perms.location === 'prompt-with-rationale') {
-      perms = await Geolocation.requestPermissions({ permissions: ['location'] });
-    }
-    if (perms.location !== 'granted') {
-      throw new Error('Location permission denied');
-    }
-
-    // H7: try high-accuracy with short timeout, fall back to network accuracy
-    try {
-      const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 });
-      return { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy_m: pos.coords.accuracy };
-    } catch {
-      const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: false, timeout: 10000 });
-      return { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy_m: pos.coords.accuracy };
-    }
-  }
-  // Web fallback — H7: short high-accuracy timeout, then fall back
   return new Promise((resolve, reject) => {
     navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy_m: pos.coords.accuracy }),
+      (pos) =>
+        resolve({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy_m: pos.coords.accuracy,
+        }),
       () => {
         navigator.geolocation.getCurrentPosition(
-          (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy_m: pos.coords.accuracy }),
+          (pos) =>
+            resolve({
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude,
+              accuracy_m: pos.coords.accuracy,
+            }),
           reject,
           { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
         );
@@ -107,91 +66,45 @@ export async function getCurrentPosition() {
 }
 
 /**
- * Watch position changes. Returns an unsubscribe function.
+ * Watch position changes using browser Geolocation API.
+ * Returns an unsubscribe function.
  */
 export async function watchPosition(callback, errorCallback) {
-  if (isNative()) {
-    const { Geolocation } = await import('@capacitor/geolocation');
-
-    // H12: verify permission before watching (Android Q+ requires explicit request)
-    let perms = await Geolocation.checkPermissions();
-    if (perms.location === 'prompt' || perms.location === 'prompt-with-rationale') {
-      perms = await Geolocation.requestPermissions({ permissions: ['location'] });
-    }
-    if (perms.location !== 'granted') {
-      errorCallback?.(new Error('Location permission denied'));
-      return () => {};
-    }
-
-    const watchId = await Geolocation.watchPosition(
-      { enableHighAccuracy: true },
-      (pos, err) => {
-        if (err) { errorCallback?.(err); return; }
-        callback({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          accuracy_m: pos.coords.accuracy,
-        });
-      }
-    );
-    return () => Geolocation.clearWatch({ id: watchId });
-  }
-
-  // Web fallback
   const id = navigator.geolocation.watchPosition(
-    (pos) => callback({
-      lat: pos.coords.latitude,
-      lng: pos.coords.longitude,
-      accuracy_m: pos.coords.accuracy,
-    }),
+    (pos) =>
+      callback({
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracy_m: pos.coords.accuracy,
+      }),
     errorCallback,
     { enableHighAccuracy: true, maximumAge: 30000 }
   );
+
   return () => navigator.geolocation.clearWatch(id);
 }
 
 // ── Haptics ───────────────────────────────────────────────────────────────────
 
 export async function hapticSuccess() {
-  if (!isNative()) return;
-  const { Haptics, ImpactStyle } = await import('@capacitor/haptics');
-  await Haptics.impact({ style: ImpactStyle.Medium });
+  // Not available on web
 }
 
 export async function hapticError() {
-  if (!isNative()) return;
-  const { Haptics, NotificationType } = await import('@capacitor/haptics');
-  await Haptics.notification({ type: NotificationType.Error });
+  // Not available on web
 }
 
 // ── Push Notifications ────────────────────────────────────────────────────────
 
 /**
- * Request push notification permission and return the device token.
- * Returns null on web or if permission is denied.
+ * Push notifications not available on web.
  */
 export async function registerForPushNotifications() {
-  if (!isNative()) return null;
-  try {
-    const { PushNotifications } = await import('@capacitor/push-notifications');
-    const permission = await PushNotifications.requestPermissions();
-    if (permission.receive !== 'granted') return null;
-    await PushNotifications.register();
-    return new Promise((resolve) => {
-      PushNotifications.addListener('registration', (token) => resolve(token.value));
-      PushNotifications.addListener('registrationError', () => resolve(null));
-    });
-  } catch {
-    return null;
-  }
+  return null;
 }
 
 // ── Network ───────────────────────────────────────────────────────────────────
 
 export async function getNetworkStatus() {
-  if (isNative()) {
-    const { Network } = await import('@capacitor/network');
-    return Network.getStatus();
-  }
-  return { connected: navigator.onLine, connectionType: 'unknown' };
+  return { isConnected: navigator.onLine, isInternetReachable: navigator.onLine };
 }

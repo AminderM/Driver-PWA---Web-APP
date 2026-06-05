@@ -1,0 +1,68 @@
+{
+  "expo": {
+    "name": "Integra Vault",
+    "slug": "vault-by-integra-ai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#030303"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTabletMode": true,
+      "bundleIdentifier": "com.integraatech.vault"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#030303"
+      },
+      "package": "com.integraatech.vault",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.POST_NOTIFICATIONS"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow access to your photos to scan documents.",
+          "cameraPermission": "Allow access to your camera to scan documents."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Integra Vault to use your location to track deliveries."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#CC2222"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "32fafbb0-7206-4482-b703-6211eb92365c"
+      },
+      "backendUrl": "https://api.staging.integratedtech.ca"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
+  }
+}
